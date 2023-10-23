@@ -5,19 +5,39 @@ provide a straightforward Python API which leverages the
 [SpacemanDMM](https://github.com/SpaceManiac/SpacemanDMM) and potentially other
 community libraries.
 
+Its primary use cases are to easily
+
+- read and modify map files
+- parse and read icon files
+- read the source tree and provide reflection data.
+
 ## Usage
 
-Avulto has the following API:
+Avulto is not currently available as a release. See the **Development** section
+below for directions on using the library locally.
+
+Avulto's API is documented in full in its [stub file](./avulto.pyi), but the
+most important parts of its API are below.
 
 ### `Path`
 
-`Path` wraps type paths and provides a handful of useful methods.
+`Path` wraps type paths and provides `parent_of(other, strict=False)` and
+`child_of(other, strict=False)` for comparing paths. When `strict`, the current
+path does not count as a parent or child of itself.It also supports the division
+operator for easy path suffixing.
 
-| Method             | Description                                             |
-| ------------------ | ------------------------------------------------------- |
-| `parent_of(other)` | Returns whether the path is a strict parent of `other`. |
-| `child_of(other)`  | Returns whether the path is a strict child of `other`.  |
-| `/`                | Allows easy path suffixing, e.g. `Path("/obj") / "foo"` |
+```py
+from avulto import Path as p
+
+>>> p('/obj/machinery').parent_of('/obj/machinery/oven')
+True
+
+>>> p('/turf').child_of('/turf', strict=True)
+False
+
+>>> p('/obj/machinery') / 'microwave'
+/obj/machinery/microwave
+```
 
 ### `DMM`
 
@@ -30,6 +50,7 @@ The `DMM` class allows parsing and manipulation of map files.
 | `coords()`            | Return an iterator over all possible 3D coordinates.   |
 | `tiles()`             | Return an iterator over all unique `Tile`s on the map. |
 | `tiledef(x, y, z)`    | Returns the `Tile` at the given coordinates.           |
+| `extents`             | The maximum size of the map's dimensions.              |
 
 `Tile` objects returned from `DMM.tiles()` and `DMM.tiledef(x, y, z)` have the
 following API:
@@ -38,7 +59,6 @@ following API:
 | ------------- | ---------------------------------------------------- |
 | `area_path()` | Returns the tile's area.                             |
 | `turf_path()` | Returns the tile's turf.                             |
-| `paths()`     | Returns all paths on the tile, in order.             |
 | `convert()`   | Provide a Python representation of all tile prefabs. |
 
 Inspecting and manipulating prefabs on a tile is performed on the prefab's index:
@@ -54,6 +74,9 @@ Inspecting and manipulating prefabs on a tile is performed on the prefab's index
 | `add_path(index, path)`            | Add a prefab with the given `path` at `index`.                             |
 | `del_prefab(index)`                | Deletes the prefab at `index`.                                             |
 | `del_prefab_var(index, name)`      | Deletes the var `name` from the prefab at `index`.                         |
+
+Note that the mutative functions above currently apply to the preset, not the
+individual tile. Future releases will hopefully provide a way to do both.
 
 ### `DME`
 
@@ -81,13 +104,34 @@ The `DMI` class allows parsing icon files.
 | `from_file(filename)` | Creates a `DME` from the given `.dme` file.                      |
 | `state_names()`       | Return a list of strings containing all state names in the file. |
 | `state(name)`         | Returns the `IconState` with the given `name`.                   |
+| `data_rgba8(rect)`    | Returns the image data for the given rect in RGBA8 bytes.        |
 
 `IconState` objects allow icon state inspection:
 
-| Method   | Description                                 |
-| -------- | ------------------------------------------- |
-| `name()` | The icon state name.                        |
-| `dirs()` | The directions available in the icon state. |
+| Method             | Description                                            |
+| ------------------ | ------------------------------------------------------ |
+| `name()`           | The icon state name.                                   |
+| `delays()`         | The delay per frame, in ticks.                         |
+| `dirs()`           | The directions available in the icon state.            |
+| `frames()`         | The number of frames in the state.                     |
+| `movement()`       | Whether the icon state is a movement state.            |
+| `rewind()`         | Whether the state rewinds on animation.                |
+| `rect(dir, frame)` | The Rect of the given frame and direction in the file. |
+
+Using [Pillow][], the image data for a given icon can quickly be turned into an
+`Image` object and easily manipulated:
+
+```py
+>>> from avulto import DMI, Dir
+>>> from PIL import Image
+>>> dmi = DMI.from_file("/SS13/icons/objects/weapons.dmi")
+>>> pistol = dmi.state("pistol")
+>>> pistol_rect = pistol.rect(Dir.SOUTH, frame=0)
+>>> pistol_data = dmi.data_rgba8(pistol_rect)
+>>> image = Image.frombytes("RGBA", size=(pistol_rect.width, pistol_rect.height), data=pistol_data)
+```
+
+[Pillow]: https://pillow.readthedocs.io/en/stable/
 
 ## Development
 

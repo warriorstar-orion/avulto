@@ -14,9 +14,10 @@ def get_fixture_path(name):
 def dmm() -> DMM:
     return DMM.from_file(get_fixture_path("map1.dmm"))
 
+
 def test_dmm_pathlib():
     assert DMM.from_file(Path(get_fixture_path("map1.dmm")))
-    
+
 
 def test_dmm_extents(dmm: DMM):
     assert dmm.extents == (10, 10, 1)

@@ -1,5 +1,6 @@
 from avulto import Path as p, paths
 
+
 def test_paths():
     assert paths.Area == p("/area")
     assert paths.Turf == p("/turf")

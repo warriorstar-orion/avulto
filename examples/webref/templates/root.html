@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link href="/static/base.css" rel="stylesheet" />
+        <script src="/static/htmx.min.js"></script>
+        <title>Test</title>
+    </head>
+    <body>
+        <h3> 
+            Search Objects
+          </h3>
+          <input class="form-control" type="search" 
+                 name="search" placeholder="Search..." 
+                 hx-post="/search" 
+                 hx-trigger="keyup changed delay:500ms, search" 
+                 hx-target="#search-results">
+          
+          <table class="table">
+              <thead>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Path</th>
+              </tr>
+              </thead>
+              <tbody id="search-results">
+              </tbody>
+          </table>
+    </body>
+</html>

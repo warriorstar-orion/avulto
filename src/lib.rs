@@ -5,16 +5,20 @@ pub mod dmi;
 pub mod dmm;
 pub mod helpers;
 pub mod path;
+pub mod tile;
 
 #[pymodule]
 fn avulto(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<path::Path>()?;
-    
+
     m.add_class::<dmm::Dmm>()?;
     m.add_class::<dmm::CoordIterator>()?;
-    m.add_class::<dmm::Tile>()?;
+    m.add_class::<tile::Tile>()?;
 
     m.add_class::<dmi::Dmi>()?;
+    m.add_class::<dmi::Rect>()?;
+    m.add_class::<dmi::IconState>()?;
+    m.add_class::<dmi::StateIter>()?;
 
     m.add_class::<dme::Dme>()?;
 

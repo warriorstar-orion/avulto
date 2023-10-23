@@ -4,17 +4,28 @@ from typing import Iterator
 class Path:
     """A DM typepath."""
 
-    def child_of(self, other) -> bool:
-        """Returns whether the path is a strict child of `other`."""
-    def parent_of(self, other) -> bool:
-        """Returns whether the path is a strict parent of `other`."""
+    def __init__(self, value):
+        """Returns a new path."""
+
+    def child_of(self, other, strict=False) -> bool:
+        """Returns whether the path is a child of `other`.
+        
+        If `strict` is true, the current path will not be considered a child of
+        itself.
+        """
+    def parent_of(self, other, strict=False) -> bool:
+        """Returns whether the path is a parent of `other`.
+
+        If `strict` is true, the current path will not be considered a parent of
+        itself.
+        """
 
 class Tile:
     """An individual map tile definition."""
 
     def add_path(self, index, path: Path | str):
         """Add a prefab with the given `path` at `index`."""
-    def area_path(self):
+    def area_path(self) -> Path:
         """Returns the path of the tile's area.
 
         Returns only the first area if multiple exist.
@@ -29,13 +40,11 @@ class Tile:
         """Deletes the prefab at `index`."""
     def del_prefab_var(self, index: int, name: str):
         """Deletes the variable `name` from the prefab at `index`."""
-    def find(self, prefix: str) -> list[int]:
+    def find(self, prefix: Path | str, exact=False) -> list[int]:
         """
         Return the indexes of the prefabs prefixed with the given path `prefix`.
         """
-    def paths(self) -> list[Path]:
-        """Returns the paths of all prefabs on the tile."""
-    def prefab_path(self, index: int) -> str:
+    def prefab_path(self, index: int) -> Path:
         """Return the path of the prefab at `index`."""
     def prefab_var(self, index: int, name: str) -> any:
         """
@@ -49,7 +58,7 @@ class Tile:
         """Set the value of the variable `name` to `val` at `index`."""
     def set_path(self, index: int, path: Path | str):
         """Set the path of the prefab at `index` to `path`."""
-    def turf_path(self):
+    def turf_path(self) -> Path:
         """Returns the path of the tile's turf. Returns only the first area if multiple exist."""
 
 class DMM:
@@ -90,11 +99,27 @@ class DME:
         """Creates a DME from the given `filename`."""
     def paths_prefixed(self, prefix: Path | str) -> list[str]:
         """Returns a list of paths with the given `prefix`."""
-    def typedecl(self, path: str) -> TypeDecl:
+    def typedecl(self, path: Path | str) -> TypeDecl:
         """Return the type declaration of the given `path`."""
 
 class Dir:
     """An enumeration of directions used in icons."""
+
+    NORTH: Dir
+    SOUTH: Dir
+    EAST: Dir
+    WEST: Dir
+    NORTHEAST: Dir
+    NORTHWEST: Dir
+    SOUTHEAST: Dir
+    SOUTHWEST: Dir
+
+class Rect:
+    left: int
+    top: int
+    width: int
+    height: int
+
 
 class IconState:
     """
@@ -105,6 +130,18 @@ class IconState:
         """The state name."""
     def dirs(self) -> list[Dir]:
         """The directions available in the icon state."""
+    def frames(self) -> int:
+        """The number of frames in the icon state."""
+    def movement(self) -> bool:
+        """Returns whether or not the state is a movement state."""
+    def delays(self) -> list[float]:
+        """Returns an array of frame delays."""
+    def rewind(self) -> bool:
+        """Returns whether the icon is a rewind icon."""
+    def rect(self, dir, frame) -> Rect:
+        """Returns a `Rect` containing the bounds of the image data for the given frame."""
+
+
 
 class DMI:
     """
@@ -112,15 +149,26 @@ class DMI:
     """
 
     @staticmethod
-    def from_file(filename: str) -> "DMI":
+    def from_file(filename: os.PathLike | str) -> "DMI":
         """
         Creates a DMI from the given `filename`.
         """
+    def icon_width(self) -> int:
+        """The width of icons in the file."""
+    def icon_height(self) -> int:
+        """The height of icons in the file."""
     def state_names(self) -> list[str]:
         """
         Return a list of strings containing all state names in the file.
         """
     def state(self, name: str) -> IconState:
         """
-        Return the icon state with the given `name`.
+        Return the icon state with the given `name`. If there are duplicates,
+        only the first one is returned. Use `states()` to retrieve duplicates.
         """
+    def states(self) -> Iterator[IconState]:
+        """
+        Iterates over all icon states.
+        """
+    def data_rgba8(self, rect:Rect) -> bytes:
+        """Return the byte data of the spritesheet in 8-bit RGBA."""

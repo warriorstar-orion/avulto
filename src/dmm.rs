@@ -1,39 +1,37 @@
 extern crate dmm_tools;
 
-use std::borrow::{Borrow, BorrowMut};
 use std::collections::btree_map;
+use std::collections::btree_map::Keys as BTreeMapKeysIter;
 use std::path::Path;
 
-use dmm_tools::dmm::Prefab;
-use dreammaker::constants::Constant;
 use itertools::iproduct;
-use pyo3::exceptions::{PyRuntimeError, PyValueError};
-use pyo3::pyclass::{CompareOp, IterNextOutput};
-use pyo3::types::{PyBool, PyDict, PyFloat, PyInt, PyList, PyString};
-use pyo3::{
-    pyclass, pymethods, IntoPy, Py, PyAny, PyCell, PyErr, PyObject, PyRef, PyRefMut, PyResult,
-    Python,
-};
-use std::collections::btree_map::Keys as BTreeMapKeysIter;
+use pyo3::exceptions::PyRuntimeError;
+use pyo3::pyclass::IterNextOutput;
+use pyo3::types::PyString;
+use pyo3::{pyclass, pymethods, IntoPy, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult, Python};
 
-use crate::{helpers, path};
+use crate::tile::Tile;
 
 #[pyclass(module = "avulto", name = "DMM")]
 pub struct Dmm {
-    map: dmm_tools::dmm::Map,
+    pub(crate) map: dmm_tools::dmm::Map,
     #[pyo3(get)]
     extents: (i32, i32, i32),
 }
 
-enum Address {
-    Key(dmm_tools::dmm::Key),
-    Coords(dmm_tools::dmm::Coord3),
+impl Dmm {
+    pub fn lookup_prefab(
+        &self,
+        key: dmm_tools::dmm::Key,
+        idx: usize,
+    ) -> Option<&dmm_tools::dmm::Prefab> {
+        self.map.dictionary.get(&key)?.get(idx)
+    }
 }
 
-#[pyclass(module = "avulto")]
-pub struct Tile {
-    dmm: Py<PyAny>,
-    addr: Address,
+pub(crate) enum Address {
+    Key(dmm_tools::dmm::Key),
+    Coords(dmm_tools::dmm::Coord3),
 }
 
 type Itertools2DCartesianProductIter =
@@ -165,351 +163,5 @@ impl Dmm {
         };
 
         Py::new(py, it)
-    }
-}
-
-#[pymethods]
-impl Tile {
-    pub fn add_path(&self, index: i32, path: String, py: Python<'_>) {
-        let cell: &PyCell<Dmm> = self.dmm.downcast(py).unwrap();
-        let key = match self.addr {
-            Address::Key(k) => k,
-            Address::Coords(c) => cell.borrow_mut().map[c],
-        };
-        cell.borrow_mut()
-            .map
-            .dictionary
-            .get_mut(&key)
-            .unwrap()
-            .insert(index as usize, Prefab::from_path(path))
-    }
-
-    pub fn area_path(&self, py: Python<'_>) -> PyResult<path::Path> {
-        let map = &self.dmm.downcast::<PyCell<Dmm>>(py).unwrap().borrow().map;
-        let key = match self.addr {
-            Address::Key(k) => k,
-            Address::Coords(c) => map[c],
-        };
-        let prefabs = &map.dictionary[&key];
-        for p in prefabs.iter() {
-            if p.path.starts_with("/area") {
-                return path::Path::new(p.path.as_str());
-            }
-        }
-
-        Err(PyRuntimeError::new_err(format!(
-            "no area on tile {}",
-            match self.addr {
-                Address::Key(k) => map.format_key(k).to_string(),
-                Address::Coords(c) => c.to_string(),
-            }
-        )))
-    }
-
-    pub fn convert(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
-        let mut out: Vec<&PyDict> = Vec::new();
-
-        let map = &self.dmm.downcast::<PyCell<Dmm>>(py).unwrap().borrow().map;
-        let key = match self.addr {
-            Address::Key(k) => k,
-            Address::Coords(c) => map[c],
-        };
-        let prefabs = &map.dictionary[&key];
-
-        for prefab in prefabs {
-            let d = PyDict::new(py);
-            d.set_item("name", prefab.path.clone())?;
-
-            if !prefab.vars.is_empty() {
-                let mut vars: Vec<&PyDict> = Vec::new();
-                for (name, constant) in prefab.vars.iter() {
-                    let var = PyDict::new(py);
-                    var.set_item("name", name)?;
-                    var.set_item("value", helpers::constant_to_python_value(constant))?;
-                    vars.push(var);
-                }
-                d.set_item("vars", vars)?;
-            }
-
-            out.push(d);
-        }
-
-        Ok(PyList::new(py, out).into_py(py))
-    }
-
-    pub fn del_prefab(&self, index: i32, py: Python<'_>) {
-        let cell: &PyCell<Dmm> = self.dmm.downcast(py).unwrap();
-        let key = match self.addr {
-            Address::Key(k) => k,
-            Address::Coords(c) => cell.borrow_mut().map[c],
-        };
-
-        cell.borrow_mut()
-            .map
-            .dictionary
-            .get_mut(&key)
-            .unwrap()
-            .remove(index as usize);
-    }
-
-    pub fn del_prefab_var(&self, index: i32, name: String, py: Python<'_>) {
-        let cell: &PyCell<Dmm> = self.dmm.downcast(py).unwrap();
-        let key = match self.addr {
-            Address::Key(k) => k,
-            Address::Coords(c) => cell.borrow_mut().map[c],
-        };
-
-        cell.borrow_mut().map.dictionary.get_mut(&key).unwrap()[index as usize]
-            .vars
-            .remove(&name);
-    }
-
-    pub fn find(&self, prefix: &PyAny) -> PyResult<Vec<i32>> {
-        Python::with_gil(|py| {
-            let mut vec = Vec::new();
-            let map = &self.dmm.downcast::<PyCell<Dmm>>(py).unwrap().borrow().map;
-            let key = match self.addr {
-                Address::Key(k) => k,
-                Address::Coords(c) => map[c],
-            };
-            let prefabs = &map.dictionary[&key];
-
-            if let Ok(val) = prefix.extract::<path::Path>() {
-                prefabs.iter().enumerate().for_each(|(i, p)| {
-                    if p.path.starts_with(&val.0) {
-                        vec.push(i as i32);
-                    }
-                });
-            } else if let Ok(pystr) = prefix.downcast::<PyString>() {
-                prefabs.iter().enumerate().for_each(|(i, p)| {
-                    if p.path.starts_with(&pystr.to_string()) {
-                        vec.push(i as i32);
-                    }
-                });
-            } else {
-                return Err(PyErr::new::<PyValueError, &str>("not a valid path"));
-            }
-
-            Ok(vec)
-        })
-    }
-
-    pub fn paths(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
-        let mut out: Vec<Py<PyAny>> = Vec::new();
-
-        let map = &self.dmm.downcast::<PyCell<Dmm>>(py).unwrap().borrow().map;
-        let key = match self.addr {
-            Address::Key(k) => k,
-            Address::Coords(c) => map[c],
-        };
-        let prefabs = &map.dictionary[&key];
-
-        for prefab in prefabs {
-            out.push(path::Path::new(prefab.path.as_str()).unwrap().into_py(py));
-        }
-
-        Ok(PyList::new(py, out).into_py(py))
-    }
-
-    pub fn prefab_path(&self, index: i32, py: Python<'_>) -> String {
-        let map = &self.dmm.downcast::<PyCell<Dmm>>(py).unwrap().borrow().map;
-        let key = match self.addr {
-            Address::Key(k) => k,
-            Address::Coords(c) => map[c],
-        };
-        let prefabs = &map.dictionary[&key];
-
-        prefabs[index as usize].path.clone()
-    }
-
-    pub fn prefab_var(&self, index: i32, name: String) -> PyObject {
-        Python::with_gil(|py| {
-            let map = &self.dmm.downcast::<PyCell<Dmm>>(py).unwrap().borrow().map;
-            let key = match self.addr {
-                Address::Key(k) => k,
-                Address::Coords(c) => map[c],
-            };
-            let prefabs = &map.dictionary[&key];
-
-            helpers::constant_to_python_value(prefabs[index as usize].vars.get(&name).unwrap())
-        })
-    }
-
-    pub fn prefab_vars(&self, index: i32) -> Vec<String> {
-        Python::with_gil(|py| {
-            let mut vec = Vec::new();
-            let map = &self.dmm.downcast::<PyCell<Dmm>>(py).unwrap().borrow().map;
-            let key = match self.addr {
-                Address::Key(k) => k,
-                Address::Coords(c) => map[c],
-            };
-            let prefabs = &map.dictionary[&key];
-
-            prefabs[index as usize].vars.iter().for_each(|(name, _)| {
-                vec.push(name.clone());
-            });
-
-            vec
-        })
-    }
-
-    pub fn set_prefab_var(&self, atom_index: i32, name: String, val: &PyAny, py: Python<'_>) {
-        let cell: &PyCell<Dmm> = self.dmm.downcast(py).unwrap();
-        let key = match self.addr {
-            Address::Key(k) => k,
-            Address::Coords(c) => cell.borrow_mut().map[c],
-        };
-
-        cell.borrow_mut()
-            .map
-            .dictionary
-            .get_mut(&key)
-            .unwrap()
-            .get_mut(atom_index as usize)
-            .borrow_mut()
-            .as_mut()
-            .unwrap()
-            .vars
-            .insert(
-                name,
-                if val.is_instance_of::<PyBool>() {
-                    let val = val.extract::<bool>().unwrap();
-                    Constant::Float(if val { 1.0 } else { 0.0 })
-                } else if let Ok(int) = val.downcast::<PyInt>() {
-                    Constant::Float(int.extract::<f32>().expect("could not cast float"))
-                } else if let Ok(float) = val.downcast::<PyFloat>() {
-                    Constant::Float(float.extract::<f32>().expect("could not cast float"))
-                } else if let Ok(pystr) = val.downcast::<PyString>() {
-                    Constant::String(pystr.to_string().into_boxed_str())
-                } else if val.is_none() {
-                    Constant::Null(None)
-                } else {
-                    panic!("cannot use {} as value", val);
-                },
-            );
-    }
-
-    pub fn set_path(&self, index: i32, path: &PyAny, py: Python<'_>) -> PyResult<()> {
-        let cell: &PyCell<Dmm> = self.dmm.downcast(py).unwrap();
-        let key = match self.addr {
-            Address::Key(k) => k,
-            Address::Coords(c) => cell.borrow_mut().map[c],
-        };
-
-        if let Ok(val) = path.extract::<path::Path>() {
-            cell.borrow_mut().map.dictionary.get_mut(&key).unwrap()[index as usize].path = val.0;
-            return Ok(())
-        } else if let Ok(pystr) = path.downcast::<PyString>() {
-            cell.borrow_mut().map.dictionary.get_mut(&key).unwrap()[index as usize].path =
-                pystr.to_string();
-            return Ok(())
-        }
-
-        Err(PyErr::new::<PyValueError, &str>("not a valid path"))
-    }
-
-    pub fn turf_path(&self, py: Python<'_>) -> PyResult<Py<PyString>> {
-        let map = &self.dmm.downcast::<PyCell<Dmm>>(py).unwrap().borrow().map;
-        let key = match self.addr {
-            Address::Key(k) => k,
-            Address::Coords(c) => map[c],
-        };
-        let prefabs = &map.dictionary[&key];
-
-        for p in prefabs.iter() {
-            if p.path.starts_with("/turf") {
-                return Ok(PyString::new(py, p.path.as_str()).into_py(py));
-            }
-        }
-
-        Err(PyRuntimeError::new_err(format!(
-            "no turf on tile {}",
-            match self.addr {
-                Address::Key(k) => map.format_key(k).to_string(),
-                Address::Coords(c) => c.to_string(),
-            }
-        )))
-    }
-
-    fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
-        let map = &self.dmm.downcast::<PyCell<Dmm>>(py).unwrap().borrow().map;
-        Ok(format!(
-            "<Tile {}>",
-            match self.addr {
-                Address::Key(k) => map.format_key(k).to_string(),
-                Address::Coords(c) => c.to_string(),
-            }
-        ))
-    }
-
-    pub fn __richcmp__(&self, other: &PyAny, op: CompareOp, py: Python<'_>) -> PyObject {
-        let map = &self.dmm.downcast::<PyCell<Dmm>>(py).unwrap().borrow().map;
-        let key = match self.addr {
-            Address::Key(k) => k,
-            Address::Coords(c) => map[c],
-        };
-        let prefabs = &map.dictionary[&key];
-
-        match op {
-            CompareOp::Eq => {
-                if let Ok(other) = other.extract::<Py<Self>>() {
-                    let odmm = &other.as_ref(py).borrow();
-                    let omap = &odmm
-                        .borrow()
-                        .dmm
-                        .downcast::<PyCell<Dmm>>(py)
-                        .unwrap()
-                        .borrow()
-                        .map;
-                    let okey = match odmm.addr {
-                        Address::Key(k) => k,
-                        Address::Coords(c) => omap[c],
-                    };
-                    let oprefabs = &omap.dictionary[&okey];
-
-                    for (f, s) in prefabs.iter().zip(oprefabs.iter()) {
-                        if !f.eq(s) {
-                            return false.into_py(py);
-                        }
-                    }
-
-                    true.into_py(py)
-                } else {
-                    println!("failed");
-                    false.into_py(py)
-                }
-            }
-
-            CompareOp::Ne => {
-                if let Ok(other) = other.extract::<Py<Self>>() {
-                    let odmm = &other.as_ref(py).borrow();
-                    let omap = &odmm
-                        .borrow()
-                        .dmm
-                        .downcast::<PyCell<Dmm>>(py)
-                        .unwrap()
-                        .borrow()
-                        .map;
-                    let okey = match odmm.addr {
-                        Address::Key(k) => k,
-                        Address::Coords(c) => omap[c],
-                    };
-                    let oprefabs = &omap.dictionary[&okey];
-
-                    for (f, s) in prefabs.iter().zip(oprefabs.iter()) {
-                        if !f.eq(s) {
-                            return true.into_py(py);
-                        }
-                    }
-
-                    false.into_py(py)
-                } else {
-                    println!("failed");
-                    false.into_py(py)
-                }
-            }
-
-            _ => py.NotImplemented(),
-        }
     }
 }

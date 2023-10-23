@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link href="/static/base.css" rel="stylesheet" />
+        <script src="/static/htmx.min.js"></script>
+        <title>{{title}}</title>
+    </head>
+    <body>
+        <h1>{{title}}</h1>
+        {% for name, data in sections.items() %}
+        <h2>{{name}}</h2>
+        <div>
+            {{data|safe}}
+        </div>
+        {% endfor %}
+        
+    </body>
+</html>
