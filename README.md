@@ -1,9 +1,8 @@
 # Avulto
 
-Avulto is a Python library for working in the BYOND environment. Its goal is to
-provide a straightforward Python API which leverages the
-[SpacemanDMM](https://github.com/SpaceManiac/SpacemanDMM) and potentially other
-community libraries.
+[Avulto]() is a Python library for working in the BYOND environment. Its goal is
+to provide a straightforward Python API which leverages the [SpacemanDMM]() and
+potentially other community libraries.
 
 Its primary use cases are to easily
 
@@ -11,13 +10,19 @@ Its primary use cases are to easily
 - parse and read icon files
 - read the source tree and provide reflection data.
 
+[Avulto]: https://github.com/warriorstar-orion/avulto
+[SpacemanDMM]: https://github.com/SpaceManiac/SpacemanDMM
+
 ## Usage
 
-Avulto is not currently available as a release. See the **Development** section
+Avulto is available as a [release]() on PyPI. See the **Development** section
 below for directions on using the library locally.
 
-Avulto's API is documented in full in its [stub file](./avulto.pyi), but the
+Avulto's API is documented in full in its [stub file](), but the
 most important parts of its API are below.
+
+[release]: https://pypi.org/project/avulto/
+[stub file]: https://github.com/warriorstar-orion/avulto/blob/main/avulto.pyi
 
 ### `Path`
 
