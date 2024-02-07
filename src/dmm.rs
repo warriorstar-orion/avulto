@@ -17,6 +17,8 @@ pub struct Dmm {
     pub(crate) map: dmm_tools::dmm::Map,
     #[pyo3(get)]
     extents: (i32, i32, i32),
+    #[pyo3(get)]
+    filepath: Py<PyAny>,
 }
 
 impl Dmm {
@@ -87,20 +89,26 @@ impl CoordIterator {
 #[pymethods]
 impl Dmm {
     #[staticmethod]
-    fn from_file(filename: &PyAny) -> PyResult<Dmm> {
+    fn from_file(filename: &PyAny, py: Python<'_>) -> PyResult<Dmm> {
+        let pathlib = py.import(pyo3::intern!(py, "pathlib"))?;
+        
         if let Ok(path) = filename.extract::<std::path::PathBuf>() {
             let map = dmm_tools::dmm::Map::from_file(&path).unwrap();
             let dim = map.dim_xyz();
+            let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path,))?;
             return Ok(Dmm {
                 map,
                 extents: (dim.0 as i32, dim.1 as i32, dim.2 as i32),
+                filepath: pathlib_path.into_py(py),
             });
         } else if let Ok(pystr) = filename.downcast::<PyString>() {
             let map = dmm_tools::dmm::Map::from_file(Path::new(&pystr.to_string())).unwrap();
             let dim = map.dim_xyz();
+            let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (pystr,))?;
             return Ok(Dmm {
                 map,
                 extents: (dim.0 as i32, dim.1 as i32, dim.2 as i32),
+                filepath: pathlib_path.into_py(py),
             });
         };
 

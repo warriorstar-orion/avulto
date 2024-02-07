@@ -1,5 +1,6 @@
 import os
 from typing import Iterator
+import pathlib
 
 class Path:
     """A DM typepath."""
@@ -66,6 +67,8 @@ class DMM:
 
     extents: tuple[int, int, int]
     """The number of tiles in each of the map's three dimensions."""
+    filepath: pathlib.Path
+    """The original filename of the DMM."""
 
     @staticmethod
     def from_file(filename: os.PathLike | str) -> "DMM":
@@ -93,6 +96,8 @@ class DME:
     """
     A representation of a single Dreammaker environment.
     """
+    filepath: pathlib.Path
+    """The original filename of the DMM."""
 
     @staticmethod
     def from_file(filename: os.PathLike | str) -> "DME":
@@ -147,6 +152,8 @@ class DMI:
     """
     A DMI file.
     """
+    filepath: pathlib.Path
+    """The original filename of the DMM."""
 
     @staticmethod
     def from_file(filename: os.PathLike | str) -> "DMI":

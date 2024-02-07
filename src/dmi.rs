@@ -19,6 +19,8 @@ extern crate dreammaker;
 pub struct Dmi {
     metadata: Metadata,
     bitmap: lodepng::Bitmap<RGBA>,
+    #[pyo3(get)]
+    filepath: Py<PyAny>,   
 }
 
 #[pyclass(module = "avulto")]
@@ -200,18 +202,23 @@ impl IconState {
 #[pymethods]
 impl Dmi {
     #[staticmethod]
-    pub fn from_file(filename: &PyAny) -> PyResult<Dmi> {
+    pub fn from_file(filename: &PyAny, py: Python<'_>) -> PyResult<Dmi> {
+        let pathlib = py.import(pyo3::intern!(py, "pathlib"))?;
         if let Ok(path) = filename.extract::<std::path::PathBuf>() {
+            let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path.clone(),))?;
             let results = Metadata::from_file(&path).unwrap();
             return Ok(Dmi {
                 bitmap: results.0,
                 metadata: results.1,
+                filepath: pathlib_path.into_py(py),
             });
         } else if let Ok(pystr) = filename.downcast::<PyString>() {
+            let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (pystr,))?;
             let results = Metadata::from_file(Path::new(&pystr.to_string())).unwrap();
             return Ok(Dmi {
                 bitmap: results.0,
                 metadata: results.1,
+                filepath: pathlib_path.into_py(py),
             });
         };
 
