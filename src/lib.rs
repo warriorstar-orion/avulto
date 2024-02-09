@@ -6,6 +6,7 @@ pub mod dmm;
 pub mod helpers;
 pub mod path;
 pub mod tile;
+pub mod typedecl;
 
 #[pymodule]
 fn avulto(_py: Python, m: &PyModule) -> PyResult<()> {

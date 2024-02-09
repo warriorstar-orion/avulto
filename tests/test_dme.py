@@ -40,3 +40,8 @@ def test_dme_vars(dme: DME):
 
     baz = dme.typedecl("/obj/foo/baz")
     assert baz.value("a") == 3
+
+
+def test_dme_procs(dme: DME):
+    foo = dme.typedecl("/obj/foo")
+    assert sorted(foo.procnames()) == ["proc1", "proc2"]

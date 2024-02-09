@@ -97,6 +97,7 @@ The `DME` class allows parsing DM object code:
 
 | Method        | Description                                                |
 | ------------- | ---------------------------------------------------------- |
+| `procnames()` | Returns a list of proc names for the type declaration.     |
 | `varnames()`  | Returns a list of variable names for the type declaration. |
 | `value(name)` | Return a Python representation of the variable `name`.     |
 

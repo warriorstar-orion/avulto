@@ -100,8 +100,13 @@ class DME:
     """The original filename of the DMM."""
 
     @staticmethod
-    def from_file(filename: os.PathLike | str) -> "DME":
-        """Creates a DME from the given `filename`."""
+    def from_file(filename: os.PathLike | str, parse_procs: bool = False) -> "DME":
+        """Creates a DME from the given `filename`.
+
+        If parse_procs is True, the entire AST of the codebase is traversed.
+        This is slower than the default but provides more reflection
+        information.
+        """
     def paths_prefixed(self, prefix: Path | str) -> list[str]:
         """Returns a list of paths with the given `prefix`."""
     def typedecl(self, path: Path | str) -> TypeDecl:
