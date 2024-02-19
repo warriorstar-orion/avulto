@@ -1,7 +1,7 @@
 [project]
 name = "avulto"
 requires-python = ">=3.10"
-version = "0.0.5"
+version = "0.0.6"
 authors = [
     {name = "Warriorstar Orion", email = "orion@snowfrost.garden"}
 ]
