@@ -128,6 +128,17 @@ impl Path {
         Err(PyErr::new::<PyRuntimeError, &str>("not a valid path"))
     }
 
+    #[getter]
+    fn get_stem(&self) -> PyResult<String> {
+        let parts: Vec<&str> = self.0.split('/').collect();
+        if let Some(last) = parts.last() {
+            let l = *last;
+            return Ok(l.to_string());
+        }
+
+        Ok("".to_string())
+    }
+
     fn __hash__(&self) -> PyResult<isize> {
         let mut s = DefaultHasher::new();
         self.0.hash(&mut s);

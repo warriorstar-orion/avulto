@@ -3,9 +3,9 @@ use std::borrow::Borrow;
 use dreammaker::constants::Constant;
 use pyo3::{
     exceptions::PyRuntimeError,
-    pyclass, pyfunction,
-    types::{PyDict, PyList, PyBool, PyInt, PyFloat, PyString},
-    PyObject, PyResult, Python, ToPyObject, pymethods, PyAny,
+    pyclass, pyfunction, pymethods,
+    types::{PyBool, PyDict, PyFloat, PyInt, PyList, PyString},
+    PyAny, PyObject, PyResult, Python, ToPyObject,
 };
 
 use dmm_tools::dmi::Dir as SDir;
@@ -36,22 +36,21 @@ impl Dir {
     fn __hash__(&self) -> PyResult<u32> {
         Ok(*self as u32)
     }
-
 }
 
 impl From<i32> for Dir {
     fn from(i: i32) -> Self {
         // TODO(wso): There has to be a less dumb way
         match i {
-            1  => Dir::North,
-            2  => Dir::South,
-            4  => Dir::East,
-            8  => Dir::West,
-            5  => Dir::Northeast,
-            9  => Dir::Northwest,
-            6  => Dir::Southeast,
+            1 => Dir::North,
+            2 => Dir::South,
+            4 => Dir::East,
+            8 => Dir::West,
+            5 => Dir::Northeast,
+            9 => Dir::Northwest,
+            6 => Dir::Southeast,
             10 => Dir::Southwest,
-            _ => panic!("bad dir {}", i)
+            _ => panic!("bad dir {}", i),
         }
     }
 }
@@ -89,11 +88,15 @@ pub fn python_value_to_constant(val: &PyAny) -> Option<dreammaker::constants::Co
         let val = val.extract::<bool>().unwrap();
         Some(Constant::Float(if val { 1.0 } else { 0.0 }))
     } else if let Ok(int) = val.downcast::<PyInt>() {
-        Some(Constant::Float(int.extract::<f32>().expect("could not cast float")))
+        Some(Constant::Float(
+            int.extract::<f32>().expect("could not cast float"),
+        ))
     } else if let Ok(float) = val.downcast::<PyFloat>() {
-        Some(Constant::Float(float.extract::<f32>().expect("could not cast float")))
+        Some(Constant::Float(
+            float.extract::<f32>().expect("could not cast float"),
+        ))
     } else if let Ok(pystr) = val.downcast::<PyString>() {
-        Some(Constant::String(pystr.to_string().into_boxed_str()))
+        Some(Constant::String(pystr.to_string().into()))
     } else if val.is_none() {
         Some(Constant::Null(None))
     } else {

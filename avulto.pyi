@@ -5,6 +5,9 @@ import pathlib
 class Path:
     """A DM typepath."""
 
+    """The final part of the path."""
+    stem: str
+
     def __init__(self, value):
         """Returns a new path."""
 
@@ -20,6 +23,9 @@ class Path:
         If `strict` is true, the current path will not be considered a parent of
         itself.
         """
+
+    def __truediv__(self, other: str|"Path") -> Path:
+        """Return the path with the specified suffix."""
 
 class Tile:
     """An individual map tile definition."""
@@ -50,7 +56,16 @@ class Tile:
     def prefab_var(self, index: int, name: str) -> any:
         """
         Return the value of the property `name` on the prefab at `index`.
+
+        Raises an error if the property does not exist. For a method that
+        returns a default if the property does not exist, see get_prefab_var.
         """
+    def get_prefab_var(self, index: int, name: str, default:any = None):
+        """
+        Returns the value of the property `name` on the prefab at `index`. If
+        the property does not exist, return `default`.
+        """
+    
     def prefab_vars(self, index: int) -> list[str]:
         """
         Return the list of variable names on the prefab at `index`.

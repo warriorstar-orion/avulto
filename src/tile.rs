@@ -197,6 +197,34 @@ impl Tile {
         })
     }
 
+    #[pyo3(signature = (index, name, default=None))]
+    pub fn get_prefab_var(
+        &self,
+        index: i32,
+        name: String,
+        default: Option<&PyAny>,
+        py: Python<'_>,
+    ) -> PyObject {
+        Python::with_gil(|py| {
+            let map = &self.dmm.downcast::<PyCell<Dmm>>(py).unwrap().borrow().map;
+            let key = match self.addr {
+                Address::Key(k) => k,
+                Address::Coords(c) => map[c],
+            };
+            let prefabs = &map.dictionary[&key];
+            let vars = &prefabs[index as usize].vars;
+            if vars.contains_key(&name) {
+                return constant_to_python_value(vars.get(&name).unwrap());
+            }
+
+            if let Some(t) = default {
+                return t.into_py(py);
+            }
+
+            pyo3::types::PyNone::get(py).into()
+        })
+    }
+
     pub fn prefab_vars(&self, index: i32) -> Vec<String> {
         Python::with_gil(|py| {
             let mut vec = Vec::new();
