@@ -15,9 +15,9 @@ def dmi() -> DMI:
 
 
 def test_dmi_info(dmi: DMI):
-    red_circle = dmi.state("red_circle")
+    assert dmi.icon_height == 32
+    assert dmi.icon_width == 32
 
-    assert not red_circle.movement()
-    assert red_circle.frames() == 1
-    rect = red_circle.rect(Dir.SOUTH, 0)
-    assert rect == Rect(0, 0, 32, 32)
+    red_circle = dmi.state("red_circle")
+    assert not red_circle.movement
+    assert red_circle.frames == 1

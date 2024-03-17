@@ -1,7 +1,8 @@
+use std::fs::File;
+use std::io::{BufReader, Write};
 use std::path::Path;
 
-use dreammaker::dmi::{Metadata, StateIndex};
-use lodepng::RGBA;
+use dmi::icon::Icon;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::pyclass::CompareOp;
 use pyo3::types::{PyBytes, PyString};
@@ -10,23 +11,21 @@ use pyo3::{
     PyResult, Python,
 };
 
-use crate::helpers::to_dmm_dir;
 use crate::helpers::Dir;
 
 extern crate dreammaker;
 
 #[pyclass(module = "avulto", name = "DMI")]
 pub struct Dmi {
-    metadata: Metadata,
-    bitmap: lodepng::Bitmap<RGBA>,
+    icon: Icon,
     #[pyo3(get)]
-    filepath: Py<PyAny>,   
+    filepath: Py<PyAny>,
 }
 
 #[pyclass(module = "avulto")]
 pub struct IconState {
     dmi: Py<PyAny>,
-    state_idx: StateIndex,
+    idx: usize,
 }
 
 #[pyclass(module = "avulto")]
@@ -89,52 +88,41 @@ impl Rect {
 
 #[pymethods]
 impl IconState {
+    #[getter]
     pub fn name(&self, py: Python<'_>) -> String {
         let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
-        dmi.borrow()
-            .metadata
-            .get_icon_state(&self.state_idx)
-            .unwrap()
-            .name
-            .clone()
+        dmi.borrow().icon.states[self.idx].name.clone()
     }
 
+    #[getter]
     pub fn movement(&self, py: Python<'_>) -> bool {
         let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
-        dmi.borrow()
-            .metadata
-            .get_icon_state(&self.state_idx)
-            .unwrap()
-            .movement
+        dmi.borrow().icon.states[self.idx].movement
     }
 
+    #[getter]
     pub fn delays(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
         let mut out: Vec<f32> = Vec::new();
         let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
         let binding = dmi.borrow();
-        let istate = binding.metadata.get_icon_state(&self.state_idx).unwrap();
-        let frames = &istate.frames;
-        for i in 0..istate.frames.count() {
-            out.push(frames.delay(i));
+        let state = binding.icon.states.get(self.idx).unwrap();
+        if let Some(delays) = &state.delay {
+            out.extend(delays);
         }
 
         Ok(PyList::new(py, out).into_py(py))
     }
 
+    #[getter]
     pub fn dirs(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
         let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
-        let dirs = dmi
-            .borrow()
-            .metadata
-            .get_icon_state(&self.state_idx)
-            .unwrap()
-            .dirs;
+        let dirs = dmi.borrow().icon.states.get(self.idx).unwrap().dirs;
         Ok(PyList::new(
             py,
             match dirs {
-                dreammaker::dmi::Dirs::One => vec![Dir::South],
-                dreammaker::dmi::Dirs::Four => vec![Dir::South, Dir::North, Dir::East, Dir::West],
-                dreammaker::dmi::Dirs::Eight => vec![
+                1 => vec![Dir::South],
+                4 => vec![Dir::South, Dir::North, Dir::East, Dir::West],
+                8 => vec![
                     Dir::South,
                     Dir::North,
                     Dir::East,
@@ -144,6 +132,7 @@ impl IconState {
                     Dir::Northeast,
                     Dir::Northwest,
                 ],
+                _ => panic!("invalid number of dirs {}", dirs),
             }
             .iter()
             .map(|f| Py::new(py, *f).unwrap()),
@@ -151,51 +140,46 @@ impl IconState {
         .into_py(py))
     }
 
+    #[getter]
     pub fn frames(&self, py: Python<'_>) -> u32 {
         let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
-        dmi.borrow()
-            .metadata
-            .get_icon_state(&self.state_idx)
-            .unwrap()
-            .frames
-            .count() as u32
+        let binding = dmi.borrow();
+        let state = binding.icon.states.get(self.idx).unwrap();
+        state.frames
     }
 
+    #[getter]
     pub fn rewind(&self, py: Python<'_>) -> bool {
         let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
-        dmi.borrow()
-            .metadata
-            .get_icon_state(&self.state_idx)
-            .unwrap()
-            .rewind
+        dmi.borrow().icon.states[self.idx].rewind
     }
 
-    pub fn rect(&self, dirval: &PyAny, frame: u32, py: Python<'_>) -> PyResult<Py<Rect>> {
-        let mut dir = Dir::South;
-        if let Ok(i) = dirval.extract::<i32>() {
-            dir = Dir::from(i);
-        } else if let Ok(d) = dirval.extract::<Dir>() {
-            dir = d;
-        }
+    pub fn data_rgba8(&self, frame: usize, py: Python<'_>) -> PyResult<Py<PyBytes>> {
         let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
-        let rect = dmi.borrow().metadata.rect_of(
-            dmi.borrow().bitmap.width as u32,
-            &self.state_idx,
-            to_dmm_dir(dir),
-            frame,
-        );
-        match rect {
-            Some(r) => Py::new(
-                py,
-                Rect {
-                    left: r.0,
-                    top: r.1,
-                    width: r.2,
-                    height: r.3,
-                },
-            ),
-            None => panic!("cannot get rect"),
-        }
+        let binding = dmi.borrow();
+        let state = binding.icon.states.get(self.idx).unwrap();
+
+        let frame_data = &state.images[frame - 1];
+        let buffer = Vec::new();
+        let mut cursor = std::io::Cursor::new(buffer);
+        cursor.write(frame_data.as_bytes());
+        let output = cursor.into_inner();
+        Ok(PyBytes::new(py, &output).into())
+    }
+
+    fn __str__(&self, py: Python<'_>) -> PyResult<String> {
+        self.__repr__(py)
+    }
+
+    fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
+        let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
+        let binding = dmi.borrow();
+        let state = binding.icon.states.get(self.idx).unwrap();
+
+        Ok(format!(
+            "<IconState '{}' dirs={} frames={}>",
+            state.name, state.dirs, state.frames
+        ))
     }
 }
 
@@ -206,18 +190,30 @@ impl Dmi {
         let pathlib = py.import(pyo3::intern!(py, "pathlib"))?;
         if let Ok(path) = filename.extract::<std::path::PathBuf>() {
             let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path.clone(),))?;
-            let results = Metadata::from_file(&path).unwrap();
+            let file = match File::open(path) {
+                Ok(f) => f,
+                Err(err) => panic!("file error: {}", err),
+            };
+            let icon = match Icon::load(BufReader::new(file)) {
+                Ok(i) => i,
+                Err(err) => panic!("icon load error: {}", err),
+            };
             return Ok(Dmi {
-                bitmap: results.0,
-                metadata: results.1,
+                icon,
                 filepath: pathlib_path.into_py(py),
             });
         } else if let Ok(pystr) = filename.downcast::<PyString>() {
             let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (pystr,))?;
-            let results = Metadata::from_file(Path::new(&pystr.to_string())).unwrap();
+            let file = match File::open(Path::new(&pystr.to_string())) {
+                Ok(f) => f,
+                Err(err) => panic!("file error: {}", err),
+            };
+            let icon = match Icon::load(BufReader::new(file)) {
+                Ok(i) => i,
+                Err(err) => panic!("icon load error: {}", err),
+            };
             return Ok(Dmi {
-                bitmap: results.0,
-                metadata: results.1,
+                icon,
                 filepath: pathlib_path.into_py(py),
             });
         };
@@ -229,12 +225,7 @@ impl Dmi {
     }
 
     pub fn state_names(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
-        let keys: Vec<String> = self
-            .metadata
-            .states
-            .iter()
-            .map(|x| x.name.clone())
-            .collect();
+        let keys: Vec<String> = self.icon.states.iter().map(|s| s.name.clone()).collect();
         Ok(PyList::new(py, keys).into_py(py))
     }
 
@@ -242,11 +233,11 @@ impl Dmi {
         let mut out: Vec<Py<PyAny>> = Vec::new();
         let self_ = &self_;
 
-        for state in &self_.metadata.states {
+        for (idx, _) in (&self_.icon.states).iter().enumerate() {
             out.push(
                 IconState {
                     dmi: self_.into_py(py),
-                    state_idx: state.get_state_name_index(),
+                    idx,
                 }
                 .into_py(py),
             );
@@ -260,34 +251,29 @@ impl Dmi {
         )
     }
 
-    pub fn state(self_: PyRef<'_, Self>, value: String, py: Python<'_>) -> IconState {
-        IconState {
-            dmi: self_.into_py(py),
-            state_idx: StateIndex::from(value),
-        }
-    }
-
-    pub fn icon_width(&self) -> u32 {
-        self.metadata.width
-    }
-
-    pub fn icon_height(&self) -> u32 {
-        self.metadata.height
-    }
-
-    pub fn data_rgba8(&self, rect: Rect, py: Python<'_>) -> PyResult<Py<PyBytes>> {
-        let mut buffer = Vec::new();
-        for y in rect.top..(rect.top + rect.height) {
-            for x in rect.left..(rect.left + rect.width) {
-                let c = self.bitmap.buffer[(y * (self.bitmap.width as u32) + x) as usize];
-                buffer.push(c.r);
-                buffer.push(c.g);
-                buffer.push(c.b);
-                buffer.push(c.a);
+    pub fn state(self_: PyRef<'_, Self>, value: String, py: Python<'_>) -> PyResult<IconState> {
+        for (idx, state) in (&self_.icon.states).iter().enumerate() {
+            if state.name == value {
+                return Ok(IconState {
+                    dmi: self_.into_py(py),
+                    idx,
+                });
             }
         }
+        Err(PyRuntimeError::new_err(format!(
+            "invalid state name {}",
+            value
+        )))
+    }
 
-        Ok(PyBytes::new(py, buffer.as_slice()).into())
+    #[getter]
+    pub fn icon_width(&self) -> u32 {
+        self.icon.width
+    }
+
+    #[getter]
+    pub fn icon_height(&self) -> u32 {
+        self.icon.height
     }
 }
 

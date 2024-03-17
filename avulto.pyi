@@ -151,22 +151,23 @@ class IconState:
     A single icon state in a DMI file.
     """
 
-    def name(self) -> str:
-        """The state name."""
-    def dirs(self) -> list[Dir]:
-        """The directions available in the icon state."""
-    def frames(self) -> int:
-        """The number of frames in the icon state."""
-    def movement(self) -> bool:
-        """Returns whether or not the state is a movement state."""
-    def delays(self) -> list[float]:
-        """Returns an array of frame delays."""
-    def rewind(self) -> bool:
-        """Returns whether the icon is a rewind icon."""
-    def rect(self, dir, frame) -> Rect:
-        """Returns a `Rect` containing the bounds of the image data for the given frame."""
+    name: str
+    """The state name."""
 
+    dirs: list[Dir]
+    """The directions available in the icon state."""
 
+    frames: int
+    """The number of frames in the icon state."""
+
+    movement: bool
+    """Returns whether or not the state is a movement state."""
+
+    delays: list[float]
+    """Returns an array of frame delays."""
+
+    rewind: bool
+    """Returns whether the icon is a rewind icon."""
 
 class DMI:
     """
@@ -175,15 +176,17 @@ class DMI:
     filepath: pathlib.Path
     """The original filename of the DMM."""
 
+    icon_width: int
+    """The width of icons in the file."""
+
+    icon_height: int
+    """The height of icons in the file."""
+
     @staticmethod
     def from_file(filename: os.PathLike | str) -> "DMI":
         """
         Creates a DMI from the given `filename`.
         """
-    def icon_width(self) -> int:
-        """The width of icons in the file."""
-    def icon_height(self) -> int:
-        """The height of icons in the file."""
     def state_names(self) -> list[str]:
         """
         Return a list of strings containing all state names in the file.
