@@ -1,7 +1,7 @@
 # Avulto
 
-[Avulto]() is a Python library for working in the BYOND environment. Its goal is
-to provide a straightforward Python API which leverages the [SpacemanDMM]() and
+[Avulto][] is a Python library for working in the BYOND environment. Its goal is
+to provide a straightforward Python API which leverages the [SpacemanDMM][] and
 potentially other community libraries.
 
 Its primary use cases are to easily
@@ -15,10 +15,10 @@ Its primary use cases are to easily
 
 ## Usage
 
-Avulto is available as a [release]() on PyPI. See the **Development** section
+Avulto is available as a [release][] on PyPI. See the **Development** section
 below for directions on using the library locally.
 
-Avulto's API is documented in full in its [stub file](), but the
+Avulto's API is documented in full in its [stub file][], but the
 most important parts of its API are below.
 
 [release]: https://pypi.org/project/avulto/
