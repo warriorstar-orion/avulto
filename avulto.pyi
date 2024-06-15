@@ -1,5 +1,5 @@
 import os
-from typing import Iterator
+from typing import Iterator, Any
 import pathlib
 
 class Path:
@@ -53,14 +53,14 @@ class Tile:
         """
     def prefab_path(self, index: int) -> Path:
         """Return the path of the prefab at `index`."""
-    def prefab_var(self, index: int, name: str) -> any:
+    def prefab_var(self, index: int, name: str) -> Any:
         """
         Return the value of the property `name` on the prefab at `index`.
 
         Raises an error if the property does not exist. For a method that
         returns a default if the property does not exist, see get_prefab_var.
         """
-    def get_prefab_var(self, index: int, name: str, default:any = None):
+    def get_prefab_var(self, index: int, name: str, default: Any = None):
         """
         Returns the value of the property `name` on the prefab at `index`. If
         the property does not exist, return `default`.
@@ -104,7 +104,7 @@ class TypeDecl:
 
     def varnames(self) -> list[str]:
         """Return a list of variable names for the type declaration."""
-    def value(self, name: str) -> any:
+    def value(self, name: str) -> Any:
         """Return a Python representation of the variable `name`."""
 
 class DME:
