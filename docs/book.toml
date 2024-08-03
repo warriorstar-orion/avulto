@@ -1,0 +1,6 @@
+[book]
+authors = ["warriorstar-orion"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Using Avulto: An SS13 Python Library"
