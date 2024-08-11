@@ -5,13 +5,9 @@ use std::{
 };
 
 use pyo3::{
-    exceptions::{PyRuntimeError, PyValueError},
-    pyclass,
-    pyclass::CompareOp,
-    pymethods,
-    types::PyString,
-    PyAny, PyErr, PyResult,
+    exceptions::{PyRuntimeError, PyValueError}, pyclass::CompareOp, pymethods, types::{PyAnyMethods, PyString}, Bound, PyAny, PyErr, PyResult
 };
+use pyo3::pyclass;
 
 #[derive(Clone, Eq, Hash, PartialOrd, Ord, PartialEq)]
 #[pyclass(module = "avulto")]
@@ -40,7 +36,7 @@ impl Path {
     }
 
     #[pyo3(signature = (other, strict=false))]
-    fn child_of(&self, other: &PyAny, strict: bool) -> PyResult<bool> {
+    fn child_of(&self, other: &Bound<PyAny>, strict: bool) -> PyResult<bool> {
         if let Ok(rhs) = other.extract::<Self>() {
             if self.0 == rhs.0 {
                 return Ok(!strict);
@@ -86,7 +82,7 @@ impl Path {
     }
 
     #[pyo3(signature = (other, strict=false))]
-    fn parent_of(&self, other: &PyAny, strict: bool) -> PyResult<bool> {
+    fn parent_of(&self, other: &Bound<PyAny>, strict: bool) -> PyResult<bool> {
         if let Ok(rhs) = other.extract::<Self>() {
             if self.0 == rhs.0 {
                 return Ok(!strict);
@@ -155,7 +151,7 @@ impl Path {
         Ok(self.0.to_string())
     }
 
-    fn __richcmp__(&self, other: &PyAny, op: CompareOp) -> PyResult<bool> {
+    fn __richcmp__(&self, other: &Bound<PyAny>, op: CompareOp) -> PyResult<bool> {
         if let Ok(rhs) = other.extract::<Self>() {
             return match op {
                 CompareOp::Eq => Ok(self.0 == rhs.0),
@@ -179,7 +175,7 @@ impl Path {
         Ok(false)
     }
 
-    fn __truediv__(&self, other: &PyAny) -> PyResult<Self> {
+    fn __truediv__(&self, other: &Bound<PyAny>) -> PyResult<Self> {
         if let Ok(rhs) = other.extract::<Self>() {
             return Ok(Path(self.0.clone() + "/" + &rhs.0));
         } else if let Ok(rhs) = other.downcast::<PyString>() {

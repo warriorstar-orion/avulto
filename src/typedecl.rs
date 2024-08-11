@@ -15,18 +15,18 @@ pub struct TypeDecl {
 
 #[pymethods]
 impl TypeDecl {
-    pub fn varnames(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
+    pub fn varnames(&self, py: Python<'_>) -> PyResult<PyObject> {
         let mut out: Vec<String> = Vec::new();
-        let dme: &PyCell<Dme> = self.dme.downcast(py).unwrap();
+        let bound = self.dme.downcast_bound::<Dme>(py).unwrap();
 
-        for ty in dme.borrow().objtree.iter_types() {
+        for ty in bound.borrow().objtree.iter_types() {
             if ty.path == self.path {
                 for (name, _) in ty.vars.iter() {
                     out.push(name.clone());
                 }
                 let mut x = out.into_iter().unique().collect::<Vec<String>>();
                 x.sort();
-                return Ok(PyList::new(py, x).into_py(py));
+                return Ok(PyList::new_bound(py, x).into_py(py));
             }
         }
 
@@ -36,10 +36,10 @@ impl TypeDecl {
         )))
     }
 
-    pub fn value(&self, name: String, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        let dme: &PyCell<Dme> = self.dme.downcast(py).unwrap();
+    pub fn value(&self, name: String, py: Python<'_>) -> PyResult<PyObject> {
+        let bound = self.dme.downcast_bound::<Dme>(py).unwrap();
 
-        for ty in dme.borrow().objtree.iter_types() {
+        for ty in bound.borrow().objtree.iter_types() {
             if ty.path == self.path {
                 if let Some(c) = ty.get_value(&name) {
                     return Ok(helpers::constant_to_python_value(
@@ -57,18 +57,18 @@ impl TypeDecl {
         )))
     }
 
-    pub fn procnames(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
+    pub fn procnames(&self, py: Python<'_>) -> PyResult<PyObject> {
         let mut out: Vec<String> = Vec::new();
-        let dme: &PyCell<Dme> = self.dme.downcast(py).unwrap();
+        let bound = self.dme.downcast_bound::<Dme>(py).unwrap();
 
-        for ty in dme.borrow().objtree.iter_types() {
+        for ty in bound.borrow().objtree.iter_types() {
             if ty.path == self.path {
                 for (name, _) in ty.procs.iter() {
                     out.push(name.clone());
                 }
                 let mut x = out.into_iter().unique().collect::<Vec<String>>();
                 x.sort();
-                return Ok(PyList::new(py, x).into_py(py));
+                return Ok(PyList::new_bound(py, x).into_py(py));
             }
         }
 

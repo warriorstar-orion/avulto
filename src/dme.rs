@@ -1,6 +1,5 @@
 extern crate dreammaker;
 
-use dreammaker::constants::Constant;
 use itertools::Itertools;
 use pyo3::{
     exceptions::PyRuntimeError,
@@ -8,7 +7,7 @@ use pyo3::{
     types::{PyList, PyString},
 };
 
-use crate::{helpers, path::Path};
+use crate::path::Path;
 use crate::{path, typedecl::TypeDecl};
 
 #[pyclass(module = "avulto", name = "DME")]
@@ -22,7 +21,7 @@ pub struct Dme {
 impl Dme {
     #[staticmethod]
     #[pyo3(signature = (filename, parse_procs=false))]
-    fn from_file(filename: &PyAny, parse_procs: bool, py: Python<'_>) -> PyResult<Dme> {
+    fn from_file(filename: &Bound<PyAny>, parse_procs: bool, py: Python<'_>) -> PyResult<Dme> {
         let path = if let Ok(path) = filename.extract::<std::path::PathBuf>() {
             path
         } else if let Ok(pystr) = filename.downcast::<PyString>() {
@@ -33,7 +32,7 @@ impl Dme {
                 filename
             )));
         };
-        let pathlib = py.import(pyo3::intern!(py, "pathlib"))?;
+        let pathlib = py.import_bound(pyo3::intern!(py, "pathlib"))?;
 
         let ctx = dreammaker::Context::default();
         let pp = dreammaker::preprocessor::Preprocessor::new(&ctx, path.clone())
@@ -59,7 +58,7 @@ impl Dme {
         })
     }
 
-    fn typedecl(self_: PyRef<'_, Self>, path: &PyAny, py: Python<'_>) -> PyResult<Py<PyAny>> {
+    fn typedecl(self_: PyRef<'_, Self>, path: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let objpath = if let Ok(patht) = path.extract::<path::Path>() {
             patht.0
         } else if let Ok(pystr) = path.downcast::<PyString>() {
@@ -83,7 +82,7 @@ impl Dme {
         }
     }
 
-    fn paths_prefixed(&self, prefix: &PyAny, py: Python<'_>) -> PyResult<Py<PyList>> {
+    fn paths_prefixed(&self, prefix: &Bound<PyAny>, py: Python<'_>) -> PyResult<PyObject> {
         let mut out: Vec<Path> = Vec::new();
 
         if let Ok(path) = prefix.extract::<path::Path>() {
@@ -102,6 +101,6 @@ impl Dme {
 
         let mut x = out.into_iter().unique().collect::<Vec<Path>>();
         x.sort();
-        Ok(PyList::new(py, x.into_iter().map(|m| m.into_py(py))).into_py(py))
+        Ok(PyList::new_bound(py, x.into_iter().map(|m| m.into_py(py))).to_object(py))
     }
 }

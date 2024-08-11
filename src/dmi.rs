@@ -5,15 +5,14 @@ use std::path::Path;
 use dmi::icon::Icon;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::pyclass::CompareOp;
-use pyo3::types::{PyBytes, PyString};
+use pyo3::types::{PyAnyMethods, PyBytes, PyString};
+use pyo3::Bound;
 use pyo3::{
-    pyclass, pymethods, types::PyList, IntoPy, Py, PyAny, PyCell, PyObject, PyRef, PyRefMut,
-    PyResult, Python,
+    pyclass, pymethods, types::PyList, IntoPy, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult,
+    Python,
 };
 
 use crate::helpers::Dir;
-
-extern crate dreammaker;
 
 #[pyclass(module = "avulto", name = "DMI")]
 pub struct Dmi {
@@ -41,11 +40,6 @@ pub struct Rect {
     height: u32,
 }
 
-#[pyclass(module = "avulto")]
-pub struct StateIter {
-    inner: std::vec::IntoIter<PyObject>,
-}
-
 #[pymethods]
 impl Rect {
     #[new]
@@ -69,7 +63,7 @@ impl Rect {
         ))
     }
 
-    fn __richcmp__(&self, other: &PyAny, op: CompareOp) -> PyResult<bool> {
+    fn __richcmp__(&self, other: Bound<PyAny>, op: CompareOp) -> PyResult<bool> {
         if let Ok(rhs) = other.extract::<Self>() {
             let cmp = self.left == rhs.left
                 && self.width == rhs.width
@@ -90,34 +84,35 @@ impl Rect {
 impl IconState {
     #[getter]
     pub fn name(&self, py: Python<'_>) -> String {
-        let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
+        let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
         dmi.borrow().icon.states[self.idx].name.clone()
     }
 
     #[getter]
     pub fn movement(&self, py: Python<'_>) -> bool {
-        let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
+        let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
         dmi.borrow().icon.states[self.idx].movement
     }
 
     #[getter]
     pub fn delays(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
         let mut out: Vec<f32> = Vec::new();
-        let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
+        let dmi = self.dmi.downcast_bound::<Dmi>(py).unwrap();
+
         let binding = dmi.borrow();
         let state = binding.icon.states.get(self.idx).unwrap();
         if let Some(delays) = &state.delay {
             out.extend(delays);
         }
 
-        Ok(PyList::new(py, out).into_py(py))
+        Ok(PyList::new_bound(py, out).into())
     }
 
     #[getter]
     pub fn dirs(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
-        let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
+        let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
         let dirs = dmi.borrow().icon.states.get(self.idx).unwrap().dirs;
-        Ok(PyList::new(
+        Ok(PyList::new_bound(
             py,
             match dirs {
                 1 => vec![Dir::South],
@@ -137,12 +132,12 @@ impl IconState {
             .iter()
             .map(|f| Py::new(py, *f).unwrap()),
         )
-        .into_py(py))
+        .into())
     }
 
     #[getter]
     pub fn frames(&self, py: Python<'_>) -> u32 {
-        let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
+        let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
         let binding = dmi.borrow();
         let state = binding.icon.states.get(self.idx).unwrap();
         state.frames
@@ -150,12 +145,12 @@ impl IconState {
 
     #[getter]
     pub fn rewind(&self, py: Python<'_>) -> bool {
-        let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
+        let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
         dmi.borrow().icon.states[self.idx].rewind
     }
 
     pub fn data_rgba8(&self, frame: usize, py: Python<'_>) -> PyResult<Py<PyBytes>> {
-        let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
+        let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
         let binding = dmi.borrow();
         let state = binding.icon.states.get(self.idx).unwrap();
 
@@ -164,7 +159,7 @@ impl IconState {
         let mut cursor = std::io::Cursor::new(buffer);
         cursor.write(frame_data.as_bytes());
         let output = cursor.into_inner();
-        Ok(PyBytes::new(py, &output).into())
+        Ok(PyBytes::new_bound(py, &output).into())
     }
 
     fn __str__(&self, py: Python<'_>) -> PyResult<String> {
@@ -172,7 +167,7 @@ impl IconState {
     }
 
     fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
-        let dmi: &PyCell<Dmi> = self.dmi.downcast(py).unwrap();
+        let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
         let binding = dmi.borrow();
         let state = binding.icon.states.get(self.idx).unwrap();
 
@@ -186,8 +181,8 @@ impl IconState {
 #[pymethods]
 impl Dmi {
     #[staticmethod]
-    pub fn from_file(filename: &PyAny, py: Python<'_>) -> PyResult<Dmi> {
-        let pathlib = py.import(pyo3::intern!(py, "pathlib"))?;
+    pub fn from_file(filename: &Bound<PyAny>, py: Python<'_>) -> PyResult<Dmi> {
+        let pathlib = py.import_bound(pyo3::intern!(py, "pathlib"))?;
         if let Ok(path) = filename.extract::<std::path::PathBuf>() {
             let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path.clone(),))?;
             let file = match File::open(path) {
@@ -226,7 +221,7 @@ impl Dmi {
 
     pub fn state_names(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
         let keys: Vec<String> = self.icon.states.iter().map(|s| s.name.clone()).collect();
-        Ok(PyList::new(py, keys).into_py(py))
+        Ok(PyList::new_bound(py, keys).into())
     }
 
     pub fn states(self_: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<StateIter>> {
@@ -277,6 +272,11 @@ impl Dmi {
     }
 }
 
+#[pyclass(module = "avulto")]
+pub struct StateIter {
+    inner: std::vec::IntoIter<PyObject>,
+}
+
 #[pymethods]
 impl StateIter {
     fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
@@ -285,7 +285,7 @@ impl StateIter {
 
     fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<Py<PyAny>> {
         if let Some(n) = slf.inner.next() {
-            let cell: &PyCell<IconState> = n.downcast(slf.py()).unwrap();
+            let cell = n.downcast_bound::<IconState>(slf.py()).unwrap();
             let state = cell.borrow_mut();
             return Some(state.into_py(slf.py()));
         }

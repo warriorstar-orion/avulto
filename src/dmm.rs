@@ -6,9 +6,8 @@ use std::path::Path;
 
 use itertools::iproduct;
 use pyo3::exceptions::PyRuntimeError;
-use pyo3::pyclass::IterNextOutput;
-use pyo3::types::PyString;
-use pyo3::{pyclass, pymethods, IntoPy, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult, Python};
+use pyo3::types::{PyAnyMethods, PyString};
+use pyo3::{pyclass, pymethods, Bound, IntoPy, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult, Python};
 
 use crate::tile::Tile;
 
@@ -58,17 +57,12 @@ impl KeyIterator {
         slf
     }
 
-    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> IterNextOutput<PyObject, ()> {
-        match slf.iter.next() {
-            Some(c) => IterNextOutput::Yield(
-                Tile {
-                    dmm: slf.dmm.as_ref(py).into_py(py),
+    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> Option<PyObject> {
+        slf.iter.next().map(|c| Tile {
+                    dmm: slf.dmm.bind(py).into_py(py),
                     addr: Address::Key(*c),
                 }
-                .into_py(py),
-            ),
-            None => IterNextOutput::Return(()),
-        }
+                .into_py(py))
     }
 }
 
@@ -78,19 +72,16 @@ impl CoordIterator {
     fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
         slf
     }
-    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> IterNextOutput<PyObject, ()> {
-        match slf.iter.next() {
-            Some(c) => IterNextOutput::Yield(c.into_py(py)),
-            None => IterNextOutput::Return(()),
-        }
+    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> Option<PyObject> {
+        slf.iter.next().map(|c| c.into_py(py))
     }
 }
 
 #[pymethods]
 impl Dmm {
     #[staticmethod]
-    fn from_file(filename: &PyAny, py: Python<'_>) -> PyResult<Dmm> {
-        let pathlib = py.import(pyo3::intern!(py, "pathlib"))?;
+    fn from_file(filename: &Bound<PyAny>, py: Python<'_>) -> PyResult<Dmm> {
+        let pathlib = py.import_bound(pyo3::intern!(py, "pathlib"))?;
         
         if let Ok(path) = filename.extract::<std::path::PathBuf>() {
             let map = dmm_tools::dmm::Map::from_file(&path).unwrap();
@@ -118,7 +109,7 @@ impl Dmm {
         )))
     }
 
-    fn save_to(&self, filename: &PyAny) -> PyResult<()> {
+    fn save_to(&self, filename: &Bound<PyAny>) -> PyResult<()> {
         if let Ok(path) = filename.extract::<std::path::PathBuf>() {
             if let Ok(()) = self.map.to_file(&path) {
                 return Ok(());

@@ -2,15 +2,12 @@ use std::borrow::Borrow;
 
 use dreammaker::constants::Constant;
 use pyo3::{
-    exceptions::PyRuntimeError,
-    pyclass, pyfunction, pymethods,
-    types::{PyBool, PyDict, PyFloat, PyInt, PyList, PyString},
-    PyAny, PyObject, PyResult, Python, ToPyObject,
+    exceptions::PyRuntimeError, pyclass, pyfunction, pymethods, types::{PyAnyMethods, PyBool, PyDict, PyFloat, PyInt, PyList, PyString}, Bound, PyAny, PyObject, PyResult, Python, ToPyObject
 };
 
 use dmm_tools::dmi::Dir as SDir;
 
-#[pyclass]
+#[pyclass(eq, eq_int)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Dir {
     #[pyo3(name = "NORTH")]
@@ -83,7 +80,7 @@ pub fn as_dir(c: i32) -> PyResult<Dir> {
     }
 }
 
-pub fn python_value_to_constant(val: &PyAny) -> Option<dreammaker::constants::Constant> {
+pub fn python_value_to_constant(val: &Bound<PyAny>) -> Option<dreammaker::constants::Constant> {
     if val.is_instance_of::<PyBool>() {
         let val = val.extract::<bool>().unwrap();
         Some(Constant::Float(if val { 1.0 } else { 0.0 }))
@@ -109,10 +106,10 @@ pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> PyObject
         Constant::Null(_) => py.None(),
         Constant::New { type_: _, args: _ } => todo!(),
         Constant::List(l) => {
-            let mut out: Vec<&PyDict> = Vec::new();
+            let mut out: Vec<Bound<PyDict>> = Vec::new();
 
             for args in l.iter() {
-                let var = PyDict::new(py);
+                let var = PyDict::new_bound(py);
                 var.set_item(
                     constant_to_python_value(&args.0),
                     constant_to_python_value(
@@ -126,7 +123,7 @@ pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> PyObject
                 out.push(var);
             }
 
-            PyList::new(py, out).to_object(py)
+            PyList::new_bound(py, out).to_object(py)
         }
         Constant::Call(_, _) => todo!(),
         Constant::Prefab(p) => p.to_string().to_object(py),
