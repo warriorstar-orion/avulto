@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::fs::File;
 use std::io::{BufReader, Write};
 use std::path::Path;
@@ -149,17 +150,32 @@ impl IconState {
         dmi.borrow().icon.states[self.idx].rewind
     }
 
-    pub fn data_rgba8(&self, frame: usize, py: Python<'_>) -> PyResult<Py<PyBytes>> {
+    pub fn data_rgba8(&self, frame: u32, dir: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<PyBytes>> {
         let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
         let binding = dmi.borrow();
         let state = binding.icon.states.get(self.idx).unwrap();
 
-        let frame_data = &state.images[frame - 1];
-        let buffer = Vec::new();
-        let mut cursor = std::io::Cursor::new(buffer);
-        cursor.write(frame_data.as_bytes());
-        let output = cursor.into_inner();
-        Ok(PyBytes::new_bound(py, &output).into())
+        if let Ok(diridx) = dir.extract::<Dir>() {
+            let diridx = match diridx {
+                Dir::North => dmi::dirs::Dirs::NORTH,
+                Dir::South => dmi::dirs::Dirs::SOUTH,
+                Dir::East => dmi::dirs::Dirs::EAST,
+                Dir::West => dmi::dirs::Dirs::WEST,
+                Dir::Northeast => dmi::dirs::Dirs::NORTHEAST,
+                Dir::Northwest => dmi::dirs::Dirs::NORTHWEST,
+                Dir::Southeast => dmi::dirs::Dirs::SOUTHEAST,
+                Dir::Southwest => dmi::dirs::Dirs::SOUTHWEST,  
+            };            
+            let frame_data = state.get_image(&diridx, frame).unwrap();
+            let buffer = Vec::new();
+            let mut cursor = std::io::Cursor::new(buffer);
+            cursor.write(frame_data.as_bytes());
+            let output = cursor.into_inner();
+            Ok(PyBytes::new_bound(py, &output).into())            
+        } else {
+            Err(PyRuntimeError::new_err("invalid direction"))
+        }
+
     }
 
     fn __str__(&self, py: Python<'_>) -> PyResult<String> {
