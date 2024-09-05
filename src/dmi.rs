@@ -1,13 +1,12 @@
-use std::borrow::Borrow;
 use std::fs::File;
-use std::io::{BufReader, Write};
+use std::io::{self, BufReader, Write};
 use std::path::Path;
 
 use dmi::icon::Icon;
-use pyo3::exceptions::PyRuntimeError;
+use pyo3::exceptions::{PyException, PyFileNotFoundError, PyRuntimeError};
 use pyo3::pyclass::CompareOp;
-use pyo3::types::{PyAnyMethods, PyBytes, PyString};
-use pyo3::Bound;
+use pyo3::types::{PyAnyMethods, PyBytes, PyString, PyTuple};
+use pyo3::{create_exception, Bound};
 use pyo3::{
     pyclass, pymethods, types::PyList, IntoPy, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult,
     Python,
@@ -150,7 +149,12 @@ impl IconState {
         dmi.borrow().icon.states[self.idx].rewind
     }
 
-    pub fn data_rgba8(&self, frame: u32, dir: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<PyBytes>> {
+    pub fn data_rgba8(
+        &self,
+        frame: u32,
+        dir: &Bound<PyAny>,
+        py: Python<'_>,
+    ) -> PyResult<Py<PyBytes>> {
         let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
         let binding = dmi.borrow();
         let state = binding.icon.states.get(self.idx).unwrap();
@@ -164,18 +168,17 @@ impl IconState {
                 Dir::Northeast => dmi::dirs::Dirs::NORTHEAST,
                 Dir::Northwest => dmi::dirs::Dirs::NORTHWEST,
                 Dir::Southeast => dmi::dirs::Dirs::SOUTHEAST,
-                Dir::Southwest => dmi::dirs::Dirs::SOUTHWEST,  
-            };            
+                Dir::Southwest => dmi::dirs::Dirs::SOUTHWEST,
+            };
             let frame_data = state.get_image(&diridx, frame).unwrap();
             let buffer = Vec::new();
             let mut cursor = std::io::Cursor::new(buffer);
             cursor.write(frame_data.as_bytes());
             let output = cursor.into_inner();
-            Ok(PyBytes::new_bound(py, &output).into())            
+            Ok(PyBytes::new_bound(py, &output).into())
         } else {
             Err(PyRuntimeError::new_err("invalid direction"))
         }
-
     }
 
     fn __str__(&self, py: Python<'_>) -> PyResult<String> {
@@ -201,9 +204,17 @@ impl Dmi {
         let pathlib = py.import_bound(pyo3::intern!(py, "pathlib"))?;
         if let Ok(path) = filename.extract::<std::path::PathBuf>() {
             let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path.clone(),))?;
-            let file = match File::open(path) {
+            let file = match File::open(&path) {
                 Ok(f) => f,
-                Err(err) => panic!("file error: {}", err),
+                Err(err) => {
+                    if err.kind() == io::ErrorKind::NotFound {
+                        return Err(PyFileNotFoundError::new_err(format!(
+                            "Not found: {}",
+                            path.to_str().unwrap()
+                        )));
+                    }
+                    return Err(PyRuntimeError::new_err(format!("Unknown error: {}", err)));
+                }
             };
             let icon = match Icon::load(BufReader::new(file)) {
                 Ok(i) => i,
@@ -285,6 +296,24 @@ impl Dmi {
     #[getter]
     pub fn icon_height(&self) -> u32 {
         self.icon.height
+    }
+
+    #[getter]
+    pub fn icon_dims(&self, py: Python<'_>) -> Py<PyTuple> {
+        PyTuple::new_bound(py, [self.icon.width, self.icon.height]).into_py(py)
+    }
+
+    fn __str__(&self, py: Python<'_>) -> PyResult<String> {
+        self.__repr__(py)
+    }
+
+    fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
+        Ok(format!(
+            "<DMI {} {}x{}>",
+            &self.filepath.getattr(py, "name").unwrap(),
+            &self.icon.width,
+            &self.icon.height
+        ))
     }
 }
 
