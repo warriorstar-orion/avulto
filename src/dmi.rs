@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{self, BufReader, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use dmi::icon::Icon;
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyRuntimeError};
@@ -204,39 +204,32 @@ impl Dmi {
     #[staticmethod]
     pub fn from_file(filename: &Bound<PyAny>, py: Python<'_>) -> PyResult<Dmi> {
         let pathlib = py.import_bound(pyo3::intern!(py, "pathlib"))?;
-        if let Ok(path) = filename.extract::<std::path::PathBuf>() {
-            let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path.clone(),))?;
-            let file = match File::open(&path) {
-                Ok(f) => f,
-                Err(err) => {
-                    if err.kind() == io::ErrorKind::NotFound {
-                        return Err(PyFileNotFoundError::new_err(format!(
-                            "Not found: {}",
-                            path.to_str().unwrap()
-                        )));
-                    }
-                    return Err(PyRuntimeError::new_err(format!("Unknown error: {}", err)));
-                }
-            };
 
-            return Icon::load(BufReader::new(file)).map_or_else(
-                |err| Err(IconError::new_err(format!("Error loading icon file: {}", err))),
-                |icon| Ok(Dmi { icon, filepath: pathlib_path.into_py(py) }));
+        let path = if let Ok(pathbuf) = filename.extract::<std::path::PathBuf>() {
+            pathbuf
         } else if let Ok(pystr) = filename.downcast::<PyString>() {
-            let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (pystr,))?;
-            let file = match File::open(Path::new(&pystr.to_string())) {
-                Ok(f) => f,
-                Err(err) => panic!("file error: {}", err),
-            };
-            return Icon::load(BufReader::new(file)).map_or_else(
-                |err| Err(IconError::new_err(format!("Error loading icon file: {}", err))),
-                |icon| Ok(Dmi { icon, filepath: pathlib_path.into_py(py) }));
+            PathBuf::from(&pystr.to_string())
+        } else {
+            return Err(PyRuntimeError::new_err(format!("invalid filename {}", filename)));
         };
 
-        Err(PyRuntimeError::new_err(format!(
-            "invalid filename {}",
-            filename
-        )))
+        let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path.clone(),))?;
+        let file = match File::open(&path) {
+            Ok(f) => f,
+            Err(err) => {
+                if err.kind() == io::ErrorKind::NotFound {
+                    return Err(PyFileNotFoundError::new_err(format!(
+                        "Not found: {}",
+                        path.to_str().unwrap()
+                    )));
+                }
+                return Err(PyRuntimeError::new_err(format!("Unknown error: {}", err)));
+            }
+        };
+
+        Icon::load(BufReader::new(file)).map_or_else(
+            |err| Err(IconError::new_err(format!("Error loading icon file: {}", err))),
+            |icon| Ok(Dmi { icon, filepath: pathlib_path.into_py(py) }))
     }
 
     pub fn state_names(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
