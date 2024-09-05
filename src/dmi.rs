@@ -14,6 +14,8 @@ use pyo3::{
 
 use crate::helpers::Dir;
 
+create_exception!(avulto.exceptions, IconError, PyException);
+
 #[pyclass(module = "avulto", name = "DMI")]
 pub struct Dmi {
     icon: Icon,
@@ -216,28 +218,19 @@ impl Dmi {
                     return Err(PyRuntimeError::new_err(format!("Unknown error: {}", err)));
                 }
             };
-            let icon = match Icon::load(BufReader::new(file)) {
-                Ok(i) => i,
-                Err(err) => panic!("icon load error: {}", err),
-            };
-            return Ok(Dmi {
-                icon,
-                filepath: pathlib_path.into_py(py),
-            });
+
+            return Icon::load(BufReader::new(file)).map_or_else(
+                |err| Err(IconError::new_err(format!("Error loading icon file: {}", err))),
+                |icon| Ok(Dmi { icon, filepath: pathlib_path.into_py(py) }));
         } else if let Ok(pystr) = filename.downcast::<PyString>() {
             let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (pystr,))?;
             let file = match File::open(Path::new(&pystr.to_string())) {
                 Ok(f) => f,
                 Err(err) => panic!("file error: {}", err),
             };
-            let icon = match Icon::load(BufReader::new(file)) {
-                Ok(i) => i,
-                Err(err) => panic!("icon load error: {}", err),
-            };
-            return Ok(Dmi {
-                icon,
-                filepath: pathlib_path.into_py(py),
-            });
+            return Icon::load(BufReader::new(file)).map_or_else(
+                |err| Err(IconError::new_err(format!("Error loading icon file: {}", err))),
+                |icon| Ok(Dmi { icon, filepath: pathlib_path.into_py(py) }));
         };
 
         Err(PyRuntimeError::new_err(format!(
