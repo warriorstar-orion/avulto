@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{self, BufReader, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use dmi::icon::Icon;
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyRuntimeError};
@@ -175,7 +175,7 @@ impl IconState {
             let frame_data = state.get_image(&diridx, frame).unwrap();
             let buffer = Vec::new();
             let mut cursor = std::io::Cursor::new(buffer);
-            cursor.write(frame_data.as_bytes());
+            cursor.write_all(frame_data.as_bytes())?;
             let output = cursor.into_inner();
             Ok(PyBytes::new_bound(py, &output).into())
         } else {
@@ -241,7 +241,7 @@ impl Dmi {
         let mut out: Vec<Py<PyAny>> = Vec::new();
         let self_ = &self_;
 
-        for (idx, _) in (&self_.icon.states).iter().enumerate() {
+        for (idx, _) in self_.icon.states.iter().enumerate() {
             out.push(
                 IconState {
                     dmi: self_.into_py(py),
@@ -260,7 +260,7 @@ impl Dmi {
     }
 
     pub fn state(self_: PyRef<'_, Self>, value: String, py: Python<'_>) -> PyResult<IconState> {
-        for (idx, state) in (&self_.icon.states).iter().enumerate() {
+        for (idx, state) in self_.icon.states.iter().enumerate() {
             if state.name == value {
                 return Ok(IconState {
                     dmi: self_.into_py(py),

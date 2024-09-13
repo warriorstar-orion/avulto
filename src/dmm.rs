@@ -2,7 +2,7 @@ extern crate dmm_tools;
 
 use std::collections::btree_map;
 use std::collections::btree_map::Keys as BTreeMapKeysIter;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use itertools::iproduct;
 use pyo3::exceptions::PyRuntimeError;
@@ -82,31 +82,22 @@ impl Dmm {
     #[staticmethod]
     fn from_file(filename: &Bound<PyAny>, py: Python<'_>) -> PyResult<Dmm> {
         let pathlib = py.import_bound(pyo3::intern!(py, "pathlib"))?;
-        
-        if let Ok(path) = filename.extract::<std::path::PathBuf>() {
-            let map = dmm_tools::dmm::Map::from_file(&path).unwrap();
-            let dim = map.dim_xyz();
-            let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path,))?;
-            return Ok(Dmm {
-                map,
-                extents: (dim.0 as i32, dim.1 as i32, dim.2 as i32),
-                filepath: pathlib_path.into_py(py),
-            });
+        let path = if let Ok(pathbuf) = filename.extract::<std::path::PathBuf>() {
+            pathbuf
         } else if let Ok(pystr) = filename.downcast::<PyString>() {
-            let map = dmm_tools::dmm::Map::from_file(Path::new(&pystr.to_string())).unwrap();
-            let dim = map.dim_xyz();
-            let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (pystr,))?;
-            return Ok(Dmm {
-                map,
-                extents: (dim.0 as i32, dim.1 as i32, dim.2 as i32),
-                filepath: pathlib_path.into_py(py),
-            });
+            PathBuf::from(&pystr.to_string())
+        } else {
+            return Err(PyRuntimeError::new_err(format!("invalid filename {}", filename)));
         };
-
-        Err(PyRuntimeError::new_err(format!(
-            "invalid filename {}",
-            filename
-        )))
+        
+        let map = dmm_tools::dmm::Map::from_file(&path).unwrap();
+        let dim = map.dim_xyz();
+        let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path,))?;
+        Ok(Dmm {
+            map,
+            extents: (dim.0 as i32, dim.1 as i32, dim.2 as i32),
+            filepath: pathlib_path.into_py(py),
+        })
     }
 
     fn save_to(&self, filename: &Bound<PyAny>) -> PyResult<()> {
