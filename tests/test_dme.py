@@ -44,4 +44,4 @@ def test_dme_vars(dme: DME):
 
 def test_dme_procs(dme: DME):
     foo = dme.typedecl("/obj/foo")
-    assert sorted(foo.procnames()) == ["proc1", "proc2"]
+    assert sorted(foo.proc_names()) == ["proc1", "proc2"]

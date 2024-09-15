@@ -57,7 +57,7 @@ impl TypeDecl {
         )))
     }
 
-    pub fn procnames(&self, py: Python<'_>) -> PyResult<PyObject> {
+    pub fn proc_names(&self, py: Python<'_>) -> PyResult<PyObject> {
         let mut out: Vec<String> = Vec::new();
         let bound = self.dme.downcast_bound::<Dme>(py).unwrap();
 

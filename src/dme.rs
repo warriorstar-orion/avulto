@@ -3,12 +3,19 @@ extern crate dreammaker;
 use itertools::Itertools;
 use pyo3::{
     exceptions::PyRuntimeError,
-    prelude::*,
-    types::{PyList, PyString},
+    pyclass, pymethods,
+    types::{PyAnyMethods, PyList, PyString},
+    Bound, IntoPy, Py, PyAny, PyObject, PyRef, PyResult, Python, ToPyObject,
 };
 
-use crate::path::Path;
-use crate::{path, typedecl::TypeDecl};
+use crate::{
+    path::{self, Path},
+    typedecl::TypeDecl,
+};
+
+mod convert;
+pub mod nodes;
+mod walker;
 
 #[pyclass(module = "avulto", name = "DME")]
 pub struct Dme {
@@ -58,7 +65,11 @@ impl Dme {
         })
     }
 
-    fn typedecl(self_: PyRef<'_, Self>, path: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<PyAny>> {
+    fn typedecl(
+        self_: PyRef<'_, Self>,
+        path: &Bound<PyAny>,
+        py: Python<'_>,
+    ) -> PyResult<Py<PyAny>> {
         let objpath = if let Ok(patht) = path.extract::<path::Path>() {
             patht.0
         } else if let Ok(pystr) = path.downcast::<PyString>() {
@@ -102,5 +113,53 @@ impl Dme {
         let mut x = out.into_iter().unique().collect::<Vec<Path>>();
         x.sort();
         Ok(PyList::new_bound(py, x.into_iter().map(|m| m.into_py(py))).to_object(py))
+    }
+
+    fn walk_proc(
+        &self,
+        path: &Bound<PyAny>,
+        proc: &Bound<PyAny>,
+        walker: &Bound<PyAny>,
+        py: Python<'_>,
+    ) -> PyResult<()> {
+        let objtree = &self.objtree;
+        let objpath = if let Ok(patht) = path.extract::<path::Path>() {
+            patht.0
+        } else if let Ok(pystr) = path.downcast::<PyString>() {
+            pystr.to_string()
+        } else {
+            return Err(PyRuntimeError::new_err(
+                "cannot coerce path to string".to_string(),
+            ));
+        };
+        let procname = if let Ok(proct) = proc.downcast::<PyString>() {
+            proct.to_string()
+        } else {
+            return Err(PyRuntimeError::new_err(
+                "cannot coerce proc name to string".to_string(),
+            ));
+        };
+        
+        if let Some(ty) = objtree.find(&objpath) {
+            if let Some(p) = ty.get_proc(&procname) {
+                if let Some(ref code) = p.get().code {
+                    for stmt in code.iter() {
+                        self.walk_stmt(&stmt.elem, walker, py)?;
+                    }
+                }
+            } else {
+                return Err(PyRuntimeError::new_err(format!(
+                    "cannot find proc {} on type {}",
+                    procname, objpath
+                )));
+            }
+        } else {
+            return Err(PyRuntimeError::new_err(format!(
+                "cannot find type {}",
+                objpath
+            )));
+        };
+
+        Ok(())
     }
 }

@@ -2,10 +2,15 @@ use std::borrow::Borrow;
 
 use dreammaker::constants::Constant;
 use pyo3::{
-    exceptions::PyRuntimeError, pyclass, pyfunction, pymethods, types::{PyAnyMethods, PyBool, PyDict, PyFloat, PyInt, PyList, PyString}, Bound, PyAny, PyObject, PyResult, Python, ToPyObject
+    exceptions::PyRuntimeError,
+    pyclass, pyfunction, pymethods,
+    types::{PyAnyMethods, PyBool, PyFloat, PyInt, PyString},
+    Bound, IntoPy, Py, PyAny, PyObject, PyResult, Python, ToPyObject,
 };
 
 use dmm_tools::dmi::Dir as SDir;
+
+use crate::{dmlist::DmList, path::Path};
 
 #[pyclass(eq, eq_int)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -106,27 +111,30 @@ pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> PyObject
         Constant::Null(_) => py.None(),
         Constant::New { type_: _, args: _ } => todo!(),
         Constant::List(l) => {
-            let mut out: Vec<Bound<PyDict>> = Vec::new();
+            let mut keys: Vec<Py<PyAny>> = vec![];
+            let mut vals: Vec<Py<PyAny>> = vec![];
 
             for args in l.iter() {
-                let var = PyDict::new_bound(py);
-                var.set_item(
-                    constant_to_python_value(&args.0),
+                keys.push(constant_to_python_value(&args.0).clone_ref(py));
+                vals.push(
                     constant_to_python_value(
                         &args
                             .1
                             .borrow()
                             .clone()
                             .unwrap_or(dreammaker::constants::Constant::Null(Option::None)),
-                    ),
+                    )
+                    .clone_ref(py),
                 );
-                out.push(var);
             }
 
-            PyList::new_bound(py, out).to_object(py)
+            DmList { keys, vals }.into_py(py).clone_ref(py)
         }
         Constant::Call(_, _) => todo!(),
-        Constant::Prefab(p) => p.to_string().to_object(py),
+        Constant::Prefab(p) => {
+            Path::new(p.to_string().as_str()).unwrap().into_py(py)
+            // p.to_string().to_object(py)
+        }
         Constant::String(s) => s.to_object(py),
         Constant::Resource(s) => s.to_object(py),
         Constant::Float(f) => {
