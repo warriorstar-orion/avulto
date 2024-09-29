@@ -59,9 +59,6 @@ impl Dme {
                         dreammaker::ast::Term::Float(_) => {
                             visit_name = "visit_Constant";
                         }
-                        dreammaker::ast::Term::Ident(_) => {
-                            visit_name = "visit_Constant";
-                        }
                         dreammaker::ast::Term::String(_) => {
                             visit_name = "visit_Constant";
                         }
@@ -180,6 +177,9 @@ impl Dme {
                     if let Some(in_list_expr) = &l.in_list {
                         self.walk_expr(in_list_expr, walker, py)?;
                     }
+                    for stmt in l.block.iter() {
+                        self.walk_stmt(&stmt.elem, walker, py)?;
+                    }
                 }
             }
             dreammaker::ast::Statement::ForRange(f) => {
@@ -246,27 +246,27 @@ impl Dme {
                 cases,
                 default,
             } => {
-                if walker.hasattr("walk_Switch").unwrap() {
-                    walker.call_method1("walk_Switch", (from_statement_to_node(stmt, py)?,))?;
+                if walker.hasattr("visit_Switch").unwrap() {
+                    walker.call_method1("visit_Switch", (from_statement_to_node(stmt, py)?,))?;
                 } else {
                     self.walk_expr(input, walker, py)?;
                     for (case_types, block) in cases.iter() {
-                        if walker.hasattr("walk_Expr").unwrap() {
+                        if walker.hasattr("visit_Expr").unwrap() {
                             for case_elem in &case_types.elem {
                                 match case_elem {
                                     dreammaker::ast::Case::Exact(e) => {
                                         walker.call_method1(
-                                            "walk_Expr",
+                                            "visit_Expr",
                                             (from_expression_to_node(e, py)?,),
                                         )?;
                                     }
                                     dreammaker::ast::Case::Range(s, e) => {
                                         walker.call_method1(
-                                            "walk_Expr",
+                                            "visit_Expr",
                                             (from_expression_to_node(s, py)?,),
                                         )?;
                                         walker.call_method1(
-                                            "walk_Expr",
+                                            "visit_Expr",
                                             (from_expression_to_node(e, py)?,),
                                         )?;
                                     }

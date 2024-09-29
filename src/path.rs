@@ -5,7 +5,7 @@ use std::{
 };
 
 use pyo3::{
-    exceptions::{PyRuntimeError, PyValueError}, pyclass::CompareOp, pymethods, types::{PyAnyMethods, PyString}, Bound, PyAny, PyErr, PyResult
+    exceptions::{PyRuntimeError, PyValueError}, pyclass::CompareOp, pymethods, types::{PyAnyMethods, PyString, PyStringMethods}, Bound, PyAny, PyErr, PyResult
 };
 use pyo3::pyclass;
 
@@ -25,6 +25,50 @@ impl From<Path> for String {
     }
 }
 
+impl Path {
+    pub fn internal_child_of_string(&self, rhs: &String, strict: bool) -> bool {
+        if self.0.eq(rhs) {
+            return !strict;
+        }
+        if rhs == "/" {
+            return true;
+        }
+        let parts: Vec<&str> = self.0.split('/').collect();
+        let oparts: Vec<&str> = rhs.split('/').collect();
+        if parts.len() < oparts.len() {
+            return false;
+        }
+        for (a, b) in parts.iter().zip(oparts) {
+            if !(*a).eq(b) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    pub fn internal_parent_of_string(&self, rhs: &String, strict: bool) -> bool {
+        if self.0.eq(rhs){
+            return !strict;
+        }
+        if self.0 == "/" {
+            return true;
+        }
+        let parts: Vec<&str> = self.0.split('/').collect();
+        let oparts: Vec<&str> = rhs.split('/').collect();
+        if parts.len() > oparts.len() {
+            return false;
+        }
+        for (a, b) in parts.iter().zip(oparts) {
+            if !(*a).eq(b) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
+
 #[pymethods]
 impl Path {
     #[new]
@@ -38,44 +82,9 @@ impl Path {
     #[pyo3(signature = (other, strict=false))]
     fn child_of(&self, other: &Bound<PyAny>, strict: bool) -> PyResult<bool> {
         if let Ok(rhs) = other.extract::<Self>() {
-            if self.0 == rhs.0 {
-                return Ok(!strict);
-            }
-            if rhs.0 == "/" {
-                return Ok(true);
-            }
-            let parts: Vec<&str> = self.0.split('/').collect();
-            let oparts: Vec<&str> = rhs.0.split('/').collect();
-            if parts.len() < oparts.len() {
-                return Ok(false);
-            }
-            for (a, b) in parts.iter().zip(oparts) {
-                if !(*a).eq(b) {
-                    return Ok(false);
-                }
-            }
-
-            return Ok(true);
+            return Ok(self.internal_child_of_string(&rhs.0, strict));
         } else if let Ok(rhs) = other.downcast::<PyString>() {
-            let rs = rhs.to_string();
-            if self.0 == rs {
-                return Ok(!strict);
-            }
-            if rs == "/" {
-                return Ok(true);
-            }
-            let sparts: Vec<&str> = self.0.split('/').collect();
-            let soparts: Vec<&str> = rs.split('/').collect();
-            if sparts.len() < soparts.len() {
-                return Ok(false);
-            }
-            for (a, b) in sparts.iter().zip(soparts) {
-                if *a != b {
-                    return Ok(false);
-                }
-            }
-
-            return Ok(true);
+            return Ok(self.internal_child_of_string(&rhs.to_cow().unwrap().to_string(), strict));
         }
 
         Err(PyErr::new::<PyRuntimeError, &str>("not a valid path"))
@@ -84,44 +93,23 @@ impl Path {
     #[pyo3(signature = (other, strict=false))]
     fn parent_of(&self, other: &Bound<PyAny>, strict: bool) -> PyResult<bool> {
         if let Ok(rhs) = other.extract::<Self>() {
-            if self.0 == rhs.0 {
-                return Ok(!strict);
-            }
-            if self.0 == "/" {
-                return Ok(true);
-            }
-            let parts: Vec<&str> = self.0.split('/').collect();
-            let oparts: Vec<&str> = rhs.0.split('/').collect();
-            if parts.len() > oparts.len() {
-                return Ok(false);
-            }
-            for (a, b) in parts.iter().zip(oparts) {
-                if !(*a).eq(b) {
-                    return Ok(false);
-                }
-            }
-
-            return Ok(true);
+            return Ok(self.internal_parent_of_string(&rhs.0, strict));
         } else if let Ok(rhs) = other.downcast::<PyString>() {
-            let rs = rhs.to_string();
-            if self.0 == rs {
-                return Ok(!strict);
-            }
-            let sparts: Vec<&str> = self.0.split('/').collect();
-            let soparts: Vec<&str> = rs.split('/').collect();
-            if sparts.len() > soparts.len() {
-                return Ok(false);
-            }
-            for (a, b) in sparts.iter().zip(soparts) {
-                if *a != b {
-                    return Ok(false);
-                }
-            }
-
-            return Ok(true);
+            return Ok(self.internal_parent_of_string(&rhs.to_cow().unwrap().to_string(), strict));
         }
 
         Err(PyErr::new::<PyRuntimeError, &str>("not a valid path"))
+    }
+
+    #[getter]
+    fn get_parent(&self) -> PyResult<Self> {
+        if self.0 == "/" {
+            return Ok(self.clone());
+        }
+        let mut parts: Vec<&str> = self.0.split('/').collect();
+        let _ = parts.split_off(parts.len() - 1);
+        let parent = parts.join("/");
+        Ok(Path(parent))
     }
 
     #[getter]

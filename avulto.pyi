@@ -7,6 +7,8 @@ class Path:
 
     """The final part of the path."""
     stem: str
+    """The parent path."""
+    parent: Path
 
     def __init__(self, value):
         """Returns a new path."""
@@ -122,8 +124,10 @@ class DME:
         This is slower than the default but provides more reflection
         information.
         """
-    def paths_prefixed(self, prefix: Path | str) -> list[str]:
-        """Returns a list of paths with the given `prefix`."""
+    def typesof(self, prefix: Path | str) -> list[str]:
+        """Returns a list of type paths with the given `prefix`."""
+    def subtypesof(self, prefix: Path | str) -> list[str]:
+        """Returns a list of type paths with the given `prefix`, excluding `prefix` itself."""
     def typedecl(self, path: Path | str) -> TypeDecl:
         """Return the type declaration of the given `path`."""
 

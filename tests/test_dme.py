@@ -14,9 +14,14 @@ def dme() -> DME:
     return DME.from_file(get_fixture_path("testenv.dme"))
 
 
-def test_dme_paths_prefixed(dme: DME):
-    assert dme.paths_prefixed("/obj/foo") == [
+def test_dme_typesof(dme: DME):
+    assert dme.typesof("/obj/foo") == [
         "/obj/foo",
+        "/obj/foo/bar",
+        "/obj/foo/baz",
+    ]
+
+    assert dme.subtypesof("/obj/foo") == [
         "/obj/foo/bar",
         "/obj/foo/baz",
     ]

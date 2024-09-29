@@ -1,6 +1,5 @@
 extern crate dreammaker;
 
-use itertools::Itertools;
 use pyo3::{
     exceptions::PyRuntimeError,
     pyclass, pymethods,
@@ -22,6 +21,19 @@ pub struct Dme {
     pub objtree: dreammaker::objtree::ObjectTree,
     #[pyo3(get)]
     filepath: Py<PyAny>,
+}
+
+impl Dme {
+    fn collect_child_paths(&self, needle: &Path, strict: bool, out: &mut Vec<Path>) {
+        for ty in self.objtree.iter_types() {
+            if needle.internal_parent_of_string(&ty.path, strict) {
+                out.push(Path(ty.path.clone()));
+            }
+        }
+
+        out.sort();
+        out.dedup();
+    }
 }
 
 #[pymethods]
@@ -93,27 +105,35 @@ impl Dme {
         }
     }
 
-    fn paths_prefixed(&self, prefix: &Bound<PyAny>, py: Python<'_>) -> PyResult<PyObject> {
+    fn typesof(&self, prefix: &Bound<PyAny>, py: Python<'_>) -> PyResult<PyObject> {
         let mut out: Vec<Path> = Vec::new();
 
-        if let Ok(path) = prefix.extract::<path::Path>() {
-            for ty in self.objtree.iter_types() {
-                if ty.path.starts_with(&path.0) {
-                    out.push(Path(ty.path.clone()));
-                }
-            }
+        let prefix_path = if let Ok(path) = prefix.extract::<path::Path>() {
+            path
         } else if let Ok(pystr) = prefix.downcast::<PyString>() {
-            for ty in self.objtree.iter_types() {
-                if ty.path.starts_with(&pystr.to_string()) {
-                    out.push(Path(ty.path.clone()));
-                }
-            }
-        }
+            Path(pystr.to_string())
+        } else {
+            return Err(PyRuntimeError::new_err(format!("invalid path {}", prefix)));
+        };
+        self.collect_child_paths(&prefix_path, false, &mut out);
 
-        let mut x = out.into_iter().unique().collect::<Vec<Path>>();
-        x.sort();
-        Ok(PyList::new_bound(py, x.into_iter().map(|m| m.into_py(py))).to_object(py))
+        Ok(PyList::new_bound(py, out.into_iter().map(|m| m.into_py(py))).to_object(py))
     }
+
+    fn subtypesof(&self, prefix: &Bound<PyAny>, py: Python<'_>) -> PyResult<PyObject> {
+        let mut out: Vec<Path> = Vec::new();
+
+        let prefix_path = if let Ok(path) = prefix.extract::<path::Path>() {
+            path
+        } else if let Ok(pystr) = prefix.downcast::<PyString>() {
+            Path(pystr.to_string())
+        } else {
+            return Err(PyRuntimeError::new_err(format!("invalid path {}", prefix)));
+        };
+        self.collect_child_paths(&prefix_path, true, &mut out);
+
+        Ok(PyList::new_bound(py, out.into_iter().map(|m| m.into_py(py))).to_object(py))
+    }    
 
     fn walk_proc(
         &self,
@@ -139,7 +159,7 @@ impl Dme {
                 "cannot coerce proc name to string".to_string(),
             ));
         };
-        
+
         if let Some(ty) = objtree.find(&objpath) {
             if let Some(p) = ty.get_proc(&procname) {
                 if let Some(ref code) = p.get().code {
