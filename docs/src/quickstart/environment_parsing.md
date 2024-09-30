@@ -24,7 +24,7 @@ from avulto import DME
 
 dme = DME.from_file("paradise.dme")
 
-for pth in dme.paths_prefixed('/datum/uplink_item'):
+for pth in dme.typesof('/datum/uplink_item'):
     typedecl = dme.typedecl(pth)
     print(f"Name: {typedecl.value('name')} Cost: {typedecl.value('cost')}")
 ```

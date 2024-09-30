@@ -44,7 +44,7 @@ impl Path {
             }
         }
 
-        return true;
+        true
     }
 
     pub fn internal_parent_of_string(&self, rhs: &String, strict: bool) -> bool {
@@ -65,7 +65,7 @@ impl Path {
             }
         }
 
-        return true;
+        true
     }
 }
 

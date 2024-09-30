@@ -22,7 +22,7 @@ ImageFile = NamedTuple(
 
 ROOT_PATH = Path("~/ExternalRepos/third_party/github/Paradise/").expanduser()
 ENV_FILE = DME.from_file(ROOT_PATH / "paradise.dme")
-PATHS = set(ENV_FILE.paths_prefixed("/obj"))
+PATHS = set(ENV_FILE.typesof("/obj"))
 
 DICTIONARY = dict()
 for path in PATHS:

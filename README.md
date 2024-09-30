@@ -28,8 +28,9 @@ most important parts of its API are below.
 
 `Path` wraps type paths and provides `parent_of(other, strict=False)` and
 `child_of(other, strict=False)` for comparing paths. When `strict`, the current
-path does not count as a parent or child of itself.It also supports the division
-operator for easy path suffixing.
+path does not count as a parent or child of itself. It also supports the
+division operator for easy path suffixing, and the `parent` attribute for
+traversing the path tree upwards.
 
 ```py
 from avulto import Path as p
@@ -90,7 +91,8 @@ The `DME` class allows parsing DM object code:
 | Method                   | Description                                                                       |
 | ------------------------ | --------------------------------------------------------------------------------- |
 | `from_file(filename)`    | Creates a `DME` from the given `.dme` file.                                       |
-| `paths_prefixed(prefix)` | Returns a list of paths with the given `prefix`, including `prefix` if it exists. |
+| `typesof(prefix)`        | Returns a list of paths with the given `prefix`, including `prefix` if it exists. |
+| `subtypesof(prefix)`     | Returns a list of paths with the given `prefix`, excluding `prefix`.              |
 | `typedecl(path)`         | Returns a `TypeDecl` of the object `path`.                                        |
 
 `TypeDecl` objects allow variable inspection:

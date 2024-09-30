@@ -154,4 +154,11 @@ impl Dmm {
 
         Py::new(py, it)
     }
+
+    fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
+        Ok(format!(
+            "<DMM {} {}x{}x{}>", self.filepath.getattr(py, "name").unwrap(), self.extents.0, self.extents.1, self.extents.2
+        ))
+    }
+
 }

@@ -95,7 +95,7 @@ impl Dme {
         match self_.objtree.find(objpath.as_str()) {
             Some(_) => Ok(TypeDecl {
                 dme: self_.into_py(py),
-                path: objpath.to_string(),
+                path: path::Path(objpath.to_string()).into_py(py),
             }
             .into_py(py)),
             None => Err(PyRuntimeError::new_err(format!(
@@ -182,4 +182,9 @@ impl Dme {
 
         Ok(())
     }
+
+    fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
+        Ok(format!("<DME {}>", self.filepath.getattr(py, "name").unwrap()))
+    }
+
 }
