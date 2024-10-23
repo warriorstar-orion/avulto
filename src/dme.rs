@@ -21,6 +21,7 @@ pub struct Dme {
     pub objtree: dreammaker::objtree::ObjectTree,
     #[pyo3(get)]
     filepath: Py<PyAny>,
+    procs_parsed: bool,
 }
 
 impl Dme {
@@ -74,6 +75,7 @@ impl Dme {
         Ok(Dme {
             objtree: tree,
             filepath: pathlib_path.into_py(py),
+            procs_parsed: parse_procs
         })
     }
 
@@ -142,6 +144,11 @@ impl Dme {
         walker: &Bound<PyAny>,
         py: Python<'_>,
     ) -> PyResult<()> {
+        if !&self.procs_parsed {
+            return Err(PyRuntimeError::new_err(
+                "parse_procs=True was not included in DME's constructor"
+            ))
+        }
         let objtree = &self.objtree;
         let objpath = if let Ok(patht) = path.extract::<path::Path>() {
             patht.0
@@ -166,6 +173,11 @@ impl Dme {
                     for stmt in code.iter() {
                         self.walk_stmt(&stmt.elem, walker, py)?;
                     }
+                } else {
+                    return Err(PyRuntimeError::new_err(format!(
+                        "no code statements found in proc {} on type {}",
+                        procname, objpath
+                    )));
                 }
             } else {
                 return Err(PyRuntimeError::new_err(format!(

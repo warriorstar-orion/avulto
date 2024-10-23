@@ -223,7 +223,7 @@ impl Dme {
             dreammaker::ast::Statement::Vars(_) => todo!(),
             dreammaker::ast::Statement::Setting { name, mode: _, value } => {
                 if walker.hasattr("visit_Setting").unwrap() {
-                    walker.call_method1("visitSetting", (from_statement_to_node(stmt, py)?,))?;
+                    walker.call_method1("visit_Setting", (from_statement_to_node(stmt, py)?,))?;
                 } else {
                     self.walk_ident(name, walker, py)?;
                     self.walk_expr(value, walker, py)?;
