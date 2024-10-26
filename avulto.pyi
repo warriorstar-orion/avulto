@@ -32,13 +32,14 @@ class Path:
 class Tile:
     """An individual map tile definition."""
 
+    """Returns the path of the tile's area. Returns only the first area if multiple exist."""
+    area_path: Path
+
+    """Returns the path of the tile's turf. Returns only the first area if multiple exist."""
+    turf_path: Path
+
     def add_path(self, index, path: Path | str):
         """Add a prefab with the given `path` at `index`."""
-    def area_path(self) -> Path:
-        """Returns the path of the tile's area.
-
-        Returns only the first area if multiple exist.
-        """
     def convert(self) -> list[dict]:
         """Convert the tile definition to a Python data structure.
 
@@ -76,8 +77,6 @@ class Tile:
         """Set the value of the variable `name` to `val` at `index`."""
     def set_path(self, index: int, path: Path | str):
         """Set the path of the prefab at `index` to `path`."""
-    def turf_path(self) -> Path:
-        """Returns the path of the tile's turf. Returns only the first area if multiple exist."""
 
 class DMM:
     """A DMM file."""
@@ -104,7 +103,9 @@ class TypeDecl:
     A single type declaration.
     """
 
-    def varnames(self) -> list[str]:
+    def proc_names(self) -> list[str]:
+        """Return a list of proc names for the type declaration."""
+    def var_names(self) -> list[str]:
         """Return a list of variable names for the type declaration."""
     def value(self, name: str) -> Any:
         """Return a Python representation of the variable `name`."""

@@ -1,6 +1,7 @@
 extern crate dmm_tools;
 
 use dmm_tools::dmm::Prefab;
+use pyo3::conversion::ToPyObject;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::pyclass::CompareOp;
 use pyo3::types::{PyAnyMethods, PyDict, PyList, PyString};
@@ -16,7 +17,6 @@ pub struct Tile {
     pub(crate) addr: Address,
 }
 
-//let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
 #[pymethods]
 impl Tile {
     pub fn add_path(&mut self, index: i32, entry: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
@@ -57,6 +57,7 @@ impl Tile {
         Err(PyRuntimeError::new_err("invalid insertion type"))
     }
 
+    #[getter]
     pub fn area_path(&self, py: Python<'_>) -> PyResult<path::Path> {
         let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
         let map = &bound.borrow().map;
@@ -149,8 +150,6 @@ impl Tile {
     #[pyo3(signature = (prefix, exact=false))]
     pub fn find(&self, prefix: &Bound<PyAny>, exact: bool, py: Python<'_>) -> PyResult<Vec<i32>> {
         let mut vec = Vec::new();
-        // let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-        // let map = bound.borrow_mut().map;
         let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
 
         let key = match self.addr {
@@ -177,6 +176,18 @@ impl Tile {
         }
 
         Ok(vec)
+    }
+
+    #[pyo3(signature = (prefix, exact=false))]
+    pub fn only(&self, prefix: &Bound<PyAny>, exact: bool, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let result = self.find(prefix, exact, py)?;
+        if result.len() > 1 {
+            Err(PyRuntimeError::new_err(format!("found {} matches on tile, not 0 or 1", result.len())))
+        } else if result.len() == 1 {
+            Ok(result[0].to_object(py))
+        } else {
+            Ok(py.None())
+        }
     }
 
     pub fn prefab_path(&self, index: i32, py: Python<'_>) -> PyResult<path::Path> {
@@ -305,6 +316,7 @@ impl Tile {
         Err(PyErr::new::<PyValueError, &str>("not a valid path"))
     }
 
+    #[getter]
     pub fn turf_path(&self, py: Python<'_>) -> PyResult<path::Path> {
         let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
         // let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();

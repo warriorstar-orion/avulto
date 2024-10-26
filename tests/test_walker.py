@@ -11,15 +11,12 @@ def get_fixture_path(name):
 
 @pytest.fixture
 def dme() -> DME:
-    return DME.from_file(get_fixture_path("testenv.dme"))
+    return DME.from_file(get_fixture_path("testenv.dme"), parse_procs=True)
 
 
-def test_walker_var_and_return(dme: DME):
+def test_walker_base(dme: DME):
     class VarAndReturnWalker:
-        def visit_Return(self, node):
-            raise RuntimeError("feh")
-            print(node)
-    
+        pass
+
     varw = VarAndReturnWalker()
     dme.walk_proc("/obj/test_object", "var_and_return", varw)
-    

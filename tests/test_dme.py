@@ -36,11 +36,11 @@ def test_missing_type(dme: DME):
 
 def test_dme_vars(dme: DME):
     foo = dme.typedecl("/obj/foo")
-    assert foo.varnames() == ["a", "icon", "icon_state"]
+    assert foo.var_names() == ["a", "icon", "icon_state"]
     assert foo.value("a") == 3
 
     bar = dme.typedecl("/obj/foo/bar")
-    assert bar.varnames() == ["a"]
+    assert bar.var_names() == ["a"]
     assert bar.value("a") == 4
 
     baz = dme.typedecl("/obj/foo/baz")

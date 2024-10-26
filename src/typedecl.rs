@@ -15,7 +15,7 @@ pub struct TypeDecl {
 
 #[pymethods]
 impl TypeDecl {
-    pub fn varnames(&self, py: Python<'_>) -> PyResult<PyObject> {
+    pub fn var_names(&self, py: Python<'_>) -> PyResult<PyObject> {
         let mut out: Vec<String> = Vec::new();
         let bound = self.dme.downcast_bound::<Dme>(py).unwrap();
 
