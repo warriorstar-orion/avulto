@@ -6,12 +6,10 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-import avulto
-
 project = 'avulto'
 copyright = '2024 Warriorstar Orion'
 author = 'Warriorstar Orion'
-release = avulto.version()
+release = 'v0.0.14'
 version = release
 
 
