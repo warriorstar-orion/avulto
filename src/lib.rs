@@ -10,8 +10,15 @@ pub mod path;
 pub mod tile;
 pub mod typedecl;
 
+#[pyfunction]
+fn version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
 #[pymodule]
 fn avulto(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(version, m)?)?;
+
     m.add_class::<path::Path>()?;
 
     m.add_class::<dmm::Dmm>()?;

@@ -15,7 +15,11 @@ use crate::tile::Tile;
 pub struct Dmm {
     pub(crate) map: dmm_tools::dmm::Map,
     #[pyo3(get)]
-    extents: (i32, i32, i32),
+    max_x: i32,
+    #[pyo3(get)]
+    max_y: i32,
+    #[pyo3(get)]
+    max_z: i32,
     #[pyo3(get)]
     filepath: Py<PyAny>,
 }
@@ -95,7 +99,9 @@ impl Dmm {
         let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path,))?;
         Ok(Dmm {
             map,
-            extents: (dim.0 as i32, dim.1 as i32, dim.2 as i32),
+            max_x: dim.0 as i32,
+            max_y: dim.1 as i32,
+            max_z: dim.2 as i32,
             filepath: pathlib_path.into_py(py),
         })
     }
@@ -157,7 +163,7 @@ impl Dmm {
 
     fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
         Ok(format!(
-            "<DMM {} {}x{}x{}>", self.filepath.getattr(py, "name").unwrap(), self.extents.0, self.extents.1, self.extents.2
+            "<DMM {} {}x{}x{}>", self.filepath.getattr(py, "name").unwrap(), self.max_x, self.max_y, self.max_z
         ))
     }
 

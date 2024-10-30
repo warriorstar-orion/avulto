@@ -1,4 +1,5 @@
-# Conclusion
+Conclusion
+==========
 
 As you can imagine, having the ability to parse maps, icons, and the codebase at
 the same time, with a single library, for use in scripting, can be very
