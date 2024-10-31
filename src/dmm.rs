@@ -7,19 +7,28 @@ use std::path::{Path, PathBuf};
 use itertools::iproduct;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::types::{PyAnyMethods, PyString};
-use pyo3::{pyclass, pymethods, Bound, IntoPy, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult, Python};
+use pyo3::{
+    pyclass, pymethods, Bound, IntoPy, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult, Python,
+};
 
 use crate::tile::Tile;
+
+#[pyclass(module = "avulto")]
+#[derive(Clone, Eq, Hash, PartialOrd, Ord, PartialEq)]
+pub struct Coord3 {
+    #[pyo3(get)]
+    x: i32,
+    #[pyo3(get)]
+    y: i32,
+    #[pyo3(get)]
+    z: i32,
+}
 
 #[pyclass(module = "avulto", name = "DMM")]
 pub struct Dmm {
     pub(crate) map: dmm_tools::dmm::Map,
     #[pyo3(get)]
-    max_x: i32,
-    #[pyo3(get)]
-    max_y: i32,
-    #[pyo3(get)]
-    max_z: i32,
+    size: Coord3,
     #[pyo3(get)]
     filepath: Py<PyAny>,
 }
@@ -62,11 +71,13 @@ impl KeyIterator {
     }
 
     fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> Option<PyObject> {
-        slf.iter.next().map(|c| Tile {
-                    dmm: slf.dmm.bind(py).into_py(py),
-                    addr: Address::Key(*c),
-                }
-                .into_py(py))
+        slf.iter.next().map(|c| {
+            Tile {
+                dmm: slf.dmm.bind(py).into_py(py),
+                addr: Address::Key(*c),
+            }
+            .into_py(py)
+        })
     }
 }
 
@@ -91,17 +102,22 @@ impl Dmm {
         } else if let Ok(pystr) = filename.downcast::<PyString>() {
             PathBuf::from(&pystr.to_string())
         } else {
-            return Err(PyRuntimeError::new_err(format!("invalid filename {}", filename)));
+            return Err(PyRuntimeError::new_err(format!(
+                "invalid filename {}",
+                filename
+            )));
         };
-        
+
         let map = dmm_tools::dmm::Map::from_file(&path).unwrap();
         let dim = map.dim_xyz();
         let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path,))?;
         Ok(Dmm {
             map,
-            max_x: dim.0 as i32,
-            max_y: dim.1 as i32,
-            max_z: dim.2 as i32,
+            size: Coord3 {
+                x: dim.0 as i32,
+                y: dim.1 as i32,
+                z: dim.2 as i32,
+            },
             filepath: pathlib_path.into_py(py),
         })
     }
@@ -163,8 +179,11 @@ impl Dmm {
 
     fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
         Ok(format!(
-            "<DMM {} {}x{}x{}>", self.filepath.getattr(py, "name").unwrap(), self.max_x, self.max_y, self.max_z
+            "<DMM {} {}x{}x{}>",
+            self.filepath.getattr(py, "name").unwrap(),
+            self.size.x,
+            self.size.y,
+            self.size.z
         ))
     }
-
 }

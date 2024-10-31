@@ -46,6 +46,20 @@ Several parts of Avulto are useful with all of its APIs.
       Returns whether we are a child of *path*. If *strict* is :const:`True`, a
       path will not count as a child of itself.
 
+.. class:: Coord3
+
+   A three-dimensional integer coordinate. These are currently only returned by
+   certain :class:`DMM` properties, and are not constructable.
+
+   .. property:: x
+      :type: int
+
+   .. property:: y
+      :type: int
+
+   .. property:: z
+      :type: int
+
 .. class:: Dir
 
    Representation of BYOND directions.

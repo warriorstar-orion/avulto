@@ -14,25 +14,10 @@
 
    Once instantiated, the following properties and methods are available:
 
-   .. property:: extents
-      :type: tuple[int, int, int]
+   .. property:: size
+      :type: Coord3
 
       The maximum size of the map's dimensions, i.e. width, length, and height.
-
-   .. property:: max_x
-      :type: int
-
-      The maximum X value of the map.
-
-   .. property:: max_y
-      :type: int
-
-      The maximum Y value of the map.
-
-   .. property:: max_z
-      :type: int
-
-      The maximum Z value of the map.
 
    .. method:: tiledef(x: int, y: int, z: int) -> Tile
 
@@ -50,27 +35,22 @@
 
       Return an iterator over all unique :class:`Tile`\s on the map.
 
-   
-
 .. class:: Tile
 
    :class:`Tile` objects returned from :func:`DMM.tiledef` can be read and
    operated upon with the following methods.
 
-   .. NOTE::
-
-      Methods that modify tile prefabs currently apply to the preset, not the
-      individual tile. Future releases will hopefully provide a way to do both.
-
    .. property:: area_path
       :type: Path
 
-      Returns the tile's area.
+      Returns the tile's area. It is expected that only one ``/area`` is present
+      on a tile.
 
    .. property:: turf_path
       :type: Path
 
-      Returns the tile's turf.
+      Returns the tile's turf. It is expected that only one ``/turf`` is present
+      on a tile.
 
    .. method:: convert() -> list[dict]
 
@@ -88,6 +68,15 @@
       :const:`None` if no such prefab exists. Raises an error if there is more
       than one prefab with the given *prefix*. If *exact* is :const:`True`, then
       the prefab path must match exactly.
+
+   Once the indexes of the atoms you wish to work with are returned from
+   :func:`Tile.find` or :func:`Tile.only`, they may be used to operate on the
+   prefabs of the tile with the following methods.
+
+   .. NOTE::
+
+      Methods that modify tile prefabs currently apply to the preset, not the
+      individual tile. Future releases will hopefully provide a way to do both.
 
    .. method:: prefab_path(index: int) -> Path
 
