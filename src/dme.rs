@@ -27,6 +27,13 @@ pub struct Dme {
 impl Dme {
     fn collect_child_paths(&self, needle: &Path, strict: bool, out: &mut Vec<Path>) {
         for ty in self.objtree.iter_types() {
+            // special handling for root
+            if ty.path.is_empty() && needle.0.eq("/") {
+                if !strict {
+                    out.push(Path("/".to_string()));
+                }
+                continue;
+            }
             if needle.internal_parent_of_string(&ty.path, strict) {
                 out.push(Path(ty.path.clone()));
             }
@@ -94,7 +101,8 @@ impl Dme {
             ));
         };
 
-        match self_.objtree.find(objpath.as_str()) {
+        let search_string = if objpath.as_str().eq("/") { "" } else { objpath.as_str() }; 
+        match self_.objtree.find(search_string) {
             Some(_) => Ok(TypeDecl {
                 dme: self_.into_py(py),
                 path: path::Path(objpath.to_string()).into_py(py),

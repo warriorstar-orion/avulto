@@ -20,7 +20,7 @@ def test_dmm_pathlib():
 
 
 def test_dmm_extents(dmm: DMM):
-    assert dmm.extents == (10, 10, 1)
+    assert dmm.size == (10, 10, 1)
 
 
 def test_dmm_get_object(dmm: DMM):

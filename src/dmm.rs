@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use itertools::iproduct;
 use pyo3::exceptions::PyRuntimeError;
-use pyo3::types::{PyAnyMethods, PyString};
+use pyo3::types::{PyAnyMethods, PyList, PyString, PyTuple};
 use pyo3::{
     pyclass, pymethods, Bound, IntoPy, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult, Python,
 };
@@ -22,6 +22,26 @@ pub struct Coord3 {
     y: i32,
     #[pyo3(get)]
     z: i32,
+}
+
+#[pymethods]
+impl Coord3 {
+    fn __eq__(&self, other: &Bound<PyAny>) -> bool {
+        if let Ok(tuple) = other.downcast::<PyTuple>() {
+            if tuple.len().unwrap() != 3 {
+                return false;
+            } else if let Ok((x, y, z)) = tuple.extract::<(i32, i32, i32)>() {
+                return self.x == x && self.y == y && self.z == z;
+            }
+        } else if let Ok(list) = other.downcast::<PyList>() {
+            if list.len().unwrap() != 3 {
+                return false;
+            } else if let Ok((x, y, z)) = list.extract::<(i32, i32, i32)>() {
+                return self.x == x && self.y == y && self.z == z;
+            }
+        }
+        false
+    }
 }
 
 #[pyclass(module = "avulto", name = "DMM")]
