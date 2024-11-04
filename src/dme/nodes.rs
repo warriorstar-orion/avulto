@@ -16,12 +16,53 @@ extern crate dreammaker;
 
 #[pymodule]
 pub fn ast(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
+    m.add_class::<Assignment>()?;
+    m.add_class::<Attribute>()?;
+    m.add_class::<BinaryOp>()?;
+    m.add_class::<BinaryOperator>()?;
+    m.add_class::<Break>()?;
+    m.add_class::<Call>()?;
+    m.add_class::<Continue>()?;
+    m.add_class::<Crash>()?;
+    m.add_class::<Del>()?;
+    m.add_class::<DoWhile>()?;
+    m.add_class::<DynamicCall>()?;
+    m.add_class::<Expression>()?;
+    m.add_class::<ExternalCall>()?;
+    m.add_class::<ForList>()?;
+    m.add_class::<ForLoop>()?;
+    m.add_class::<ForRange>()?;
+    m.add_class::<Identifier>()?;
+    m.add_class::<If>()?;
+    m.add_class::<IfArm>()?;
+    m.add_class::<Index>()?;
+    m.add_class::<Input>()?;
+    m.add_class::<InterpString>()?;
+    m.add_class::<Label>()?;
+    m.add_class::<Locate>()?;
+    m.add_class::<MiniExpr>()?;
+    m.add_class::<NewImplicit>()?;
+    m.add_class::<NewMiniExpr>()?;
+    m.add_class::<NewPrefab>()?;
     m.add_class::<Node>()?;
     m.add_class::<NodeKind>()?;
+    m.add_class::<Operator>()?;
+    m.add_class::<ParentCall>()?;
     m.add_class::<Prefab>()?;
-    m.add_class::<Attribute>()?;
-    m.add_class::<Identifier>()?;
-    m.add_class::<Call>()?;
+    m.add_class::<Return>()?;
+    m.add_class::<SelfCall>()?;
+    m.add_class::<Setting>()?;
+    m.add_class::<SettingMode>()?;
+    m.add_class::<Spawn>()?;
+    m.add_class::<Switch>()?;
+    m.add_class::<SwitchCase>()?;
+    m.add_class::<Ternary>()?;
+    m.add_class::<Throw>()?;
+    m.add_class::<TryCatch>()?;
+    m.add_class::<UnaryOp>()?;
+    m.add_class::<UnaryOperator>()?;
+    m.add_class::<Var>()?;
+    m.add_class::<While>()?;
     Ok(())
 }
 
