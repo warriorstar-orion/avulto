@@ -36,6 +36,11 @@ Several parts of Avulto are useful with all of its APIs.
 
       Returns the last part of our path.
 
+   .. property:: is_root
+      :type: bool
+
+      Returns whether the path is ``/``.
+
    .. method:: parent_of(path: Path | str, strict=False)
 
       Returns whether we are a parent of *path*. If *strict* is :const:`True`, a

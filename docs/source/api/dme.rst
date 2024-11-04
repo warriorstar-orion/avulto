@@ -27,6 +27,10 @@
       Return a list of :class:`Path`\s of any subtypes of *prefix*, excluding
       itself.
 
+   .. method:: typedecl(path: Path | str) -> TypeDecl
+
+      Returns the :class:`TypeDecl` of the type given by *path* if it exists.
+
    .. method:: walk_proc(path: Path | str, proc: str, walker)
 
       Performs an AST walk of the proc *proc* on the object specified by *path*.
