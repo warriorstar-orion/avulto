@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate lazy_static;
+
 use dmlist::DmList;
 use pyo3::{prelude::*, types::PyDict, wrap_pymodule};
 
@@ -14,6 +17,7 @@ pub mod typedecl;
 fn version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
+
 
 #[pymodule]
 fn avulto(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {

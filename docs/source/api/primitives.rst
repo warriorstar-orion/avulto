@@ -26,6 +26,35 @@ Several parts of Avulto are useful with all of its APIs.
     >>> p('/obj/machinery/microwave').stem
     "microwave"
 
+   .. property:: abs
+      :type: str
+
+      Returns the *absolute* representation of the path, rooted at ``/datum``.
+
+      .. code-block:: python
+
+         >>> p('/obj/foo').abs
+         '/datum/atom/movable/obj/foo'
+
+         >>> p('/foo').abs
+         '/datum/foo'
+
+   .. property:: rel
+      :type: str
+
+      Returns the *relative* or *declared* representation of the path.
+
+      .. code-block:: python
+
+         >>> p('/obj/foo').rel
+         '/obj/foo'
+
+         >>> p('/datum/foo').rel
+         '/datum/foo'
+
+         >>> p('/foo').rel
+         '/foo'
+
    .. property:: parent
       :type: Path
 

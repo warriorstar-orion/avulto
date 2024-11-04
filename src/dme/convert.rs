@@ -259,7 +259,7 @@ pub fn make_prefab_node(p: &dreammaker::ast::Prefab, py: Python<'_>) -> PyResult
     for (op, val) in p.path.iter() {
         path.push_str(format!("{}{}", op, val).as_str());
     }
-    let pypath = Path(path);
+    let pypath = Path::make_trusted(path.as_str());
     let mut out: Vec<Bound<PyDict>> = Vec::new();
 
     for (k, v) in p.vars.iter() {

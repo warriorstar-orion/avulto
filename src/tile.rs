@@ -28,7 +28,7 @@ impl Tile {
 
         if let Ok(val) = entry.extract::<path::Path>() {
             let prefab = Prefab {
-                path: val.0.clone(),
+                path: val.rel.clone(),
                 vars: Default::default(),
             };
             bound
@@ -158,7 +158,7 @@ impl Tile {
         };
 
         let prefix_str = if let Ok(v) = prefix.extract::<path::Path>() {
-            v.0
+            v.rel
         } else if let Ok(pystr) = prefix.downcast::<PyString>() {
             pystr.to_string()
         } else {
@@ -297,15 +297,13 @@ impl Tile {
 
     pub fn set_path(&self, index: i32, path: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
         let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-        // let mut map = bound.borrow_mut().map;
-
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => bound.borrow().map[c],
         };
 
         if let Ok(val) = path.extract::<path::Path>() {
-            bound.borrow_mut().map.dictionary.get_mut(&key).unwrap()[index as usize].path = val.0;
+            bound.borrow_mut().map.dictionary.get_mut(&key).unwrap()[index as usize].path = val.rel;
             return Ok(());
         } else if let Ok(pystr) = path.downcast::<PyString>() {
             bound.borrow_mut().map.dictionary.get_mut(&key).unwrap()[index as usize].path =

@@ -15,16 +15,19 @@ def dme() -> DME:
 
 
 def test_dme_typesof(dme: DME):
-    assert dme.typesof("/obj/foo") == [
+    foo_types = {
         "/obj/foo",
         "/obj/foo/bar",
         "/obj/foo/baz",
-    ]
-
+    }
+    assert sorted(dme.typesof("/obj/foo")) == sorted(foo_types)
     assert dme.subtypesof("/obj/foo") == [
         "/obj/foo/bar",
         "/obj/foo/baz",
     ]
+
+    datum_subtypes = dme.subtypesof("/datum")
+    assert all([x in datum_subtypes for x in foo_types])
 
 
 def test_missing_type(dme: DME):

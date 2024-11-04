@@ -21,7 +21,7 @@ impl TypeDecl {
 
         let _path = self.path.extract::<path::Path>(py)?;
         for ty in bound.borrow().objtree.iter_types() {
-            if ty.path == _path.0 {
+            if ty.path == _path.rel {
                 for (name, _) in ty.vars.iter() {
                     out.push(name.clone());
                 }
@@ -42,7 +42,7 @@ impl TypeDecl {
         let _path = self.path.extract::<path::Path>(py)?;
 
         for ty in bound.borrow().objtree.iter_types() {
-            if ty.path == _path.0 {
+            if ty.path == _path.rel {
                 if let Some(c) = ty.get_value(&name) {
                     return Ok(helpers::constant_to_python_value(
                         c.constant.as_ref().unwrap_or(Constant::null()),
@@ -65,7 +65,7 @@ impl TypeDecl {
         let _path = self.path.extract::<path::Path>(py)?;
 
         for ty in bound.borrow().objtree.iter_types() {
-            if ty.path == _path.0 {
+            if ty.path == _path.rel {
                 for (name, _) in ty.procs.iter() {
                     out.push(name.clone());
                 }

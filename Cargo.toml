@@ -10,12 +10,14 @@ name = "avulto"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = {version = "0.22.2"}
+pyo3 = {version = "0.22.4"}
 itertools = "0.11.0"
 lodepng = "3.7.0"
 ndarray = "0.15.6"
 dmi = "0.3.4"
 image = "0.25.2"
+regex = "1.10.3"
+lazy_static = "1.4"
 
 [dependencies.dreammaker]
 git = "https://github.com/SpaceManiac/SpacemanDMM"

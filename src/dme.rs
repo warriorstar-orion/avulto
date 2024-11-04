@@ -1,9 +1,9 @@
 extern crate dreammaker;
 
 use pyo3::{
-    exceptions::PyRuntimeError,
+    exceptions::{PyOSError, PyRuntimeError, PyValueError},
     pyclass, pymethods,
-    types::{PyAnyMethods, PyList, PyString},
+    types::{PyAnyMethods, PyList, PyString, PyStringMethods},
     Bound, IntoPy, Py, PyAny, PyObject, PyRef, PyResult, Python, ToPyObject,
 };
 
@@ -28,14 +28,15 @@ impl Dme {
     fn collect_child_paths(&self, needle: &Path, strict: bool, out: &mut Vec<Path>) {
         for ty in self.objtree.iter_types() {
             // special handling for root
-            if ty.path.is_empty() && needle.0.eq("/") {
+            if ty.path.is_empty() && needle.abs.eq("/") {
                 if !strict {
-                    out.push(Path("/".to_string()));
+                    out.push(Path::root());
                 }
                 continue;
             }
-            if needle.internal_parent_of_string(&ty.path, strict) {
-                out.push(Path(ty.path.clone()));
+            let trusted = Path::make_trusted(&ty.path.clone());
+            if needle.internal_parent_of_string(&trusted.abs, strict) {
+                out.push(trusted);
             }
         }
 
@@ -82,7 +83,7 @@ impl Dme {
         Ok(Dme {
             objtree: tree,
             filepath: pathlib_path.into_py(py),
-            procs_parsed: parse_procs
+            procs_parsed: parse_procs,
         })
     }
 
@@ -92,7 +93,7 @@ impl Dme {
         py: Python<'_>,
     ) -> PyResult<Py<PyAny>> {
         let objpath = if let Ok(patht) = path.extract::<path::Path>() {
-            patht.0
+            patht.rel
         } else if let Ok(pystr) = path.downcast::<PyString>() {
             pystr.to_string()
         } else {
@@ -101,11 +102,15 @@ impl Dme {
             ));
         };
 
-        let search_string = if objpath.as_str().eq("/") { "" } else { objpath.as_str() }; 
+        let search_string = if objpath.as_str().eq("/") {
+            ""
+        } else {
+            objpath.as_str()
+        };
         match self_.objtree.find(search_string) {
             Some(_) => Ok(TypeDecl {
                 dme: self_.into_py(py),
-                path: path::Path(objpath.to_string()).into_py(py),
+                path: Path::make_trusted(objpath.as_str()).into_py(py),
             }
             .into_py(py)),
             None => Err(PyRuntimeError::new_err(format!(
@@ -121,7 +126,12 @@ impl Dme {
         let prefix_path = if let Ok(path) = prefix.extract::<path::Path>() {
             path
         } else if let Ok(pystr) = prefix.downcast::<PyString>() {
-            Path(pystr.to_string())
+            match Path::make_untrusted(pystr.to_str()?) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Err(PyRuntimeError::new_err(e));
+                }
+            }
         } else {
             return Err(PyRuntimeError::new_err(format!("invalid path {}", prefix)));
         };
@@ -136,14 +146,19 @@ impl Dme {
         let prefix_path = if let Ok(path) = prefix.extract::<path::Path>() {
             path
         } else if let Ok(pystr) = prefix.downcast::<PyString>() {
-            Path(pystr.to_string())
+            match Path::make_untrusted(pystr.to_str()?) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Err(PyRuntimeError::new_err(e));
+                }
+            }
         } else {
-            return Err(PyRuntimeError::new_err(format!("invalid path {}", prefix)));
+            return Err(PyValueError::new_err(format!("invalid path {:?}", prefix)));
         };
         self.collect_child_paths(&prefix_path, true, &mut out);
 
         Ok(PyList::new_bound(py, out.into_iter().map(|m| m.into_py(py))).to_object(py))
-    }    
+    }
 
     fn walk_proc(
         &self,
@@ -154,12 +169,12 @@ impl Dme {
     ) -> PyResult<()> {
         if !&self.procs_parsed {
             return Err(PyRuntimeError::new_err(
-                "parse_procs=True was not included in DME's constructor"
-            ))
+                "parse_procs=True was not included in DME's constructor",
+            ));
         }
         let objtree = &self.objtree;
         let objpath = if let Ok(patht) = path.extract::<path::Path>() {
-            patht.0
+            patht.rel
         } else if let Ok(pystr) = path.downcast::<PyString>() {
             pystr.to_string()
         } else {
@@ -204,7 +219,9 @@ impl Dme {
     }
 
     fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
-        Ok(format!("<DME {}>", self.filepath.getattr(py, "name").unwrap()))
+        Ok(format!(
+            "<DME {}>",
+            self.filepath.getattr(py, "name").unwrap()
+        ))
     }
-
 }

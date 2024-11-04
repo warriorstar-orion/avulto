@@ -5,35 +5,118 @@ use std::{
 };
 
 use pyo3::{
-    exceptions::{PyRuntimeError, PyValueError}, pyclass::CompareOp, pymethods, types::{PyAnyMethods, PyString, PyStringMethods}, Bound, PyAny, PyErr, PyResult
+    create_exception, exceptions::{PyException, PyTypeError}, pyclass, IntoPy, Python
 };
-use pyo3::pyclass;
+use pyo3::{
+    pyclass::CompareOp,
+    pymethods,
+    types::{PyAnyMethods, PyString, PyStringMethods},
+    Bound, PyAny, PyResult,
+};
+use regex::Regex;
+
+create_exception!(avulto.exceptions, PathError, PyException);
+
+const OBJ_PREFIX: &[&str] = &["datum", "atom", "movable", "obj"];
+const MOB_PREFIX: &[&str] = &["datum", "atom", "movable", "mob"];
+const AREA_PREFIX: &[&str] = &["datum", "atom", "area"];
+const TURF_PREFIX: &[&str] = &["datum", "atom", "turf"];
+const ATOM_PREFIX: &[&str] = &["datum", "atom"];
+
+const CORE_TYPES: &[&str] = &[
+    "datum",
+    "image",
+    "mutable_appearance",
+    "sound",
+    "icon",
+    "matrix",
+    "database",
+    "exception",
+    "regex",
+    "dm_filter",
+    "generator",
+    "particles",
+];
 
 #[derive(Clone, Eq, Hash, PartialOrd, Ord, PartialEq)]
 #[pyclass(module = "avulto")]
-pub struct Path(pub String);
+pub struct Path {
+    // We can either do a bunch of munging when displaying paths, which happens a lot,
+    // or do a bunch of munging when operating on paths, which happens a lot,
+    // or we can just keep both around, because memory is cheap.
+    #[pyo3(get)]
+    pub abs: String,
+    #[pyo3(get)]
+    pub rel: String,
+}
 
 impl fmt::Display for Path {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", self.abs)
     }
 }
 
 impl From<Path> for String {
     fn from(val: Path) -> Self {
-        val.0
+        val.abs
     }
 }
 
+lazy_static! {
+    static ref VALID_PATH_PART_RE: Regex = Regex::new(r"^[A-Za-z_][A-Za-z0-9_]+$").unwrap();
+}
+
+fn invalid_path_part(part: &&str) -> bool {
+    VALID_PATH_PART_RE.captures(part).is_none()
+}
+
 impl Path {
+    pub fn root() -> Path {
+        Path {
+            abs: String::from("/"),
+            rel: String::from("/"),
+        }
+    }
+
+    /// Used where we know the path is coming from a source guaranteed
+    /// to emit valid paths, such as DMEs themselves.
+    pub fn make_trusted(value: &str) -> Path {
+        let rel = to_relative_path(value);
+        let abs = to_absolute_path(rel.as_str());
+        Path { abs, rel }
+    }
+
+    pub fn make_untrusted(value: &str) -> Result<Path, String> {
+        let trimmed = value.trim();
+        if trimmed.eq("/") {
+            return Ok(Path::root());
+        }
+        if trimmed.is_empty() {
+            return Err(String::from("empty path"));
+        }
+        if !trimmed.starts_with('/') {
+            return Err(String::from("invalid path"));
+        }
+        let parts: Vec<&str> = trimmed.split('/').collect();
+        if parts.iter().filter(|&x| x.is_empty()).count() > 1 {
+            return Err(String::from("path contains empty parts"));
+        }
+        if parts.iter().filter(|&x| invalid_path_part(x)).count() > 1 {
+            return Err(String::from("path contains invalid parts"));
+        }
+        let rel = to_relative_path(trimmed);
+        let abs = to_absolute_path(rel.as_str());
+        Ok(Path { abs, rel })
+    }
+
     pub fn internal_child_of_string(&self, rhs: &String, strict: bool) -> bool {
-        if self.0.eq(rhs) {
+        if self.abs.eq(rhs) {
             return !strict;
         }
         if rhs == "/" {
             return true;
         }
-        let parts: Vec<&str> = self.0.split('/').collect();
+        let parts: Vec<&str> = self.abs.split('/').collect();
         let oparts: Vec<&str> = rhs.split('/').collect();
         if parts.len() < oparts.len() {
             return false;
@@ -48,13 +131,13 @@ impl Path {
     }
 
     pub fn internal_parent_of_string(&self, rhs: &String, strict: bool) -> bool {
-        if self.0.eq(rhs){
+        if self.abs.eq(rhs) {
             return !strict;
         }
-        if self.0 == "/" {
+        if self.abs == "/" {
             return true;
         }
-        let parts: Vec<&str> = self.0.split('/').collect();
+        let parts: Vec<&str> = self.abs.split('/').collect();
         let oparts: Vec<&str> = rhs.split('/').collect();
         if parts.len() > oparts.len() {
             return false;
@@ -69,57 +152,105 @@ impl Path {
     }
 }
 
+fn to_relative_path(value: &str) -> String {
+    let parts: Vec<&str> = value.split('/').filter(|&x| !x.is_empty()).collect();
+
+    for prefix in [
+        OBJ_PREFIX,
+        MOB_PREFIX,
+        AREA_PREFIX,
+        TURF_PREFIX,
+        ATOM_PREFIX,
+    ] {
+        if parts
+            .iter()
+            .zip(prefix.iter())
+            .filter(|&(a, b)| a == b)
+            .count()
+            == prefix.len()
+        {
+            return format!("/{}", parts[prefix.len() - 1..].join("/"));
+        }
+    }
+
+    String::from(value)
+}
+
+fn to_absolute_path(value: &str) -> String {
+    let parts: Vec<&str> = value.split('/').filter(|&x| !x.is_empty()).collect();
+    if parts.is_empty() {
+        "/".to_string()
+    } else if parts[0].eq("area") {
+        return "/datum/atom/".to_string() + &parts.join("/");
+    } else if parts[0].eq("atom") {
+        return "/datum/".to_string() + &parts.join("/");
+    } else if parts[0].eq("mob") {
+        return "/datum/atom/movable/".to_string() + &parts.join("/");
+    } else if parts[0].eq("turf") {
+        return "/datum/atom/".to_string() + &parts.join("/");
+    } else if parts[0].eq("obj") {
+        return "/datum/atom/movable/".to_string() + &parts.join("/");
+    } else if CORE_TYPES.contains(&parts[0]) {
+        return "/".to_string() + &parts.join("/");
+    } else {
+        return "/datum/".to_string() + &parts.join("/");
+    }
+}
+
 #[pymethods]
 impl Path {
     #[new]
     pub fn new(value: &str) -> PyResult<Self> {
-        if !&value.starts_with('/') {
-            return Err(PyErr::new::<PyValueError, &str>("not a valid path"));
+        match Path::make_untrusted(value) {
+            Ok(p) => Ok(p),
+            Err(e) => Err(PathError::new_err(e)),
         }
-        Ok(Path(value.to_string()))
     }
 
     #[pyo3(signature = (other, strict=false))]
     fn child_of(&self, other: &Bound<PyAny>, strict: bool) -> PyResult<bool> {
         if let Ok(rhs) = other.extract::<Self>() {
-            return Ok(self.internal_child_of_string(&rhs.0, strict));
+            return Ok(self.internal_child_of_string(&rhs.abs, strict));
         } else if let Ok(rhs) = other.downcast::<PyString>() {
             return Ok(self.internal_child_of_string(&rhs.to_cow().unwrap().to_string(), strict));
         }
 
-        Err(PyErr::new::<PyRuntimeError, &str>("not a valid path"))
+        Err(PyTypeError::new_err("invalid argument type"))
     }
 
     #[pyo3(signature = (other, strict=false))]
     fn parent_of(&self, other: &Bound<PyAny>, strict: bool) -> PyResult<bool> {
         if let Ok(rhs) = other.extract::<Self>() {
-            return Ok(self.internal_parent_of_string(&rhs.0, strict));
+            return Ok(self.internal_parent_of_string(&rhs.abs, strict));
         } else if let Ok(rhs) = other.downcast::<PyString>() {
             return Ok(self.internal_parent_of_string(&rhs.to_cow().unwrap().to_string(), strict));
         }
 
-        Err(PyErr::new::<PyRuntimeError, &str>("not a valid path"))
+        Err(PyTypeError::new_err("invalid argument type"))
     }
 
     #[getter]
     fn get_parent(&self) -> PyResult<Self> {
-        if self.0 == "/" {
+        if self.abs == "/" {
             return Ok(self.clone());
         }
-        let mut parts: Vec<&str> = self.0.split('/').filter(|&x| !x.is_empty()).collect();
+        let mut parts: Vec<&str> = self.abs.split('/').filter(|&x| !x.is_empty()).collect();
         let _ = parts.split_off(parts.len() - 1);
         if parts.is_empty() {
-            Ok(Path("/".to_string()))
+            Ok(Path {
+                abs: String::from("/"),
+                rel: String::from("/"),
+            })
         } else {
             let mut parent = parts.join("/");
             parent.insert(0, '/');
-            Ok(Path(parent))
+            Path::new(parent.as_str())
         }
     }
 
     #[getter]
     fn get_stem(&self) -> PyResult<String> {
-        let parts: Vec<&str> = self.0.split('/').collect();
+        let parts: Vec<&str> = self.abs.split('/').collect();
         if let Some(last) = parts.last() {
             let l = *last;
             return Ok(l.to_string());
@@ -130,15 +261,14 @@ impl Path {
 
     #[getter]
     fn get_is_root(&self) -> bool {
-        self.0 == "/"
+        self.abs == "/"
     }
 
-    fn __hash__(&self) -> PyResult<isize> {
-        let mut s = DefaultHasher::new();
-        self.0.hash(&mut s);
-        let result = s.finish() as isize;
-
-        Ok(result)
+    fn __hash__(&self, py: Python<'_>) -> PyResult<isize> {
+        // TODO: Still not sure how to handle "/obj/foo" in {p("/obj/foo")} and
+        // p("/obj/foo") in {"/obj/foo"} if there's a mismatch between if the
+        // string is absolute or relative
+        (&self.abs).into_py(py).call_method0(py, "__hash__").unwrap().extract::<isize>(py)
     }
 
     fn __str__(&self) -> PyResult<String> {
@@ -146,27 +276,27 @@ impl Path {
     }
 
     fn __repr__(&self) -> PyResult<String> {
-        Ok(self.0.to_string())
+        Ok(self.rel.clone())
     }
 
     fn __richcmp__(&self, other: &Bound<PyAny>, op: CompareOp) -> PyResult<bool> {
         if let Ok(rhs) = other.extract::<Self>() {
             return match op {
-                CompareOp::Eq => Ok(self.0 == rhs.0),
-                CompareOp::Ne => Ok(self.0 != rhs.0),
-                CompareOp::Lt => Ok(self.0 < rhs.0),
-                CompareOp::Gt => Ok(self.0 > rhs.0),
-                CompareOp::Le => Ok(self.0 <= rhs.0),
-                CompareOp::Ge => Ok(self.0 >= rhs.0),
+                CompareOp::Eq => Ok(self.abs == rhs.abs),
+                CompareOp::Ne => Ok(self.abs != rhs.abs),
+                CompareOp::Lt => Ok(self.abs < rhs.abs),
+                CompareOp::Gt => Ok(self.abs > rhs.abs),
+                CompareOp::Le => Ok(self.abs <= rhs.abs),
+                CompareOp::Ge => Ok(self.abs >= rhs.abs),
             };
         } else if let Ok(rhs) = other.downcast::<PyString>() {
             return match op {
-                CompareOp::Eq => Ok(self.0 == rhs.to_string()),
-                CompareOp::Ne => Ok(self.0 != rhs.to_string()),
-                CompareOp::Lt => Ok(self.0 < rhs.to_string()),
-                CompareOp::Gt => Ok(self.0 > rhs.to_string()),
-                CompareOp::Le => Ok(self.0 <= rhs.to_string()),
-                CompareOp::Ge => Ok(self.0 >= rhs.to_string()),
+                CompareOp::Eq => Ok(self.abs == to_absolute_path(rhs.to_str().unwrap())),
+                CompareOp::Ne => Ok(self.abs != to_absolute_path(rhs.to_str().unwrap())),
+                CompareOp::Lt => Ok(self.abs < to_absolute_path(rhs.to_str().unwrap())),
+                CompareOp::Gt => Ok(self.abs > to_absolute_path(rhs.to_str().unwrap())),
+                CompareOp::Le => Ok(self.abs <= to_absolute_path(rhs.to_str().unwrap())),
+                CompareOp::Ge => Ok(self.abs >= to_absolute_path(rhs.to_str().unwrap())),
             };
         }
 
@@ -175,18 +305,18 @@ impl Path {
 
     fn __truediv__(&self, other: &Bound<PyAny>) -> PyResult<Self> {
         if let Ok(rhs) = other.extract::<Self>() {
-            return Ok(Path(self.0.clone() + "/" + &rhs.0));
+            let new_path = self.abs.clone() + "/" + &rhs.abs;
+            return Path::new(new_path.as_str());
         } else if let Ok(rhs) = other.downcast::<PyString>() {
-            return Ok(Path(
-                self.0.clone()
-                    + "/"
-                    + rhs
-                        .to_string()
-                        .strip_prefix('/')
-                        .unwrap_or(rhs.to_string().as_str()),
-            ));
+            let new_path = self.abs.clone()
+                + "/"
+                + rhs
+                    .to_string()
+                    .strip_prefix('/')
+                    .unwrap_or(rhs.to_string().as_str());
+            return Path::new(new_path.as_str());
         }
 
-        Err(PyRuntimeError::new_err("cannot append"))
+        Err(PathError::new_err("cannot append"))
     }
 }
