@@ -106,10 +106,15 @@ impl Path {
         if self.0 == "/" {
             return Ok(self.clone());
         }
-        let mut parts: Vec<&str> = self.0.split('/').collect();
+        let mut parts: Vec<&str> = self.0.split('/').filter(|&x| !x.is_empty()).collect();
         let _ = parts.split_off(parts.len() - 1);
-        let parent = parts.join("/");
-        Ok(Path(parent))
+        if parts.is_empty() {
+            Ok(Path("/".to_string()))
+        } else {
+            let mut parent = parts.join("/");
+            parent.insert(0, '/');
+            Ok(Path(parent))
+        }
     }
 
     #[getter]
@@ -121,6 +126,11 @@ impl Path {
         }
 
         Ok("".to_string())
+    }
+
+    #[getter]
+    fn get_is_root(&self) -> bool {
+        self.0 == "/"
     }
 
     fn __hash__(&self) -> PyResult<isize> {

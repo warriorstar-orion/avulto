@@ -21,3 +21,7 @@ def test_ischild():
 
 def test_suffix():
     assert p("/obj") / "foo" == p("/obj/foo")
+
+def test_parent():
+    assert p("/obj").parent == paths.Root
+    assert p("/area/foo").parent == p("/area")
