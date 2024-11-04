@@ -1,8 +1,4 @@
-use std::{
-    collections::hash_map::DefaultHasher,
-    fmt,
-    hash::{Hash, Hasher},
-};
+use std::fmt;
 
 use pyo3::{
     create_exception, exceptions::{PyException, PyTypeError}, pyclass, IntoPy, Python
