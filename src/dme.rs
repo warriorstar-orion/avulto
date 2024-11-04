@@ -55,16 +55,22 @@ impl Dme {
         } else if let Ok(pystr) = filename.downcast::<PyString>() {
             std::path::Path::new(&pystr.to_string()).to_path_buf()
         } else {
-            return Err(PyRuntimeError::new_err(format!(
+            return Err(PyValueError::new_err(format!(
                 "invalid filename {}",
                 filename
             )));
         };
         let pathlib = py.import_bound(pyo3::intern!(py, "pathlib"))?;
-
+        if !path.is_file() {
+            return Err(PyOSError::new_err(format!("file not found: {:?}", path)));
+        }
         let ctx = dreammaker::Context::default();
-        let pp = dreammaker::preprocessor::Preprocessor::new(&ctx, path.clone())
-            .expect("i/o error opening .dme");
+        let pp = match dreammaker::preprocessor::Preprocessor::new(&ctx, path.clone()) {
+            Ok(pp) => pp,
+            Err(e) => {
+                return Err(PyOSError::new_err(format!("error opening {:?}: {}", path, e)));
+            }
+        };
         let indents = dreammaker::indents::IndentProcessor::new(&ctx, pp);
         let mut parser = dreammaker::parser::Parser::new(&ctx, indents);
         if parse_procs {
@@ -97,9 +103,7 @@ impl Dme {
         } else if let Ok(pystr) = path.downcast::<PyString>() {
             pystr.to_string()
         } else {
-            return Err(PyRuntimeError::new_err(
-                "cannot coerce path to string".to_string(),
-            ));
+            return Err(PyValueError::new_err(format!("invalid path {:?}", path)));
         };
 
         let search_string = if objpath.as_str().eq("/") {
@@ -133,7 +137,7 @@ impl Dme {
                 }
             }
         } else {
-            return Err(PyRuntimeError::new_err(format!("invalid path {}", prefix)));
+            return Err(PyValueError::new_err(format!("invalid path {:?}", prefix)));
         };
         self.collect_child_paths(&prefix_path, false, &mut out);
 

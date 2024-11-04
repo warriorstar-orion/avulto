@@ -214,6 +214,7 @@ impl Dmi {
         };
 
         let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path.clone(),))?;
+        // TODO: Why am I doing this like this instead of just checking for path.exists?
         let file = match File::open(&path) {
             Ok(f) => f,
             Err(err) => {

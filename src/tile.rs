@@ -86,8 +86,6 @@ impl Tile {
         let mut out: Vec<Bound<PyDict>> = Vec::new();
 
         let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
-        // let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-        // let map = bound.borrow().map;
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],
@@ -117,8 +115,6 @@ impl Tile {
 
     pub fn del_prefab(&self, index: i32, py: Python<'_>) {
         let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-        // let map = bound.borrow_mut().map;
-
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => bound.borrow().map[c],
@@ -135,8 +131,6 @@ impl Tile {
 
     pub fn del_prefab_var(&self, index: i32, name: String, py: Python<'_>) {
         let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-        // let map = bound.borrow_mut().map;
-
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => bound.borrow().map[c],
@@ -192,9 +186,6 @@ impl Tile {
 
     pub fn prefab_path(&self, index: i32, py: Python<'_>) -> PyResult<path::Path> {
         let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
-        // let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-        // let map = bound.borrow_mut().map;
-
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],
@@ -208,9 +199,6 @@ impl Tile {
 
     pub fn prefab_var(&self, index: i32, name: String, py: Python<'_>) -> PyObject {
         let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
-        // let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-        // let map = bound.borrow_mut().map;
-
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],
@@ -229,9 +217,6 @@ impl Tile {
         py: Python<'_>,
     ) -> PyObject {
         let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
-        // let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-        // let map = bound.borrow_mut().map;
-
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],
@@ -251,9 +236,6 @@ impl Tile {
 
     pub fn prefab_vars(&self, index: i32, py: Python<'_>) -> Vec<String> {
         let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
-        // let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-        // let map = bound.borrow_mut().map;
-
         let mut vec = Vec::new();
         let key = match self.addr {
             Address::Key(k) => k,
@@ -276,8 +258,6 @@ impl Tile {
         py: Python<'_>,
     ) {
         let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-        // let map = bound.borrow_mut().map;
-
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => bound.borrow().map[c],
@@ -317,9 +297,6 @@ impl Tile {
     #[getter]
     pub fn turf_path(&self, py: Python<'_>) -> PyResult<path::Path> {
         let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
-        // let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-        // let map = bound.borrow_mut().map;
-
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],
@@ -342,9 +319,6 @@ impl Tile {
 
     fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
         let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
-        // let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-        // let map = bound.borrow_mut().map;
-
         Ok(format!(
             "<Tile {}>",
             match self.addr {
@@ -356,9 +330,6 @@ impl Tile {
 
     pub fn __richcmp__(&self, other: &Bound<PyAny>, op: CompareOp, py: Python<'_>) -> PyObject {
         let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
-        // let bound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-        // let map = bound.borrow_mut().map;
-
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],

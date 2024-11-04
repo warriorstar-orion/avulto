@@ -15,6 +15,9 @@
       If the optional *parse_procs* argument is :const:`True`, reflection data is
       made available for all procs.
 
+      :raises: :class:`OSError`: If the file is not found or there was an error opening it.
+      :raises: :class:`RuntimeError`: If there was an error parsing the DME environment.
+
    Once instantiated, the following methods are available:
 
    .. method:: typesof(prefix: Path | str) -> list[Path]

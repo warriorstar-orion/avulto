@@ -5,7 +5,7 @@ use std::collections::btree_map::Keys as BTreeMapKeysIter;
 use std::path::{Path, PathBuf};
 
 use itertools::iproduct;
-use pyo3::exceptions::PyRuntimeError;
+use pyo3::exceptions::{PyOSError, PyRuntimeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyList, PyString, PyTuple};
 use pyo3::{
     pyclass, pymethods, Bound, IntoPy, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult, Python,
@@ -128,6 +128,10 @@ impl Dmm {
             )));
         };
 
+        if !path.is_file() {
+            return Err(PyOSError::new_err(format!("file not found: {:?}", path)));
+        }
+
         let map = dmm_tools::dmm::Map::from_file(&path).unwrap();
         let dim = map.dim_xyz();
         let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path,))?;
@@ -153,7 +157,7 @@ impl Dmm {
             }
         }
 
-        Err(PyRuntimeError::new_err(format!(
+        Err(PyValueError::new_err(format!(
             "invalid filename {}",
             filename
         )))
