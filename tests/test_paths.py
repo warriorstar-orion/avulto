@@ -19,6 +19,10 @@ def test_ischild():
     assert paths.Area.child_of(paths.Root)
 
 
+def test_concat():
+    assert paths.Root / "foo" == p("/foo")
+
+
 def test_suffix():
     assert p("/obj") / "foo" == p("/obj/foo")
 

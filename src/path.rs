@@ -1,7 +1,9 @@
 use std::fmt;
 
 use pyo3::{
-    create_exception, exceptions::{PyException, PyTypeError}, pyclass, IntoPy, Python
+    create_exception,
+    exceptions::{PyException, PyTypeError},
+    pyclass, IntoPy, Python,
 };
 use pyo3::{
     pyclass::CompareOp,
@@ -264,7 +266,11 @@ impl Path {
         // TODO: Still not sure how to handle "/obj/foo" in {p("/obj/foo")} and
         // p("/obj/foo") in {"/obj/foo"} if there's a mismatch between if the
         // string is absolute or relative
-        (&self.abs).into_py(py).call_method0(py, "__hash__").unwrap().extract::<isize>(py)
+        (&self.abs)
+            .into_py(py)
+            .call_method0(py, "__hash__")
+            .unwrap()
+            .extract::<isize>(py)
     }
 
     fn __str__(&self) -> PyResult<String> {
@@ -301,11 +307,14 @@ impl Path {
 
     fn __truediv__(&self, other: &Bound<PyAny>) -> PyResult<Self> {
         if let Ok(rhs) = other.extract::<Self>() {
-            let new_path = self.abs.clone() + "/" + &rhs.abs;
+            let new_path = self.abs.clone() + &rhs.rel;
             return Path::new(new_path.as_str());
         } else if let Ok(rhs) = other.downcast::<PyString>() {
-            let new_path = self.abs.clone()
-                + "/"
+            let new_path = if self.get_is_root() {
+                String::from("")
+            } else {
+                self.abs.clone()
+            } + "/"
                 + rhs
                     .to_string()
                     .strip_prefix('/')
