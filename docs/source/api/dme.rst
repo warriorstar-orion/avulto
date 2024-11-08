@@ -42,6 +42,8 @@
       take an argument *node*, which will be filled in with information about
       that node in the AST. The currently available visitors are:
 
+      - ``visit_AssignOp``
+      - ``visit_BinaryOp``
       - ``visit_Break``
       - ``visit_Call``
       - ``visit_Constant``
@@ -53,15 +55,20 @@
       - ``visit_For``
       - ``visit_ForList``
       - ``visit_ForRange``
+      - ``visit_Goto``
       - ``visit_If``
+      - ``visit_InterpString``
       - ``visit_Label``
+      - ``visit_New``
       - ``visit_ParentCall``
+      - ``visit_Prefab``
       - ``visit_Resource``
       - ``visit_Return``
       - ``visit_SelfCall``
       - ``visit_Setting``
       - ``visit_Spawn``
       - ``visit_Switch``
+      - ``visit_TernaryOp``
       - ``visit_Throw``
       - ``visit_TryCatch``
       - ``visit_Var``
