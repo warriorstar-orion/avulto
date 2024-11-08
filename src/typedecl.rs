@@ -81,6 +81,16 @@ impl TypeDecl {
         )))
     }
 
+    pub fn walk_proc(
+        &self,
+        proc: &Bound<PyAny>,
+        walker: &Bound<PyAny>,
+        py: Python<'_>,
+    ) -> PyResult<()> {
+        let bound = self.dme.downcast_bound::<Dme>(py).unwrap();
+        bound.borrow().walk_proc(self.path.bind(py), proc, walker, py)
+    }
+
     fn __repr__(&self) -> PyResult<String> {
         Ok(format!("<TypeDecl {}>", self.path))
     }

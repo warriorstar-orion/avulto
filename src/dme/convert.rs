@@ -11,7 +11,7 @@ use pyo3::{
 use crate::{dmlist::DmList, path::Path};
 
 use super::nodes::{
-    Assignment, Attribute, BinaryOp, Break, Call, Continue, Crash, Del, DoWhile, DynamicCall, Expression, ExternalCall, ForInfinite, ForList, ForLoop, ForRange, Goto, Identifier, If, IfArm, Index, Input, InterpString, Label, Locate, MiniExpr, NewImplicit, NewMiniExpr, NewPrefab, ParentCall, Prefab, Return, SelfCall, Setting, Spawn, Switch, SwitchCase, Ternary, Throw, TryCatch, UnaryOp, Var, Vars, While
+    Assignment, Attribute, BinaryOp, Break, Call, Continue, Crash, Del, DoWhile, DynamicCall, ExternalCall, ForInfinite, ForList, ForLoop, ForRange, Goto, Identifier, If, IfArm, Index, Input, InterpString, Label, Locate, MiniExpr, NewImplicit, NewMiniExpr, NewPrefab, ParentCall, Prefab, ProcReference, Return, SelfCall, Setting, Spawn, StaticField, Switch, SwitchCase, Ternary, Throw, TryCatch, UnaryOp, Var, Vars, While
 };
 
 pub fn from_block_to_stmt_node_list(block: &Block, py: Python<'_>) -> PyResult<Py<PyAny>> {
@@ -548,8 +548,13 @@ pub fn from_expression_to_node(
                     dreammaker::ast::Follow::Unary(u) => {
                         original_term = UnaryOp::make(py, original_term, u)?;
                     }
-                    dreammaker::ast::Follow::StaticField(_) => todo!(),
-                    dreammaker::ast::Follow::ProcReference(_) => todo!(),
+                    dreammaker::ast::Follow::StaticField(f) => {
+                        original_term = StaticField::make(py, original_term, f.into_py(py))?;
+                    },
+                    
+                    dreammaker::ast::Follow::ProcReference(p) => {
+                        original_term = ProcReference::make(py, original_term, p.into_py(py))?;
+                    },
                 }
             }
 

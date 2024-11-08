@@ -56,6 +56,8 @@ pub fn ast(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<Setting>()?;
     m.add_class::<SettingMode>()?;
     m.add_class::<Spawn>()?;
+    m.add_class::<StaticField>()?;
+    m.add_class::<ProcReference>()?;
     m.add_class::<Switch>()?;
     m.add_class::<SwitchCase>()?;
     m.add_class::<Ternary>()?;
@@ -164,6 +166,8 @@ pub enum NodeKind {
     Goto,
     #[pyo3(name = "FOR_INFINITE")]
     ForInfinite,
+    StaticField,
+    ProcReference,
 }
 
 #[pyclass(module = "avulto.ast", name = "Operator", eq, eq_int)]
@@ -632,6 +636,38 @@ pub enum UnaryOperator {
     Ref,
     #[pyo3(name = "DEREF")]
     Deref,
+}
+
+#[pyclass(extends = Node, module = "avulto.ast")]
+pub struct StaticField {
+    #[pyo3(get)]
+    term: Py<PyAny>,
+    #[pyo3(get)]
+    field: Py<PyAny>,
+}
+
+impl StaticField {
+    pub fn make(py: Python<'_>, term: Py<PyAny>, field: Py<PyAny>) -> PyResult<PyObject> {
+        let base = PyClassInitializer::from(Node::new(NodeKind::StaticField));
+        let sub = base.add_subclass(StaticField { term, field });
+        Ok(Py::new(py, sub)?.to_object(py))
+    }
+}
+
+#[pyclass(extends = Node, module = "avulto.ast")]
+pub struct ProcReference {
+    #[pyo3(get)]
+    term: Py<PyAny>,
+    #[pyo3(get)]
+    proc_name: Py<PyAny>,
+}
+
+impl ProcReference {
+    pub fn make(py: Python<'_>, term: Py<PyAny>, proc_name: Py<PyAny>) -> PyResult<PyObject> {
+        let base = PyClassInitializer::from(Node::new(NodeKind::ProcReference));
+        let sub = base.add_subclass(ProcReference { term, proc_name });
+        Ok(Py::new(py, sub)?.to_object(py))
+    }
 }
 
 #[pyclass(extends = Node, module = "avulto.ast")]

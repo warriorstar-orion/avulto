@@ -1,10 +1,7 @@
 extern crate dreammaker;
 
 use pyo3::{
-    exceptions::{PyOSError, PyRuntimeError, PyValueError},
-    pyclass, pymethods,
-    types::{PyAnyMethods, PyList, PyString, PyStringMethods},
-    Bound, IntoPy, Py, PyAny, PyObject, PyRef, PyResult, Python, ToPyObject,
+    create_exception, exceptions::{PyException, PyOSError, PyRuntimeError, PyValueError}, pyclass, pymethods, types::{PyAnyMethods, PyList, PyString, PyStringMethods}, Bound, IntoPy, Py, PyAny, PyObject, PyRef, PyResult, Python, ToPyObject
 };
 
 use crate::{
@@ -15,6 +12,10 @@ use crate::{
 mod convert;
 pub mod nodes;
 mod walker;
+
+create_exception!(avulto.exceptions, EmptyProcError, PyException);
+create_exception!(avulto.exceptions, MissingTypeError, PyException);
+create_exception!(avulto.exceptions, MissingProcError, PyException);
 
 #[pyclass(module = "avulto", name = "DME")]
 pub struct Dme {
@@ -164,7 +165,7 @@ impl Dme {
         Ok(PyList::new_bound(py, out.into_iter().map(|m| m.into_py(py))).to_object(py))
     }
 
-    fn walk_proc(
+    pub fn walk_proc(
         &self,
         path: &Bound<PyAny>,
         proc: &Bound<PyAny>,
@@ -201,19 +202,19 @@ impl Dme {
                         self.walk_stmt(&stmt.elem, walker, py)?;
                     }
                 } else {
-                    return Err(PyRuntimeError::new_err(format!(
+                    return Err(EmptyProcError::new_err(format!(
                         "no code statements found in proc {} on type {}",
                         procname, objpath
                     )));
                 }
             } else {
-                return Err(PyRuntimeError::new_err(format!(
+                return Err(MissingProcError::new_err(format!(
                     "cannot find proc {} on type {}",
                     procname, objpath
                 )));
             }
         } else {
-            return Err(PyRuntimeError::new_err(format!(
+            return Err(MissingTypeError::new_err(format!(
                 "cannot find type {}",
                 objpath
             )));

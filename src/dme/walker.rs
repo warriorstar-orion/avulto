@@ -1,9 +1,11 @@
+use std::borrow::Borrow;
+
 use dreammaker::ast::{Expression, Ident2, Statement};
 use pyo3::{types::PyAnyMethods, Bound, IntoPy, PyAny, PyResult, Python};
 
 use super::{
     convert::{from_expression_to_node, from_statement_to_node},
-    nodes::{self, Call, Identifier},
+    nodes::{self, Identifier},
     Dme,
 };
 
@@ -45,10 +47,6 @@ impl Dme {
                     dreammaker::ast::Term::Resource(_) => {
                         visitor_name = "visit_Resource";
                     }
-                    dreammaker::ast::Term::As(input_type) => todo!(),
-                    dreammaker::ast::Term::__PROC__ => todo!(),
-                    dreammaker::ast::Term::__TYPE__ => todo!(),
-                    dreammaker::ast::Term::__IMPLIED_TYPE__ => todo!(),
                     dreammaker::ast::Term::Prefab(prefab) => {
                         visitor_name = "visit_Prefab";
                     }
@@ -69,22 +67,6 @@ impl Dme {
                     | dreammaker::ast::Term::NewMiniExpr { expr: _, args: _ } => {
                         visitor_name = "visit_New";
                     }
-                    dreammaker::ast::Term::List(_) => todo!(),
-                    dreammaker::ast::Term::Input {
-                        args,
-                        input_type,
-                        in_list,
-                    } => todo!(),
-                    dreammaker::ast::Term::Locate { args, in_list } => todo!(),
-                    dreammaker::ast::Term::Pick(_) => todo!(),
-                    dreammaker::ast::Term::DynamicCall(_, _) => todo!(),
-                    dreammaker::ast::Term::ExternalCall {
-                        library_name,
-                        function_name,
-                        args,
-                    } => todo!(),
-                    dreammaker::ast::Term::GlobalIdent(ident2) => todo!(),
-                    dreammaker::ast::Term::GlobalCall(ident2, _) => todo!(),
                     _ => {}
                 }
 
@@ -190,7 +172,7 @@ impl Dme {
                 for stmt in block.iter() {
                     self.walk_stmt(&stmt.elem, walker, py)?;
                 }
-            },
+            }
             dreammaker::ast::Statement::ForLoop {
                 init,
                 test,
@@ -358,7 +340,34 @@ impl Dme {
                     }
                 }
             }
-            dreammaker::ast::Statement::TryCatch { .. } => todo!(),
+            dreammaker::ast::Statement::TryCatch {
+                try_block,
+                catch_params,
+                catch_block,
+            } => {
+                if walker.hasattr("visit_TryCatch").unwrap() {
+                    walker.call_method1("visit_TryCatch", (from_statement_to_node(stmt, py)?,))?;
+                } else {
+                    for stmt in try_block.iter() {
+                        self.walk_stmt(&stmt.elem, walker, py)?;
+                    }
+                    for param in catch_params.iter() {
+                        if walker.hasattr("visit_Constant").unwrap() {
+                            for s in param.iter() {
+                                walker.call_method1(
+                                    "visit_Constant",
+                                    (Identifier {
+                                        ident: s.clone().into_py(py),
+                                    },),
+                                )?;
+                            }
+                        }
+                    }
+                    for stmt in catch_block.iter() {
+                        self.walk_stmt(&stmt.elem, walker, py)?;
+                    }
+                }
+            }
             dreammaker::ast::Statement::Continue(c) => {
                 if walker.hasattr("visit_Continue").unwrap() {
                     walker.call_method1("visit_Continue", (from_statement_to_node(stmt, py)?,))?;

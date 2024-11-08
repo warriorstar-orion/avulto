@@ -1,7 +1,10 @@
 #[macro_use]
 extern crate lazy_static;
 
+use dme::{EmptyProcError, MissingProcError, MissingTypeError};
+use dmi::IconError;
 use dmlist::DmList;
+use path::PathError;
 use pyo3::{prelude::*, types::PyDict, wrap_pymodule};
 
 pub mod dme;
@@ -54,6 +57,16 @@ fn avulto(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     let sys = PyModule::import_bound(_py, "sys")?;
     let sys_modules: Bound<'_, PyDict> = sys.getattr("modules")?.downcast_into()?;
     sys_modules.set_item("avulto.ast", m.getattr("ast")?)?;    
+
+    let err_submodule = PyModule::new_bound(_py, "exceptions")?;
+
+    err_submodule.add("EmptyProcError", _py.get_type_bound::<EmptyProcError>())?;
+    err_submodule.add("MissingTypeError", _py.get_type_bound::<MissingTypeError>())?;
+    err_submodule.add("MissingProcError", _py.get_type_bound::<MissingProcError>())?;
+    err_submodule.add("IconError", _py.get_type_bound::<IconError>())?;
+    err_submodule.add("PathError", _py.get_type_bound::<PathError>())?;
+
+    m.add_submodule(&err_submodule)?;
 
     Ok(())
 }
