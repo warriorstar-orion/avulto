@@ -11,7 +11,7 @@ use pyo3::{
 use crate::{dmlist::DmList, path::Path};
 
 use super::nodes::{
-    Assignment, Attribute, BinaryOp, Break, Call, Continue, Del, DoWhile, DynamicCall, ExternalCall, ForList, ForLoop, ForRange, Identifier, If, IfArm, Index, Input, InterpString, Label, Locate, MiniExpr, NewImplicit, NewMiniExpr, NewPrefab, ParentCall, Prefab, Return, SelfCall, Setting, Spawn, Switch, SwitchCase, Ternary, Throw, TryCatch, UnaryOp, While
+    Assignment, Attribute, BinaryOp, Break, Call, Continue, Crash, Del, DoWhile, DynamicCall, Expression, ExternalCall, ForInfinite, ForList, ForLoop, ForRange, Goto, Identifier, If, IfArm, Index, Input, InterpString, Label, Locate, MiniExpr, NewImplicit, NewMiniExpr, NewPrefab, ParentCall, Prefab, Return, SelfCall, Setting, Spawn, Switch, SwitchCase, Ternary, Throw, TryCatch, UnaryOp, Var, Vars, While
 };
 
 pub fn from_block_to_stmt_node_list(block: &Block, py: Python<'_>) -> PyResult<Py<PyAny>> {
@@ -81,7 +81,14 @@ pub fn from_statement_to_node(
                 else_arm_node,
             )
         }
-        dreammaker::ast::Statement::ForInfinite { .. } => todo!(),
+        dreammaker::ast::Statement::ForInfinite { block } => {
+            let mut stmt_nodes: Vec<Py<PyAny>> = vec![];
+            for stmt in block.iter() {
+                stmt_nodes.push(from_statement_to_node(&stmt.elem, py).unwrap());
+            }
+            let stmt_list = PyList::new_bound(py, stmt_nodes).into_py(py);
+            ForInfinite::make(py, stmt_list)
+        },
         dreammaker::ast::Statement::ForLoop {
             init,
             test,
@@ -137,8 +144,28 @@ pub fn from_statement_to_node(
             let stmt_list = from_block_to_stmt_node_list(&f.block, py)?;
             ForRange::make(py, name, start_expr, end_expr, step_node, stmt_list)
         }
-        dreammaker::ast::Statement::Var(_) => todo!(),
-        dreammaker::ast::Statement::Vars(_) => todo!(),
+        dreammaker::ast::Statement::Var(v) => Var::make(
+            py, 
+            v.name.clone(), 
+            match &v.value {
+                Some(expr) => from_expression_to_node(expr, py)?,
+                None => py.None(),
+            }
+        ),
+        dreammaker::ast::Statement::Vars(vs) => {
+            let mut stmt_nodes: Vec<Py<PyAny>> = vec![];
+            for v in vs.iter() {
+                stmt_nodes.push(Var::make(
+                    py,
+                    v.name.clone(),
+                    match &v.value {
+                        Some(expr) => from_expression_to_node(expr, py)?,
+                        None => py.None(),
+                    }
+                )?);
+            }
+            Vars::make(py, PyList::new_bound(py, stmt_nodes).into_py(py))
+        },
         dreammaker::ast::Statement::Setting { name, mode, value } => Setting::make(
             py,
             Identifier {
@@ -237,7 +264,9 @@ pub fn from_statement_to_node(
                 None => py.None(),
             },
         ),
-        dreammaker::ast::Statement::Goto(_) => todo!(),
+        dreammaker::ast::Statement::Goto(label) => Goto::make(
+            py, label.clone()
+        ),
         dreammaker::ast::Statement::Label { name, block } => {
             let mut stmt_nodes: Vec<Py<PyAny>> = vec![];
             for stmt in block.iter() {
@@ -250,7 +279,12 @@ pub fn from_statement_to_node(
         dreammaker::ast::Statement::Del(expr) => {
             Del::make(py, from_expression_to_node(expr, py)?)
         },
-        dreammaker::ast::Statement::Crash(_) => todo!(),
+        dreammaker::ast::Statement::Crash(expr) => {
+            Crash::make(py, match expr {
+                Some(e) => from_expression_to_node(e, py)?,
+                None => py.None(),
+            })
+        },
     }
 }
 

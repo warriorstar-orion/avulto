@@ -3,7 +3,7 @@ use pyo3::{types::PyAnyMethods, Bound, IntoPy, PyAny, PyResult, Python};
 
 use super::{
     convert::{from_expression_to_node, from_statement_to_node},
-    nodes::{self, Identifier},
+    nodes::{self, Call, Identifier},
     Dme,
 };
 
@@ -25,17 +25,105 @@ impl Dme {
         Ok(())
     }
 
-    pub fn walk_expr(
+    pub fn visit_expr(
         &self,
         expr: &Expression,
         walker: &Bound<PyAny>,
         py: Python<'_>,
     ) -> PyResult<()> {
-        if walker.hasattr("visit_Expr").unwrap() {
-            walker.call_method1("visit_Expr", (from_expression_to_node(expr, py)?,))?;
-        }
+        let mut visitor_name = "visit_Expr";
+        match expr {
+            Expression::Base { term, follow } => {
+                match &term.elem {
+                    dreammaker::ast::Term::Null
+                    | dreammaker::ast::Term::Int(_)
+                    | dreammaker::ast::Term::Float(_)
+                    | dreammaker::ast::Term::Ident(_)
+                    | dreammaker::ast::Term::String(_) => {
+                        visitor_name = "visit_Constant";
+                    }
+                    dreammaker::ast::Term::Resource(_) => {
+                        visitor_name = "visit_Resource";
+                    }
+                    dreammaker::ast::Term::As(input_type) => todo!(),
+                    dreammaker::ast::Term::__PROC__ => todo!(),
+                    dreammaker::ast::Term::__TYPE__ => todo!(),
+                    dreammaker::ast::Term::__IMPLIED_TYPE__ => todo!(),
+                    dreammaker::ast::Term::Prefab(prefab) => {
+                        visitor_name = "visit_Prefab";
+                    }
+                    dreammaker::ast::Term::InterpString(ident2, _) => {
+                        visitor_name = "visit_InterpString"
+                    }
+                    dreammaker::ast::Term::Call(ident2, _) => {
+                        visitor_name = "visit_Call";
+                    }
+                    dreammaker::ast::Term::SelfCall(_) => {
+                        visitor_name = "visit_SelfCall";
+                    }
+                    dreammaker::ast::Term::ParentCall(_) => {
+                        visitor_name = "visit_ParentCall";
+                    }
+                    dreammaker::ast::Term::NewImplicit { args: _ }
+                    | dreammaker::ast::Term::NewPrefab { prefab: _, args: _ }
+                    | dreammaker::ast::Term::NewMiniExpr { expr: _, args: _ } => {
+                        visitor_name = "visit_New";
+                    }
+                    dreammaker::ast::Term::List(_) => todo!(),
+                    dreammaker::ast::Term::Input {
+                        args,
+                        input_type,
+                        in_list,
+                    } => todo!(),
+                    dreammaker::ast::Term::Locate { args, in_list } => todo!(),
+                    dreammaker::ast::Term::Pick(_) => todo!(),
+                    dreammaker::ast::Term::DynamicCall(_, _) => todo!(),
+                    dreammaker::ast::Term::ExternalCall {
+                        library_name,
+                        function_name,
+                        args,
+                    } => todo!(),
+                    dreammaker::ast::Term::GlobalIdent(ident2) => todo!(),
+                    dreammaker::ast::Term::GlobalCall(ident2, _) => todo!(),
+                    _ => {}
+                }
 
-        Ok(())
+                if walker.hasattr(visitor_name).unwrap() {
+                    walker.call_method1(visitor_name, (from_expression_to_node(expr, py)?,))?;
+                }
+
+                Ok(())
+            }
+            Expression::BinaryOp { op: _, lhs, rhs } => {
+                if walker.hasattr("visit_BinaryOp").unwrap() {
+                    walker.call_method1("visit_BinaryOp", (from_expression_to_node(expr, py)?,))?;
+                } else {
+                    self.visit_expr(lhs, walker, py)?;
+                    self.visit_expr(rhs, walker, py)?;
+                }
+                Ok(())
+            }
+            Expression::AssignOp { op: _, lhs, rhs } => {
+                if walker.hasattr("visit_AssignOp").unwrap() {
+                    walker.call_method1("visit_AssignOp", (from_expression_to_node(expr, py)?,))?;
+                } else {
+                    self.visit_expr(lhs, walker, py)?;
+                    self.visit_expr(rhs, walker, py)?;
+                }
+                Ok(())
+            }
+            Expression::TernaryOp { cond, if_, else_ } => {
+                if walker.hasattr("visit_TernaryOp").unwrap() {
+                    walker
+                        .call_method1("visit_TernaryOp", (from_expression_to_node(expr, py)?,))?;
+                } else {
+                    self.visit_expr(cond, walker, py)?;
+                    self.visit_expr(if_, walker, py)?;
+                    self.visit_expr(else_, walker, py)?;
+                }
+                Ok(())
+            }
+        }
     }
 
     pub fn walk_stmt(
@@ -46,41 +134,7 @@ impl Dme {
     ) -> PyResult<()> {
         match &stmt {
             dreammaker::ast::Statement::Expr(expr) => {
-                let mut visit_name = "visit_Expr";
-                let node = from_expression_to_node(expr, py)?;
-                if let dreammaker::ast::Expression::Base { term, .. } = expr {
-                    match &term.elem {
-                        dreammaker::ast::Term::Null => {
-                            visit_name = "visit_Constant";
-                        }
-                        dreammaker::ast::Term::Int(_) => {
-                            visit_name = "visit_Constant";
-                        }
-                        dreammaker::ast::Term::Float(_) => {
-                            visit_name = "visit_Constant";
-                        }
-                        dreammaker::ast::Term::String(_) => {
-                            visit_name = "visit_Constant";
-                        }
-                        dreammaker::ast::Term::Resource(_) => {
-                            visit_name = "visit_Resource";
-                        }
-                        dreammaker::ast::Term::Call(_, _) => {
-                            visit_name = "visit_Call";
-                        }
-                        dreammaker::ast::Term::SelfCall(_) => {
-                            visit_name = "visit_SelfCall";
-                        }
-                        dreammaker::ast::Term::ParentCall(_) => {
-                            visit_name = "visit_ParentCall";
-                        }
-                        _ => {}
-                    }
-                };
-
-                if walker.hasattr(visit_name).unwrap() {
-                    walker.call_method1(visit_name, (node,))?;
-                }
+                self.visit_expr(expr, walker, py)?;
             }
             dreammaker::ast::Statement::Return(_) => {
                 if walker.hasattr("visit_Return").unwrap() {
@@ -91,14 +145,14 @@ impl Dme {
                 if walker.hasattr("visit_Throw").unwrap() {
                     walker.call_method1("visit_Throw", (from_statement_to_node(stmt, py)?,))?;
                 } else {
-                    self.walk_expr(t, walker, py)?;
+                    self.visit_expr(t, walker, py)?;
                 }
-            },
+            }
             dreammaker::ast::Statement::While { condition, block } => {
                 if walker.hasattr("visit_While").unwrap() {
                     walker.call_method1("visit_While", (from_statement_to_node(stmt, py)?,))?;
                 } else {
-                    self.walk_expr(condition, walker, py)?;
+                    self.visit_expr(condition, walker, py)?;
                     for stmt in block.iter() {
                         self.walk_stmt(&stmt.elem, walker, py)?;
                     }
@@ -108,7 +162,7 @@ impl Dme {
                 if walker.hasattr("visit_DoWhile").unwrap() {
                     walker.call_method1("visit_DoWhile", (from_statement_to_node(stmt, py)?,))?;
                 } else {
-                    self.walk_expr(&condition.elem, walker, py)?;
+                    self.visit_expr(&condition.elem, walker, py)?;
                     for stmt in block.iter() {
                         self.walk_stmt(&stmt.elem, walker, py)?;
                     }
@@ -120,12 +174,7 @@ impl Dme {
                     walker.call_method1("visit_If", (if_node,))?;
                 } else {
                     for (cond, armcode) in arms {
-                        if walker.hasattr("visit_Expr").unwrap() {
-                            walker.call_method1(
-                                "visit_Expr",
-                                (from_expression_to_node(&cond.elem, py)?,),
-                            )?;
-                        }
+                        self.visit_expr(&cond.elem, walker, py)?;
                         for arm_stmt in armcode.iter() {
                             self.walk_stmt(&arm_stmt.elem, walker, py)?;
                         }
@@ -137,7 +186,11 @@ impl Dme {
                     }
                 }
             }
-            dreammaker::ast::Statement::ForInfinite { .. } => todo!(),
+            dreammaker::ast::Statement::ForInfinite { block } => {
+                for stmt in block.iter() {
+                    self.walk_stmt(&stmt.elem, walker, py)?;
+                }
+            },
             dreammaker::ast::Statement::ForLoop {
                 init,
                 test,
@@ -153,12 +206,7 @@ impl Dme {
                     }
                     if let Some(test_expr_boxed) = test {
                         let test_expr = test_expr_boxed.as_ref();
-                        if walker.hasattr("visit_Expr").unwrap() {
-                            walker.call_method1(
-                                "visit_Expr",
-                                (from_expression_to_node(test_expr, py)?,),
-                            )?;
-                        }
+                        self.visit_expr(test_expr, walker, py)?;
                     }
                     if let Some(inc_stmt_boxed) = inc {
                         let inc_stmt = inc_stmt_boxed.as_ref();
@@ -175,7 +223,7 @@ impl Dme {
                 } else {
                     self.walk_ident(&l.name, walker, py)?;
                     if let Some(in_list_expr) = &l.in_list {
-                        self.walk_expr(in_list_expr, walker, py)?;
+                        self.visit_expr(in_list_expr, walker, py)?;
                     }
                     for stmt in l.block.iter() {
                         self.walk_stmt(&stmt.elem, walker, py)?;
@@ -188,10 +236,10 @@ impl Dme {
                     walker.call_method1("visit_ForRange", (node,))?;
                 } else {
                     self.walk_ident(&f.name, walker, py)?;
-                    self.walk_expr(&f.start, walker, py)?;
-                    self.walk_expr(&f.end, walker, py)?;
+                    self.visit_expr(&f.start, walker, py)?;
+                    self.visit_expr(&f.end, walker, py)?;
                     if let Some(step_expr) = &f.step {
-                        self.walk_expr(step_expr, walker, py)?;
+                        self.visit_expr(step_expr, walker, py)?;
                     }
                     for stmt in f.block.iter() {
                         self.walk_stmt(&stmt.elem, walker, py)?;
@@ -203,7 +251,10 @@ impl Dme {
                     let var_node = nodes::Var::make(
                         py,
                         v.name.clone(),
-                        from_expression_to_node(v.value.as_ref().unwrap(), py)?,
+                        match &v.value {
+                            Some(e) => from_expression_to_node(e, py)?,
+                            None => py.None(),
+                        },
                     )?;
                     walker.call_method1("visit_Var", (var_node,))?;
                 } else {
@@ -216,17 +267,49 @@ impl Dme {
                         )?;
                     }
                     if let Some(v_expr) = &v.value {
-                        self.walk_expr(v_expr, walker, py)?;
+                        self.visit_expr(v_expr, walker, py)?;
                     }
                 }
             }
-            dreammaker::ast::Statement::Vars(_) => todo!(),
-            dreammaker::ast::Statement::Setting { name, mode: _, value } => {
+            dreammaker::ast::Statement::Vars(vs) => {
+                if walker.hasattr("visit_Var").unwrap() {
+                    for v in vs.iter() {
+                        let var_node = nodes::Var::make(
+                            py,
+                            v.name.clone(),
+                            match &v.value {
+                                Some(e) => from_expression_to_node(e, py)?,
+                                None => py.None(),
+                            },
+                        )?;
+                        walker.call_method1("visit_Var", (var_node,))?;
+                    }
+                } else {
+                    for v in vs.iter() {
+                        if walker.hasattr("visit_Constant").unwrap() {
+                            walker.call_method1(
+                                "visit_Constant",
+                                (Identifier {
+                                    ident: v.name.clone().into_py(py),
+                                },),
+                            )?;
+                        }
+                        if let Some(v_expr) = &v.value {
+                            self.visit_expr(v_expr, walker, py)?;
+                        }
+                    }
+                }
+            }
+            dreammaker::ast::Statement::Setting {
+                name,
+                mode: _,
+                value,
+            } => {
                 if walker.hasattr("visit_Setting").unwrap() {
                     walker.call_method1("visit_Setting", (from_statement_to_node(stmt, py)?,))?;
                 } else {
                     self.walk_ident(name, walker, py)?;
-                    self.walk_expr(value, walker, py)?;
+                    self.visit_expr(value, walker, py)?;
                 }
             }
             dreammaker::ast::Statement::Spawn { delay, block } => {
@@ -234,7 +317,7 @@ impl Dme {
                     walker.call_method1("visit_Spawn", (from_statement_to_node(stmt, py)?,))?;
                 } else {
                     if let Some(delay_expr) = delay {
-                        self.walk_expr(delay_expr, walker, py)?;
+                        self.visit_expr(delay_expr, walker, py)?;
                     }
                     for stmt in block.iter() {
                         self.walk_stmt(&stmt.elem, walker, py)?;
@@ -249,26 +332,17 @@ impl Dme {
                 if walker.hasattr("visit_Switch").unwrap() {
                     walker.call_method1("visit_Switch", (from_statement_to_node(stmt, py)?,))?;
                 } else {
-                    self.walk_expr(input, walker, py)?;
+                    self.visit_expr(input, walker, py)?;
                     for (case_types, block) in cases.iter() {
                         if walker.hasattr("visit_Expr").unwrap() {
                             for case_elem in &case_types.elem {
                                 match case_elem {
                                     dreammaker::ast::Case::Exact(e) => {
-                                        walker.call_method1(
-                                            "visit_Expr",
-                                            (from_expression_to_node(e, py)?,),
-                                        )?;
+                                        self.visit_expr(e, walker, py)?;
                                     }
                                     dreammaker::ast::Case::Range(s, e) => {
-                                        walker.call_method1(
-                                            "visit_Expr",
-                                            (from_expression_to_node(s, py)?,),
-                                        )?;
-                                        walker.call_method1(
-                                            "visit_Expr",
-                                            (from_expression_to_node(e, py)?,),
-                                        )?;
+                                        self.visit_expr(s, walker, py)?;
+                                        self.visit_expr(e, walker, py)?;
                                     }
                                 }
                             }
@@ -284,22 +358,47 @@ impl Dme {
                     }
                 }
             }
-            dreammaker::ast::Statement::TryCatch { .. } => {
-                if walker.hasattr("visit_TryCatch").unwrap() {
-                    walker.call_method1("visit_TryCatch", (from_statement_to_node(stmt, py)?,))?;
-                }
-            },
-            dreammaker::ast::Statement::Continue(_) => {
+            dreammaker::ast::Statement::TryCatch { .. } => todo!(),
+            dreammaker::ast::Statement::Continue(c) => {
                 if walker.hasattr("visit_Continue").unwrap() {
                     walker.call_method1("visit_Continue", (from_statement_to_node(stmt, py)?,))?;
-                }
-            },
-            dreammaker::ast::Statement::Break(_) => {
-                if walker.hasattr("visit_Break").unwrap() {
-                    walker.call_method1("visit_Break", (from_statement_to_node(stmt, py)?,))?;
+                } else if walker.hasattr("visit_Constant").unwrap() {
+                    if let Some(cs) = c {
+                        walker.call_method1(
+                            "visit_Constant",
+                            (Identifier {
+                                ident: cs.clone().into_py(py),
+                            },),
+                        )?;
+                    }
                 }
             }
-            dreammaker::ast::Statement::Goto(_) => todo!(),
+            dreammaker::ast::Statement::Break(b) => {
+                if walker.hasattr("visit_Break").unwrap() {
+                    walker.call_method1("visit_Break", (from_statement_to_node(stmt, py)?,))?;
+                } else if walker.hasattr("visit_Constant").unwrap() {
+                    if let Some(bs) = b {
+                        walker.call_method1(
+                            "visit_Constant",
+                            (Identifier {
+                                ident: bs.clone().into_py(py),
+                            },),
+                        )?;
+                    }
+                }
+            }
+            dreammaker::ast::Statement::Goto(g) => {
+                if walker.hasattr("visit_Goto").unwrap() {
+                    walker.call_method1("visit_Goto", (from_statement_to_node(stmt, py)?,))?;
+                } else if walker.hasattr("visit_Constant").unwrap() {
+                    walker.call_method1(
+                        "visit_Constant",
+                        (Identifier {
+                            ident: g.clone().into_py(py),
+                        },),
+                    )?;
+                }
+            }
             dreammaker::ast::Statement::Label { name, block } => {
                 if walker.hasattr("visit_Label").unwrap() {
                     walker.call_method1("visit_Label", (from_statement_to_node(stmt, py)?,))?;
@@ -322,9 +421,9 @@ impl Dme {
                     let del_node = from_statement_to_node(stmt, py)?;
                     walker.call_method1("visit_Del", (del_node,))?;
                 } else {
-                    self.walk_expr(expr, walker, py)?;
+                    self.visit_expr(expr, walker, py)?;
                 }
-            },
+            }
             dreammaker::ast::Statement::Crash(crash_expr) => {
                 if walker.hasattr("visit_Crash").unwrap() {
                     let crashval = if let Some(cexpr) = crash_expr {

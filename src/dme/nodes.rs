@@ -29,9 +29,11 @@ pub fn ast(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<DynamicCall>()?;
     m.add_class::<Expression>()?;
     m.add_class::<ExternalCall>()?;
+    m.add_class::<ForInfinite>()?;
     m.add_class::<ForList>()?;
     m.add_class::<ForLoop>()?;
     m.add_class::<ForRange>()?;
+    m.add_class::<Goto>()?;
     m.add_class::<Identifier>()?;
     m.add_class::<If>()?;
     m.add_class::<IfArm>()?;
@@ -62,6 +64,7 @@ pub fn ast(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<UnaryOp>()?;
     m.add_class::<UnaryOperator>()?;
     m.add_class::<Var>()?;
+    m.add_class::<Vars>()?;
     m.add_class::<While>()?;
     Ok(())
 }
@@ -157,6 +160,10 @@ pub enum NodeKind {
     Del,
     #[pyo3(name = "THROW")]
     Throw,
+    #[pyo3(name = "GOTO")]
+    Goto,
+    #[pyo3(name = "FOR_INFINITE")]
+    ForInfinite,
 }
 
 #[pyclass(module = "avulto.ast", name = "Operator", eq, eq_int)]
@@ -311,6 +318,23 @@ impl Var {
         let sub = base.add_subclass(Var {
             name: name.into_py(py),
             value,
+        });
+
+        Ok(Py::new(py, sub)?.to_object(py))
+    }
+}
+
+#[pyclass(extends = Node, module = "avulto.ast")]
+pub struct Vars {
+    #[pyo3(get)]
+    vars: Py<PyAny>,
+}
+
+impl Vars {
+    pub fn make(py: Python<'_>, vars: Py<PyAny>) -> PyResult<PyObject> {
+        let base = PyClassInitializer::from(Node::new(NodeKind::Var));
+        let sub = base.add_subclass(Vars {
+            vars
         });
 
         Ok(Py::new(py, sub)?.to_object(py))
@@ -723,6 +747,25 @@ impl Crash {
     pub fn make(py: Python<'_>, expr: Py<PyAny>) -> PyResult<PyObject> {
         let base = PyClassInitializer::from(Node::new(NodeKind::Crash));
         let sub = base.add_subclass(Crash { expr });
+        Ok(Py::new(py, sub)?.to_object(py))
+    }
+}
+
+#[pyclass(extends = Node, module = "avulto.ast")]
+pub struct ForInfinite {
+    #[pyo3(get)]
+    stmts: Py<PyAny>,
+}
+
+impl ForInfinite {
+    pub fn make(
+        py: Python<'_>,
+        stmts: Py<PyAny>,
+    ) -> PyResult<PyObject> {
+        let base = PyClassInitializer::from(Node::new(NodeKind::ForInfinite));
+        let sub = base.add_subclass(ForInfinite {
+            stmts,
+        });
         Ok(Py::new(py, sub)?.to_object(py))
     }
 }
@@ -1215,3 +1258,18 @@ impl Throw {
         Ok(Py::new(py, sub)?.to_object(py))
     }
 }
+
+#[pyclass(extends = Node, module = "avulto.ast")]
+pub struct Goto {
+    #[pyo3(get)]
+    label: String,
+}
+
+impl Goto {
+    pub fn make(py: Python<'_>, label: String) -> PyResult<PyObject> {
+        let base = PyClassInitializer::from(Node::new(NodeKind::Goto));
+        let sub = base.add_subclass(Goto { label });
+        Ok(Py::new(py, sub)?.to_object(py))
+    }
+}
+
