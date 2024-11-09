@@ -13,10 +13,12 @@ def test_paths():
 def test_isparent():
     assert paths.Root.parent_of(p("/datum"))
     assert p("/obj/foo").parent_of(p("/obj/foo/bar"))
+    assert p("/obj").parent_of("/obj/foo")
 
 
 def test_ischild():
     assert paths.Area.child_of(paths.Root)
+    assert p("/obj/foo").child_of("/obj")
 
 
 def test_concat():

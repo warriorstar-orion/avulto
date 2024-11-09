@@ -9,7 +9,7 @@
 project = 'avulto'
 copyright = '2024 Warriorstar Orion'
 author = 'Warriorstar Orion'
-release = 'v0.0.20'
+release = 'v0.0.21'
 version = release
 
 
@@ -17,6 +17,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
+    'sphinxext.opengraph',
     # 'sphinx.ext.todo',
     # 'sphinx.ext.inheritance_diagram',
     # 'sphinx.ext.autosectionlabel',

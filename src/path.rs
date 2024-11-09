@@ -115,7 +115,8 @@ impl Path {
             return true;
         }
         let parts: Vec<&str> = self.abs.split('/').collect();
-        let oparts: Vec<&str> = rhs.split('/').collect();
+        let rhs_abs = to_absolute_path(rhs);
+        let oparts: Vec<&str> = rhs_abs.split('/').collect();
         if parts.len() < oparts.len() {
             return false;
         }
@@ -136,7 +137,8 @@ impl Path {
             return true;
         }
         let parts: Vec<&str> = self.abs.split('/').collect();
-        let oparts: Vec<&str> = rhs.split('/').collect();
+        let rhs_abs = to_absolute_path(rhs);
+        let oparts: Vec<&str> = rhs_abs.split('/').collect();
         if parts.len() > oparts.len() {
             return false;
         }
