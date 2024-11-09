@@ -96,3 +96,8 @@
 
       Returns a Python representation of the variable *name*. This will lookup
       values of variables declared in the type's parents.
+
+   .. method:: walk_proc(proc: str, walker)
+
+      Use the AST *walker* to walk the proc named *proc*. A convenience method
+      for :py:meth:`DME.walk_proc`.
