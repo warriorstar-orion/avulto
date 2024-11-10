@@ -130,7 +130,7 @@ dependencies = [
 
 [[package]]
 name = "avulto"
-version = "0.0.25"
+version = "0.0.26"
 dependencies = [
  "dmi",
  "dmm-tools",
