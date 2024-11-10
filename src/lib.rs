@@ -6,6 +6,7 @@ use dmi::IconError;
 use dmlist::DmList;
 use path::PathError;
 use pyo3::{prelude::*, types::PyDict, wrap_pymodule};
+use typedecl::{ProcDecl, TypeDecl};
 
 pub mod dme;
 pub mod dmi;
@@ -38,6 +39,8 @@ fn avulto(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<dmi::StateIter>()?;
 
     m.add_class::<dme::Dme>()?;
+    m.add_class::<ProcDecl>()?;
+    m.add_class::<TypeDecl>()?;
     m.add_class::<DmList>()?;
 
     m.add_class::<helpers::Dir>()?;
