@@ -167,7 +167,7 @@ impl Expression {
                     dreammaker::ast::Term::Resource(s) => Self::Constant {
                         constant: Constant::Resource(s.clone()),
                     },
-                    dreammaker::ast::Term::As(input_type) => todo!(),
+                    dreammaker::ast::Term::As(_) => todo!(),
                     dreammaker::ast::Term::__PROC__ => Self::Constant {
                         constant: Constant::ProcMacro(),
                     },
@@ -233,7 +233,7 @@ impl Expression {
                                 .collect()
                         }),
                     },
-                    dreammaker::ast::Term::NewMiniExpr { expr, args } => Self::NewMiniExpr {
+                    dreammaker::ast::Term::NewMiniExpr { expr, args: _ } => Self::NewMiniExpr {
                         name: Expression::Identifier {
                             name: expr.ident.to_string(),
                         }
@@ -302,7 +302,7 @@ impl Expression {
                         input_type: input_type.as_ref().map(|it| it.bits().into_py(py)),
                         in_list: in_list
                             .as_ref()
-                            .map(|in_list| Expression::from_expression(py, &in_list).into_py(py)),
+                            .map(|in_list| Expression::from_expression(py, in_list).into_py(py)),
                     },
                     dreammaker::ast::Term::Locate { args, in_list } => Self::Locate {
                         args: args
@@ -319,9 +319,9 @@ impl Expression {
                             .map(|(a, b)| {
                                 (
                                     a.as_ref().map(|expr| {
-                                        Expression::from_expression(py, &expr).into_py(py)
+                                        Expression::from_expression(py, expr).into_py(py)
                                     }),
-                                    Expression::from_expression(py, &b).into_py(py),
+                                    Expression::from_expression(py, b).into_py(py),
                                 )
                             })
                             .collect(),
@@ -341,26 +341,26 @@ impl Expression {
                         function_name,
                         args,
                     } => Self::ExternalCall {
-                        library_name: Expression::from_expression(py, &library_name).into_py(py),
-                        function_name: Expression::from_expression(py, &function_name).into_py(py),
+                        library_name: Expression::from_expression(py, library_name).into_py(py),
+                        function_name: Expression::from_expression(py, function_name).into_py(py),
                         args: args
                             .iter()
                             .map(|a| Expression::from_expression(py, a).into_py(py))
                             .collect(),
                     },
-                    dreammaker::ast::Term::GlobalIdent(ident2) => todo!(),
-                    dreammaker::ast::Term::GlobalCall(ident2, _) => todo!(),
+                    dreammaker::ast::Term::GlobalIdent(_) => todo!(),
+                    dreammaker::ast::Term::GlobalCall(_, _) => todo!(),
                 };
 
                 for f in follow.iter() {
                     match &f.elem {
-                        dreammaker::ast::Follow::Index(list_access_kind, expression) => {
+                        dreammaker::ast::Follow::Index(_, expression) => {
                             core = Self::Index {
                                 expr: core.into_py(py),
-                                index: Expression::from_expression(py, &expression).into_py(py),
+                                index: Expression::from_expression(py, expression).into_py(py),
                             };
                         }
-                        dreammaker::ast::Follow::Field(property_access_kind, ident2) => {
+                        dreammaker::ast::Follow::Field(_, ident2) => {
                             core = Self::Field {
                                 expr: Some(core.into_py(py)),
                                 field: Expression::Identifier {
@@ -369,7 +369,7 @@ impl Expression {
                                 .into_py(py),
                             };
                         }
-                        dreammaker::ast::Follow::Call(property_access_kind, ident2, args) => {
+                        dreammaker::ast::Follow::Call(_, ident2, args) => {
                             core = Self::Call {
                                 expr: core.into_py(py),
                                 name: Expression::Identifier {
@@ -615,7 +615,7 @@ impl Expression {
                 }
                 Expression::Prefab { prefab } => {
                     if let Ok(prefab) = prefab.downcast_bound::<Prefab>(py) {
-                        prefab.borrow().walk(walker);
+                        Prefab::walk(prefab, walker)?;
                     }
 
                     Ok(())
@@ -664,7 +664,7 @@ impl Expression {
 
                     Ok(())
                 }
-                Expression::Call { expr, name, args } => {
+                Expression::Call { expr, name: _, args } => {
                     if walker.hasattr("visit_Call").unwrap() {
                         walker.call_method1("visit_Call", (self_.into_py(py),))?;
                     } else {
@@ -709,7 +709,7 @@ impl Expression {
 
                     Ok(())
                 }
-                Expression::UnaryOp { expr, unary_op } => {
+                Expression::UnaryOp { expr, unary_op: _ } => {
                     if walker.hasattr("visit_UnaryOp").unwrap() {
                         walker.call_method1("visit_UnaryOp", (self_.into_py(py),))?;
                     } else if let Ok(e) = expr.downcast_bound::<Expression>(py) {
@@ -806,7 +806,7 @@ impl Expression {
                         walker.call_method1("visit_NewPrefab", (self_.into_py(py),))?;
                     } else {
                         if let Ok(prefab) = prefab.downcast_bound::<Prefab>(py) {
-                            prefab.borrow().walk(walker);
+                            Prefab::walk(prefab, walker)?;
                         }
                         if let Some(args) = args {
                             for arg in args.iter() {
@@ -842,7 +842,7 @@ impl Expression {
                 }
                 Expression::Input {
                     args,
-                    input_type,
+                    input_type: _,
                     in_list,
                 } => {
                     if walker.hasattr("visit_Input").unwrap() {
@@ -919,7 +919,10 @@ impl Expression {
     }
 
     fn __str__(&self, py: Python<'_>) -> PyResult<String> {
-        self.__repr__(py)
+        match self {
+            Expression::Identifier { name } => Ok(name.clone()),
+            _ => self.__repr__(py)
+        }
     }
 
     fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
@@ -938,31 +941,31 @@ impl Expression {
             Expression::Locate { args: _, in_list: _ } => Ok("<Locate ...>".to_string()),
             Expression::Prefab { prefab } => Ok(format!("<Prefab {}>", prefab)),
             Expression::Index { expr, index } => Ok(format!("<Index {}[{}]>", expr, index)),
-            Expression::Field { expr, field } => Ok(format!("<Field {}>", field)),
+            Expression::Field { expr: _, field } => Ok(format!("<Field {}>", field)),
             Expression::StaticField { expr, field } => Ok(format!("<StaticField {}::{}>", expr, field)),
-            Expression::Call { expr, name, args } => Ok(format!("<Call {}.{}(...)>", expr, name)),
-            Expression::SelfCall { args } => Ok(format!("<SelfCall ...>")),
-            Expression::ParentCall { args } => Ok(format!("<ParentCall ...>")),
+            Expression::Call { expr, name, args: _ } => Ok(format!("<Call {}.{}(...)>", expr, name)),
+            Expression::SelfCall { .. } => Ok("<SelfCall ...>".to_string()),
+            Expression::ParentCall { .. } => Ok("<ParentCall ...>".to_string()),
             Expression::UnaryOp { expr, unary_op } => Ok(format!("<UnaryOp {:?} {}>", unary_op, expr)),
             Expression::ProcReference { expr, name } => Ok(format!("<ProcReference {}.{}>", expr, name)),
             Expression::ExternalCall {
                 library_name,
                 function_name,
-                args,
+                args: _,
             } => Ok(format!("<ExternalCall {},{}(...)>", library_name, function_name)),
-            Expression::NewMiniExpr { name, fields } => Ok(format!("<NewMiniExpr {} ...>", name)),
-            Expression::NewImplicit { args } => Ok(format!("<NewImplicit ...>")),
-            Expression::NewPrefab { prefab, args } => Ok(format!("<NewPrefab {} ...>", prefab)),
+            Expression::NewMiniExpr { name, fields: _ } => Ok(format!("<NewMiniExpr {} ...>", name)),
+            Expression::NewImplicit { .. } => Ok("<NewImplicit ...>".to_string()),
+            Expression::NewPrefab { prefab, args: _ } => Ok(format!("<NewPrefab {} ...>", prefab)),
             Expression::DynamicCall {
                 lib_name,
                 proc_name,
             } => Ok(format!("<DynamicCall ({:?})({:?})>", lib_name, proc_name)),
             Expression::Input {
-                args,
+                args: _,
                 input_type,
-                in_list,
+                in_list: _,
             } => Ok(format!("<Input {:?} ...>", input_type)),
-            Expression::Pick { args } => Ok(format!("<Pick ...>")),
+            Expression::Pick { .. } => Ok("<Pick ...>".to_string()),
         }
     }
 }

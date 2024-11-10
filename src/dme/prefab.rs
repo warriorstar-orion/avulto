@@ -15,7 +15,7 @@ pub struct Prefab {
 }
 
 impl Prefab {
-    pub fn make(py: Python<'_>, prefab: &Box<dreammaker::ast::Prefab>) -> Self {
+    pub fn make(py: Python<'_>, prefab: &dreammaker::ast::Prefab) -> Self {
         let mut path: String = "".to_owned();
         for (op, val) in prefab.path.iter() {
             path.push_str(format!("{}{}", op, val).as_str());
@@ -59,8 +59,12 @@ impl Prefab {
         "".to_string()
     }
 
-    pub fn walk(&self, walker: &Bound<PyAny>) {
+    pub fn walk(self_: &Bound<Self>, walker: &Bound<PyAny>) -> PyResult<()> {
+        if walker.hasattr("visit_Prefab").unwrap() {
+            walker.call_method1("visit_Prefab", (self_,))?;
+        }
 
+        Ok(())
     }
 }
 

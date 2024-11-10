@@ -14,6 +14,7 @@ extern crate dreammaker;
 pub fn ast(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<Expression>()?;
     m.add_class::<Node>()?;
+    m.add_class::<NodeKind>()?;
     Ok(())
 }
 
@@ -179,7 +180,7 @@ pub enum Node {
     },
 }
 
-pub fn visit_constant(py: Python<'_>, walker: &Bound<PyAny>, constant: Py<PyAny>) -> PyResult<()> {
+pub fn visit_constant(_py: Python<'_>, walker: &Bound<PyAny>, constant: Py<PyAny>) -> PyResult<()> {
     if walker.hasattr("visit_Constant").unwrap() {
         walker.call_method1("visit_Constant", (constant,))?;
     }
