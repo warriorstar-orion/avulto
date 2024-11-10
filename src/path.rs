@@ -61,7 +61,7 @@ impl From<Path> for String {
 }
 
 lazy_static! {
-    static ref VALID_PATH_PART_RE: Regex = Regex::new(r"^[A-Za-z_][A-Za-z0-9_]+$").unwrap();
+    static ref VALID_PATH_PART_RE: Regex = Regex::new(r"^[A-Za-z_][A-Za-z0-9_]*$").unwrap();
 }
 
 fn invalid_path_part(part: &&str) -> bool {
