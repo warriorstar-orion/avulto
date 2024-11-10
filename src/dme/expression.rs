@@ -2,11 +2,11 @@ use dreammaker::ast::AssignOp;
 use pyo3::{
     exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyAnyMethods},
+    types::PyAnyMethods,
     Bound, IntoPy, Py, PyAny, PyObject, PyResult, Python,
 };
 
-use crate::{dmlist::DmList};
+use crate::dmlist::DmList;
 
 use super::{
     nodes::{visit_constant, NodeKind},
@@ -577,7 +577,11 @@ impl Expression {
                         let borrowed = dmlist.borrow();
                         for i in 0..borrowed.keys.len() {
                             if let Some(k) = borrowed.keys.get(i) {
-                                visit_constant(py, walker, k.clone_ref(py))?;
+                                if let Ok(bound_k) = k.downcast_bound::<Expression>(py) {
+                                    Expression::walk(bound_k, walker)?;
+                                } else if k.downcast_bound::<Constant>(py).is_ok() {
+                                    visit_constant(py, walker, k.clone_ref(py))?;
+                                }
                             }
                             if let Some(v) = borrowed.vals.get(i) {
                                 if let Ok(v_) = v.downcast_bound::<Expression>(py) {
@@ -593,7 +597,11 @@ impl Expression {
                     if walker.hasattr("visit_InterpString").unwrap() {
                         walker.call_method1("visit_InterpString", (self_.into_py(py),))?;
                     } else {
-                        visit_constant(py, walker, ident.clone_ref(py))?;
+                        if let Ok(bound_ident) = ident.downcast_bound::<Expression>(py) {
+                            Expression::walk(bound_ident, walker)?;
+                        } else if ident.downcast_bound::<Constant>(py).is_ok() {
+                            visit_constant(py, walker, ident.clone_ref(py))?;
+                        }
                         for tokens in tokens.iter() {
                             for token in tokens.iter() {
                                 if let Ok(bound_token) = token.downcast_bound::<Expression>(py) {
@@ -649,7 +657,9 @@ impl Expression {
                         if let Ok(e) = expr.downcast_bound::<Expression>(py) {
                             Expression::walk(e, walker)?;
                         }
-                        visit_constant(py, walker, field.clone_ref(py))?;
+                        if let Ok(bound_field) = field.downcast_bound::<Expression>(py) {
+                            Expression::walk(bound_field, walker)?;
+                        }
                     }
 
                     Ok(())
@@ -661,7 +671,9 @@ impl Expression {
                         if let Ok(bound_expr) = expr.downcast_bound::<Expression>(py) {
                             Expression::walk(bound_expr, walker)?;
                         }
-                        visit_constant(py, walker, name.clone_ref(py))?;
+                        if let Ok(bound_name) = expr.downcast_bound::<Expression>(py) {
+                            Expression::walk(bound_name, walker)?;
+                        }
                         for arg in args.iter() {
                             if let Ok(bound_arg) = arg.downcast_bound::<Expression>(py) {
                                 Expression::walk(bound_arg, walker)?;
@@ -713,7 +725,9 @@ impl Expression {
                         if let Ok(e) = expr.downcast_bound::<Expression>(py) {
                             Expression::walk(e, walker)?;
                         }
-                        visit_constant(py, walker, name.clone_ref(py))?;
+                        if let Ok(bound_name) = name.downcast_bound::<Expression>(py) {
+                            Expression::walk(bound_name, walker)?;
+                        }
                     }
 
                     Ok(())
@@ -744,8 +758,12 @@ impl Expression {
                     if walker.hasattr("visit_ExternalCall").unwrap() {
                         walker.call_method1("visit_ExternalCall", (self_.into_py(py),))?;
                     } else {
-                        visit_constant(py, walker, library_name.clone_ref(py))?;
-                        visit_constant(py, walker, function_name.clone_ref(py))?;
+                        if let Ok(bound_library_name) = library_name.downcast_bound::<Expression>(py) {
+                            Expression::walk(bound_library_name, walker)?;
+                        }
+                        if let Ok(bound_function_name) = function_name.downcast_bound::<Expression>(py) {
+                            Expression::walk(bound_function_name, walker)?;
+                        }
                         for arg in args.iter() {
                             if let Ok(bound_arg) = arg.downcast_bound::<Expression>(py) {
                                 Expression::walk(bound_arg, walker)?;
@@ -758,7 +776,9 @@ impl Expression {
                     if walker.hasattr("visit_NewMiniExpr").unwrap() {
                         walker.call_method1("visit_NewMiniExpr", (self_.into_py(py),))?;
                     } else {
-                        visit_constant(py, walker, name.clone_ref(py))?;
+                        if let Ok(bound_name) = name.downcast_bound::<Expression>(py) {
+                            Expression::walk(bound_name, walker)?;
+                        }
                         for field in fields.iter() {
                             if let Ok(bound_field) = field.downcast_bound::<Expression>(py) {
                                 Expression::walk(bound_field, walker)?;
