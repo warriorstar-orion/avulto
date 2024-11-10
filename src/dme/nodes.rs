@@ -1,8 +1,5 @@
 use core::fmt;
-use std::{
-    borrow::Borrow,
-    hash::{Hash, Hasher},
-};
+use std::hash::Hash;
 
 use dreammaker::ast::Statement;
 use pyo3::{
@@ -80,6 +77,7 @@ pub enum NodeKind {
     UnaryOp,
     Unknown,
     Var,
+    Vars,
     While,
 }
 
@@ -366,7 +364,7 @@ impl Node {
                 cases,
                 default,
             } => {
-                let input_expr = Expression::from_expression(py, &input).into_py(py);
+                let input_expr = Expression::from_expression(py, input).into_py(py);
                 let mut case_nodes: Vec<Py<PyAny>> = vec![];
                 for (case, block) in cases.iter() {
                     let mut exact_nodes: Vec<Py<PyAny>> = vec![];
@@ -699,7 +697,7 @@ impl Node {
                     visit_constant(py, walker, l.clone().into_py(py))?;
                 }
             }
-            Node::Setting { name, mode, value } => {
+            Node::Setting { name, mode: _, value } => {
                 if walker.hasattr("visit_Setting").unwrap() {
                     walker.call_method1("visit_Setting", (self_.as_ref(),))?;
                 } else {
@@ -815,6 +813,35 @@ impl Node {
 
 #[pymethods]
 impl Node {
+    #[getter]
+    fn get_kind(&self, py: Python<'_>) -> PyResult<PyObject> {
+        match self {
+            Node::Unknown() => Ok(NodeKind::Unknown.into_py(py)),
+            Node::Expression { expr } => expr.call_method0(py, "kind"),
+            Node::Crash { .. } => Ok(NodeKind::Crash.into_py(py)),
+            Node::Return { .. } => Ok(NodeKind::Return.into_py(py)),
+            Node::Throw { .. } => Ok(NodeKind::Throw.into_py(py)),
+            Node::Del { .. } => Ok(NodeKind::Del.into_py(py)),
+            Node::Break { .. } => Ok(NodeKind::Break.into_py(py)),
+            Node::While { .. } => Ok(NodeKind::While.into_py(py)),
+            Node::DoWhile { .. } => Ok(NodeKind::DoWhile.into_py(py)),
+            Node::If { .. } => Ok(NodeKind::If.into_py(py)),
+            Node::ForInfinite { .. } => Ok(NodeKind::ForInfinite.into_py(py)),
+            Node::ForList { .. } => Ok(NodeKind::ForList.into_py(py)),
+            Node::ForLoop { .. } => Ok(NodeKind::ForLoop.into_py(py)),
+            Node::ForRange { .. } => Ok(NodeKind::ForRange.into_py(py)),
+            Node::Var { .. } => Ok(NodeKind::Var.into_py(py)),
+            Node::Vars { .. } => Ok(NodeKind::Vars.into_py(py)),
+            Node::Setting { .. } => Ok(NodeKind::Setting.into_py(py)),
+            Node::Spawn { .. } => Ok(NodeKind::Spawn.into_py(py)),
+            Node::Continue { .. } => Ok(NodeKind::Continue.into_py(py)),
+            Node::Goto { .. } => Ok(NodeKind::Goto.into_py(py)),
+            Node::Label { .. } => Ok(NodeKind::Label.into_py(py)),
+            Node::TryCatch { .. } => Ok(NodeKind::TryCatch.into_py(py)),
+            Node::Switch { .. } => Ok(NodeKind::Switch.into_py(py)),
+        }
+    }
+
     fn __str__(&self, py: Python<'_>) -> PyResult<String> {
         self.__repr__(py)
     }
@@ -828,22 +855,22 @@ impl Node {
             Node::Throw { expr } => Ok(format!("<Throw {:?}>", expr)),
             Node::Del { expr } => Ok(format!("<Del {:?}>", expr)),
             Node::Break { label } => Ok(format!("<Break {:?}>", label)),
-            Node::While { condition, block } => Ok(format!("<While {} ...>", condition)),
-            Node::DoWhile { condition, block } => Ok(format!("<DoWhile {} ...>", condition)),
-            Node::If { if_arms, else_arm } => Ok(format!("<If ...>")),
-            Node::ForInfinite { block } => Ok(format!("<ForInfinite ...>")),
-            Node::ForList { name, in_list, block } => Ok(format!("<ForList ...>")),
-            Node::ForLoop { init, test, inc, block } => Ok(format!("<ForLoop ...>")),
-            Node::ForRange { name, start, end, step, block } => Ok(format!("<ForRange ...>")),
-            Node::Var { name, value } => Ok(format!("<Var {:?} ...>", name)),
-            Node::Vars { vars } => Ok(format!("<Vars ...>")),
-            Node::Setting { name, mode, value } => Ok(format!("<Setting {} ...>", name)),
-            Node::Spawn { delay, block } => Ok(format!("<Spawn ...>")),
+            Node::While { condition, block: _ } => Ok(format!("<While {} ...>", condition)),
+            Node::DoWhile { condition, block: _ } => Ok(format!("<DoWhile {} ...>", condition)),
+            Node::If { .. } => Ok("<If ...>".to_string()),
+            Node::ForInfinite { .. } => Ok("<ForInfinite ...>".to_string()),
+            Node::ForList { .. } => Ok("<ForList ...>".to_string()),
+            Node::ForLoop { .. } => Ok("<ForLoop ...>".to_string()),
+            Node::ForRange { .. } => Ok("<ForRange ...>".to_string()),
+            Node::Var { name, value: _ } => Ok(format!("<Var {:?} ...>", name)),
+            Node::Vars { .. } => Ok("<Vars ...>".to_string()),
+            Node::Setting { name, mode: _, value: _ } => Ok(format!("<Setting {} ...>", name)),
+            Node::Spawn { delay: _, block: _ } => Ok("<Spawn ...>".to_string()),
             Node::Continue { name } => Ok(format!("<Continue {:?}>", name)),
             Node::Goto { label } => Ok(format!("<Goto {}>", label)),
-            Node::Label { name, block } => Ok(format!("<Label {} ...>", name)),
-            Node::TryCatch { try_block, catch_params, catch_block } => Ok(format!("<TryCatch ...>")),
-            Node::Switch { input, cases, default } => Ok(format!("<Switch {} ...>", input)),
+            Node::Label { name, block: _ } => Ok(format!("<Label {} ...>", name)),
+            Node::TryCatch { .. } => Ok("<TryCatch ...>".to_string()),
+            Node::Switch { input, cases: _, default: _ } => Ok(format!("<Switch {} ...>", input)),
         }
     }
 }
