@@ -1,1311 +1,885 @@
+use core::fmt;
 use std::{
-    collections::hash_map::DefaultHasher,
+    borrow::Borrow,
     hash::{Hash, Hasher},
 };
 
-use dreammaker::ast::AssignOp;
+use dreammaker::ast::Statement;
 use pyo3::{
-    pyclass, pymethods, pymodule,
-    types::{PyAnyMethods, PyDict, PyDictMethods, PyList, PyModule, PyModuleMethods, PyString},
-    Bound, IntoPy, Py, PyAny, PyClassInitializer, PyObject, PyResult, Python, ToPyObject,
+    pyclass, pymethods, pymodule, types::{PyAnyMethods, PyList, PyModule, PyModuleMethods}, Bound, IntoPy, Py, PyAny, PyObject, PyResult, Python
 };
 
-use crate::path::Path;
+use super::{expression::Expression, operators::SettingMode};
 
 extern crate dreammaker;
 
 #[pymodule]
 pub fn ast(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
-    m.add_class::<Assignment>()?;
-    m.add_class::<Attribute>()?;
-    m.add_class::<BinaryOp>()?;
-    m.add_class::<BinaryOperator>()?;
-    m.add_class::<Break>()?;
-    m.add_class::<Call>()?;
-    m.add_class::<Continue>()?;
-    m.add_class::<Crash>()?;
-    m.add_class::<Del>()?;
-    m.add_class::<DoWhile>()?;
-    m.add_class::<DynamicCall>()?;
     m.add_class::<Expression>()?;
-    m.add_class::<ExternalCall>()?;
-    m.add_class::<ForInfinite>()?;
-    m.add_class::<ForList>()?;
-    m.add_class::<ForLoop>()?;
-    m.add_class::<ForRange>()?;
-    m.add_class::<Goto>()?;
-    m.add_class::<Identifier>()?;
-    m.add_class::<If>()?;
-    m.add_class::<IfArm>()?;
-    m.add_class::<Index>()?;
-    m.add_class::<Input>()?;
-    m.add_class::<InterpString>()?;
-    m.add_class::<Label>()?;
-    m.add_class::<Locate>()?;
-    m.add_class::<MiniExpr>()?;
-    m.add_class::<NewImplicit>()?;
-    m.add_class::<NewMiniExpr>()?;
-    m.add_class::<NewPrefab>()?;
     m.add_class::<Node>()?;
-    m.add_class::<NodeKind>()?;
-    m.add_class::<Operator>()?;
-    m.add_class::<ParentCall>()?;
-    m.add_class::<Prefab>()?;
-    m.add_class::<Return>()?;
-    m.add_class::<SelfCall>()?;
-    m.add_class::<Setting>()?;
-    m.add_class::<SettingMode>()?;
-    m.add_class::<Spawn>()?;
-    m.add_class::<StaticField>()?;
-    m.add_class::<ProcReference>()?;
-    m.add_class::<Switch>()?;
-    m.add_class::<SwitchCase>()?;
-    m.add_class::<Ternary>()?;
-    m.add_class::<Throw>()?;
-    m.add_class::<TryCatch>()?;
-    m.add_class::<UnaryOp>()?;
-    m.add_class::<UnaryOperator>()?;
-    m.add_class::<Var>()?;
-    m.add_class::<Vars>()?;
-    m.add_class::<While>()?;
     Ok(())
 }
 
-#[pyclass(module = "avulto.ast", name = "NodeKind", eq, eq_int)]
+#[pyclass(
+    module = "avulto.ast",
+    name = "NodeKind",
+    eq,
+    eq_int,
+    rename_all = "SCREAMING_SNAKE_CASE"
+)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum NodeKind {
-    #[pyo3(name = "UNKNOWN")]
-    Unknown,
-    #[pyo3(name = "EXPRESSION")]
-    Expression,
-    #[pyo3(name = "VAR")]
-    Var,
-    #[pyo3(name = "TERM")]
-    Term,
-    #[pyo3(name = "ASSIGN")]
-    Assign,
-    #[pyo3(name = "PREFAB")]
-    Prefab,
-    #[pyo3(name = "RETURN")]
-    Return,
-    #[pyo3(name = "IF")]
-    If,
-    #[pyo3(name = "IF_ARM")]
-    IfArm,
-    #[pyo3(name = "IF_ELSE")]
-    IfElse,
-    #[pyo3(name = "ATTRIBUTE")]
+    AssignOp,
     Attribute,
-    #[pyo3(name = "TERNARY")]
-    Ternary,
-    #[pyo3(name = "BINARY_OP")]
     BinaryOp,
-    #[pyo3(name = "UNARY_OP")]
-    UnaryOp,
-    #[pyo3(name = "INDEX")]
-    Index,
-    #[pyo3(name = "CALL")]
-    Call,
-    #[pyo3(name = "CRASH")]
-    Crash,
-    #[pyo3(name = "PARENT_CALL")]
-    ParentCall,
-    #[pyo3(name = "SELF_CALL")]
-    SelfCall,
-    #[pyo3(name = "FOR_LOOP")]
-    ForLoop,
-    #[pyo3(name = "FOR_LIST")]
-    ForList,
-    #[pyo3(name = "FOR_RANGE")]
-    ForRange,
-    #[pyo3(name = "NEW_PREFAB")]
-    NewPrefab,
-    #[pyo3(name = "SETTING")]
-    Setting,
-    #[pyo3(name = "LABEL")]
-    Label,
-    #[pyo3(name = "NEW_IMPLICIT")]
-    NewImplicit,
-    #[pyo3(name = "INTERP_STRING")]
-    InterpString,
-    #[pyo3(name = "SWITCH_CASE")]
-    SwitchCase,
-    #[pyo3(name = "SWITCH")]
-    Switch,
-    #[pyo3(name = "SPAWN")]
-    Spawn,
-    #[pyo3(name = "WHILE")]
-    While,
-    #[pyo3(name = "DO_WHILE")]
-    DoWhile,
-    #[pyo3(name = "PICK")]
-    Pick,
-    #[pyo3(name = "BREAK")]
     Break,
-    #[pyo3(name = "LOCATE")]
-    Locate,
-    #[pyo3(name = "CONTINUE")]
+    Call,
+    Constant,
     Continue,
-    #[pyo3(name = "TRY_CATCH")]
-    TryCatch,
-    #[pyo3(name = "INPUT")]
-    Input,
-    #[pyo3(name = "NEW_MINI_EXPR")]
-    NewMiniExpr,
-    #[pyo3(name = "MINI_EXPR")]
-    MiniExpr,
-    #[pyo3(name = "DYNAMIC_CALL")]
-    DynamicCall,
-    #[pyo3(name = "EXTERNAL_CALL")]
-    ExternalCall,
-    #[pyo3(name = "DEL")]
+    Crash,
     Del,
-    #[pyo3(name = "THROW")]
-    Throw,
-    #[pyo3(name = "GOTO")]
-    Goto,
-    #[pyo3(name = "FOR_INFINITE")]
+    DoWhile,
+    DynamicCall,
+    Expression,
+    ExternalCall,
+    Field,
     ForInfinite,
-    StaticField,
+    ForList,
+    ForLoop,
+    ForRange,
+    Goto,
+    Identifier,
+    If,
+    IfArm,
+    IfElse,
+    Index,
+    Input,
+    InterpString,
+    Label,
+    List,
+    Locate,
+    MiniExpr,
+    NewImplicit,
+    NewMiniExpr,
+    NewPrefab,
+    ParentCall,
+    Pick,
+    Prefab,
     ProcReference,
+    Return,
+    SelfCall,
+    Setting,
+    Spawn,
+    StaticField,
+    Switch,
+    SwitchCase,
+    Term,
+    TernaryOp,
+    Throw,
+    TryCatch,
+    UnaryOp,
+    Unknown,
+    Var,
+    While,
 }
 
-#[pyclass(module = "avulto.ast", name = "Operator", eq, eq_int)]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub enum Operator {
-    #[pyo3(name = "ASSIGN")]
-    Assign,
-    #[pyo3(name = "ASSIGN_ADD")]
-    AssignAdd,
-    #[pyo3(name = "ASSIGN_SUB")]
-    AssignSub,
-    #[pyo3(name = "ASSIGN_MUL")]
-    AssignMul,
-    #[pyo3(name = "ASSIGN_DIV")]
-    AssignDiv,
-    #[pyo3(name = "ASSIGN_MOD")]
-    AssignMod,
-    #[pyo3(name = "ASSIGN_FLOAT_MOD")]
-    AssignFloatMod,
-    #[pyo3(name = "ASSIGN_INTO")]
-    AssignInto,
-    #[pyo3(name = "ASSIGN_BIT_AND")]
-    AssignBitAnd,
-    #[pyo3(name = "ASSIGN_AND")]
-    AssignAnd,
-    #[pyo3(name = "ASSIGN_OR")]
-    AssignOr,
-    #[pyo3(name = "ASSIGN_BIT_OR")]
-    AssignBitOr,
-    #[pyo3(name = "ASSIGN_BIT_XOR")]
-    AssignBitXor,
-    #[pyo3(name = "ASSIGN_LSHIFT")]
-    AssignLShift,
-    #[pyo3(name = "ASSIGN_RSHIFT")]
-    AssignRShift,
+impl fmt::Display for NodeKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
-#[pyclass(module = "avulto.ast", name = "SettingMode", eq, eq_int)]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub enum SettingMode {
-    #[pyo3(name = "ASSIGN")]
-    Assign,
-    #[pyo3(name = "IN")]
-    In,
+#[pyclass(frozen)]
+pub enum Node {
+    Unknown(),
+    Expression {
+        expr: PyObject,
+    },
+    Crash {
+        expr: Option<PyObject>,
+    },
+    Return {
+        retval: Option<PyObject>,
+    },
+    Throw {
+        expr: PyObject,
+    },
+    Del {
+        expr: PyObject,
+    },
+    Break {
+        label: Option<PyObject>,
+    },
+    While {
+        condition: PyObject,
+        block: Vec<PyObject>,
+    },
+    DoWhile {
+        condition: PyObject,
+        block: Vec<PyObject>,
+    },
+    If {
+        if_arms: Vec<(PyObject, Vec<PyObject>)>,
+        else_arm: Option<Vec<PyObject>>,
+    },
+    ForInfinite {
+        block: Vec<PyObject>,
+    },
+    ForList {
+        name: PyObject,
+        in_list: Option<PyObject>,
+        block: Vec<PyObject>,
+    },
+    ForLoop {
+        init: Option<PyObject>,
+        test: Option<PyObject>,
+        inc: Option<PyObject>,
+        block: Vec<PyObject>,
+    },
+    ForRange {
+        name: PyObject,
+        start: PyObject,
+        end: PyObject,
+        step: Option<PyObject>,
+        block: Vec<PyObject>,
+    },
+    Var {
+        name: String,
+        value: Option<PyObject>,
+    },
+    Vars {
+        vars: Vec<PyObject>,
+    },
+    Setting {
+        name: PyObject,
+        mode: SettingMode,
+        value: PyObject,
+    },
+    Spawn {
+        delay: Option<PyObject>,
+        block: Vec<PyObject>,
+    },
+    Continue {
+        name: Option<PyObject>,
+    },
+    Goto {
+        label: PyObject,
+    },
+    Label {
+        name: PyObject,
+        block: Vec<PyObject>,
+    },
+    TryCatch {
+        try_block: Vec<PyObject>,
+        catch_params: Vec<Vec<PyObject>>,
+        catch_block: Vec<PyObject>,
+    },
+    Switch {
+        input: PyObject,
+        cases: Vec<PyObject>,
+        default: Option<Vec<PyObject>>,
+    },
 }
 
-#[pyclass(module = "avulto.ast", name = "BinaryOperator", eq, eq_int)]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub enum BinaryOperator {
-    #[pyo3(name = "ADD")]
-    Add,
-    #[pyo3(name = "SUB")]
-    Sub,
-    #[pyo3(name = "MUL")]
-    Mul,
-    #[pyo3(name = "DIV")]
-    Div,
-    #[pyo3(name = "POW")]
-    Pow,
-    #[pyo3(name = "MOD")]
-    Mod,
-    #[pyo3(name = "FLOAT_MOD")]
-    FloatMod,
-    #[pyo3(name = "EQ")]
-    Eq,
-    #[pyo3(name = "NOT_EQ")]
-    NotEq,
-    #[pyo3(name = "LESS")]
-    Less,
-    #[pyo3(name = "GREATER")]
-    Greater,
-    #[pyo3(name = "LESS_EQ")]
-    LessEq,
-    #[pyo3(name = "GREATER_EQ")]
-    GreaterEq,
-    #[pyo3(name = "EQUIV")]
-    Equiv,
-    #[pyo3(name = "NOT_EQUIV")]
-    NotEquiv,
-    #[pyo3(name = "BIT_AND")]
-    BitAnd,
-    #[pyo3(name = "BIT_XOR")]
-    BitXor,
-    #[pyo3(name = "BIT_OR")]
-    BitOr,
-    #[pyo3(name = "LSHIFT")]
-    LShift,
-    #[pyo3(name = "RSHIFT")]
-    RShift,
-    #[pyo3(name = "AND")]
-    And,
-    #[pyo3(name = "OR")]
-    Or,
-    #[pyo3(name = "IN")]
-    In,
-    #[pyo3(name = "TO")]
-    To,
+pub fn visit_constant(py: Python<'_>, walker: &Bound<PyAny>, constant: Py<PyAny>) -> PyResult<()> {
+    if walker.hasattr("visit_Constant").unwrap() {
+        walker.call_method1("visit_Constant", (constant,))?;
+    }
+
+    Ok(())
 }
 
-#[pyclass(subclass, module = "avulto.ast")]
-pub struct Node {
-    #[pyo3(get)]
-    kind: NodeKind,
+impl Node {
+    pub fn from_statement(py: Python<'_>, stmt: &Statement) -> PyObject {
+        match stmt {
+            Statement::Var(v) => Self::Var {
+                name: v.name.clone(),
+                value: v
+                    .value
+                    .as_ref()
+                    .map(|expr| Expression::from_expression(py, expr).into_py(py)),
+            }
+            .into_py(py),
+            Statement::Expr(expression) => Self::Expression {
+                expr: Expression::from_expression(py, expression).into_py(py),
+            }
+            .into_py(py),
+            Statement::Return(expression) => Self::Return {
+                retval: expression
+                    .as_ref()
+                    .map(|expr| Expression::from_expression(py, expr).into_py(py)),
+            }
+            .into_py(py),
+            Statement::Throw(expression) => Self::Throw {
+                expr: Expression::from_expression(py, expression).into_py(py),
+            }
+            .into_py(py),
+            Statement::While { condition, block } => Self::While {
+                condition: Expression::from_expression(py, condition).into_py(py),
+                block: block
+                    .iter()
+                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
+                    .collect::<Vec<PyObject>>(),
+            }
+            .into_py(py),
+            Statement::DoWhile { block, condition } => Self::DoWhile {
+                condition: Expression::from_expression(py, &condition.elem).into_py(py),
+                block: block
+                    .iter()
+                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
+                    .collect::<Vec<PyObject>>(),
+            }
+            .into_py(py),
+            Statement::If { arms, else_arm } => {
+                let if_arms: Vec<(PyObject, Vec<PyObject>)> = arms
+                    .iter()
+                    .map(|(cond, stmts)| {
+                        let mut stmt_nodes: Vec<Py<PyAny>> = vec![];
+                        for stmt in stmts.iter() {
+                            stmt_nodes.push(Node::from_statement(py, &stmt.elem).into_py(py));
+                        }
+
+                        (
+                            Expression::from_expression(py, &cond.elem).into_py(py),
+                            stmt_nodes,
+                        )
+                    })
+                    .collect();
+                let mut else_arm_nodes: Vec<Py<PyAny>> = vec![];
+                if let Some(else_arm_block) = else_arm {
+                    for stmt in else_arm_block.iter() {
+                        else_arm_nodes.push(Node::from_statement(py, &stmt.elem).into_py(py));
+                    }
+                }
+                Self::If {
+                    if_arms,
+                    else_arm: if else_arm_nodes.is_empty() {
+                        None
+                    } else {
+                        Some(else_arm_nodes)
+                    },
+                }
+                .into_py(py)
+            }
+            Statement::ForInfinite { block } => Self::ForInfinite {
+                block: block
+                    .iter()
+                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
+                    .collect::<Vec<PyObject>>(),
+            }
+            .into_py(py),
+            Statement::ForLoop {
+                init,
+                test,
+                inc,
+                block,
+            } => Self::ForLoop {
+                init: init
+                    .as_ref()
+                    .map(|stmt| Node::from_statement(py, stmt).into_py(py)),
+                test: test
+                    .as_ref()
+                    .map(|expr| Expression::from_expression(py, expr).into_py(py)),
+                inc: inc
+                    .as_ref()
+                    .map(|stmt| Node::from_statement(py, stmt).into_py(py)),
+                block: block
+                    .iter()
+                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
+                    .collect::<Vec<PyObject>>(),
+            }
+            .into_py(py),
+            Statement::ForList(for_list_statement) => Self::ForList {
+                name: Expression::Identifier {
+                    name: for_list_statement.name.to_string(),
+                }
+                .into_py(py),
+                in_list: for_list_statement
+                    .in_list
+                    .as_ref()
+                    .map(|expr| Expression::from_expression(py, expr).into_py(py)),
+                block: for_list_statement
+                    .block
+                    .iter()
+                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
+                    .collect::<Vec<PyObject>>(),
+            }
+            .into_py(py),
+            Statement::ForRange(for_range_statement) => Self::ForRange {
+                name: Expression::Identifier {
+                    name: for_range_statement.name.to_string(),
+                }
+                .into_py(py),
+                start: Expression::from_expression(py, &for_range_statement.start).into_py(py),
+                end: Expression::from_expression(py, &for_range_statement.end).into_py(py),
+                block: for_range_statement
+                    .block
+                    .iter()
+                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
+                    .collect::<Vec<PyObject>>(),
+                step: for_range_statement
+                    .step
+                    .as_ref()
+                    .map(|expr| Expression::from_expression(py, expr).into_py(py)),
+            }
+            .into_py(py),
+            Statement::Vars(vec) => Self::Vars {
+                vars: vec
+                    .iter()
+                    .map(|vs| {
+                        Self::Var {
+                            name: vs.name.clone(),
+                            value: vs
+                                .value
+                                .as_ref()
+                                .map(|expr| Expression::from_expression(py, expr).into_py(py)),
+                        }
+                        .into_py(py)
+                    })
+                    .collect(),
+            }
+            .into_py(py),
+            Statement::Setting { name, mode, value } => Self::Setting {
+                name: Expression::Identifier {
+                    name: name.to_string(),
+                }
+                .into_py(py),
+                mode: match mode {
+                    dreammaker::ast::SettingMode::Assign => SettingMode::Assign,
+                    dreammaker::ast::SettingMode::In => SettingMode::In,
+                },
+                value: Expression::from_expression(py, value).into_py(py),
+            }
+            .into_py(py),
+            Statement::Spawn { delay, block } => Self::Spawn {
+                delay: delay
+                    .as_ref()
+                    .map(|expr| Expression::from_expression(py, expr).into_py(py)),
+                block: block
+                    .iter()
+                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
+                    .collect::<Vec<PyObject>>(),
+            }
+            .into_py(py),
+            Statement::Switch {
+                input,
+                cases,
+                default,
+            } => {
+                let input_expr = Expression::from_expression(py, &input).into_py(py);
+                let mut case_nodes: Vec<Py<PyAny>> = vec![];
+                for (case, block) in cases.iter() {
+                    let mut exact_nodes: Vec<Py<PyAny>> = vec![];
+                    let mut range_nodes: Vec<Py<PyAny>> = vec![];
+
+                    for case_type in &case.elem {
+                        match case_type {
+                            dreammaker::ast::Case::Exact(e) => {
+                                exact_nodes.push(Expression::from_expression(py, e).into_py(py));
+                            }
+                            dreammaker::ast::Case::Range(s, e) => {
+                                let range_list = PyList::new_bound(
+                                    py,
+                                    [
+                                        Expression::from_expression(py, s).into_py(py),
+                                        Expression::from_expression(py, e).into_py(py),
+                                    ],
+                                )
+                                .into_py(py);
+                                range_nodes.push(range_list);
+                            }
+                        }
+                    }
+                    case_nodes.push(
+                        SwitchCase {
+                            exact: PyList::new_bound(py, exact_nodes).into_py(py),
+                            range: PyList::new_bound(py, range_nodes).into_py(py),
+                            block: block
+                                .iter()
+                                .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
+                                .collect::<Vec<PyObject>>(),
+                        }
+                        .into_py(py),
+                    );
+                }
+
+                Self::Switch {
+                    input: input_expr,
+                    cases: case_nodes,
+                    default: default.as_ref().map(|stmts| {
+                        stmts
+                            .iter()
+                            .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
+                            .collect::<Vec<PyObject>>()
+                    }),
+                }
+                .into_py(py)
+            }
+            Statement::TryCatch {
+                try_block,
+                catch_params,
+                catch_block,
+            } => Self::TryCatch {
+                try_block: try_block
+                    .iter()
+                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
+                    .collect::<Vec<PyObject>>(),
+                catch_block: catch_block
+                    .iter()
+                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
+                    .collect::<Vec<PyObject>>(),
+                catch_params: catch_params
+                    .iter()
+                    .map(|tc| {
+                        tc.iter()
+                            .map(|tcs| Expression::Identifier { name: tcs.clone() }.into_py(py))
+                            .collect::<Vec<PyObject>>()
+                    })
+                    .collect::<Vec<Vec<PyObject>>>(),
+            }
+            .into_py(py),
+            Statement::Continue(name) => Self::Continue {
+                name: name
+                    .clone()
+                    .map(|s| Expression::Identifier { name: s.clone() }.into_py(py)),
+            }
+            .into_py(py),
+            Statement::Break(label) => Self::Break {
+                label: label
+                    .as_ref()
+                    .map(|l| Expression::Identifier { name: l.clone() }.into_py(py)),
+            }
+            .into_py(py),
+            Statement::Goto(label) => Self::Goto {
+                label: Expression::Identifier {
+                    name: label.clone(),
+                }
+                .into_py(py),
+            }
+            .into_py(py),
+            Statement::Label { name, block } => Self::Label {
+                name: Expression::Identifier { name: name.clone() }.into_py(py),
+                block: block
+                    .iter()
+                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
+                    .collect::<Vec<PyObject>>(),
+            }
+            .into_py(py),
+            Statement::Del(expression) => Self::Del {
+                expr: Expression::from_expression(py, expression).into_py(py),
+            }
+            .into_py(py),
+            Statement::Crash(expression) => Self::Crash {
+                expr: expression
+                    .as_ref()
+                    .map(|expr| Expression::from_expression(py, expr).into_py(py)),
+            }
+            .into_py(py),
+        }
+    }
+
+    pub fn walk(self_: &Bound<Self>, py: Python<'_>, walker: &Bound<PyAny>) -> PyResult<()> {
+        let node = self_.get();
+        match node {
+            Node::Unknown() => todo!(),
+            Node::Expression { expr } => {
+                if let Ok(expr_) = expr.downcast_bound::<Expression>(py) {
+                    Expression::walk(expr_, walker)?;
+                }
+            }
+            Node::Return { retval } => {
+                if walker.hasattr("visit_Return").unwrap() {
+                    walker.call_method1("visit_Return", (self_.as_ref(),))?;
+                } else if let Some(some_expr) = retval {
+                    if let Ok(expr_py) = some_expr.downcast_bound::<Expression>(py) {
+                        Expression::walk(expr_py, walker)?;
+                    }
+                }
+
+                return Ok(());
+            }
+            Node::Throw { expr } => {
+                if walker.hasattr("visit_Throw").unwrap() {
+                    walker.call_method1("visit_Throw", (self_.as_ref(),))?;
+                } else if let Ok(expr_py) = expr.downcast_bound::<Expression>(py) {
+                    Expression::walk(expr_py, walker)?;
+                }
+            }
+            Node::While { condition, block } => {
+                if walker.hasattr("visit_While").unwrap() {
+                    walker.call_method1("visit_While", (self_.as_ref(),))?;
+                } else {
+                    if let Ok(cond_expr) = condition.downcast_bound::<Expression>(py) {
+                        Expression::walk(cond_expr, walker)?;
+                    }
+                    for stmt in block.iter() {
+                        if let Ok(node) = stmt.downcast_bound::<Node>(py) {
+                            Node::walk(node, py, walker)?;
+                        }
+                    }
+                }
+                return Ok(());
+            }
+            Node::DoWhile { condition, block } => {
+                if walker.hasattr("visit_DoWhile").unwrap() {
+                    walker.call_method1("visit_DoWhile", (self_.as_ref(),))?;
+                } else {
+                    if let Ok(bound_condition) = condition.downcast_bound::<Expression>(py) {
+                        Expression::walk(bound_condition, walker)?;
+                    }
+                    for stmt in block.iter() {
+                        if let Ok(node) = stmt.downcast_bound::<Node>(py) {
+                            Node::walk(node, py, walker)?;
+                        }
+                    }
+                }
+            }
+            Node::If { if_arms, else_arm } => {
+                if walker.hasattr("visit_If").unwrap() {
+                    walker.call_method1("visit_If", (self_.as_ref(),))?;
+                } else {
+                    for (cond, block) in if_arms.iter() {
+                        if let Ok(cond_expr) = cond.downcast_bound::<Expression>(py) {
+                            Expression::walk(cond_expr, walker)?;
+                        }
+                        for stmt in block.iter() {
+                            if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
+                                Node::walk(node_expr, py, walker)?;
+                            }
+                        }
+                    }
+                    if let Some(else_arm_block) = else_arm {
+                        for stmt in else_arm_block.iter() {
+                            if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
+                                Node::walk(node_expr, py, walker)?;
+                            }
+                        }
+                    }
+                }
+                return Ok(());
+            }
+            Node::ForInfinite { block } => {
+                if walker.hasattr("visit_ForInfinite").unwrap() {
+                    walker.call_method1("visit_ForInfinite", (self_.as_ref(),))?;
+                } else {
+                    for stmt in block.iter() {
+                        if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
+                            Node::walk(node_expr, py, walker)?;
+                        }
+                    }
+                }
+                return Ok(());
+            }
+            Node::ForLoop {
+                init,
+                test,
+                inc,
+                block,
+            } => {
+                if walker.hasattr("visit_ForLoop").unwrap() {
+                    walker.call_method1("visit_ForLoop", (self_.as_ref(),))?;
+                } else {
+                    if let Some(init) = init {
+                        if let Ok(init_node) = init.downcast_bound::<Node>(py) {
+                            Node::walk(init_node, py, walker)?;
+                        }
+                    }
+                    if let Some(test) = test {
+                        if let Ok(bound_test) = test.downcast_bound::<Expression>(py) {
+                            Expression::walk(bound_test, walker)?;
+                        }
+                    }
+                    if let Some(inc) = inc {
+                        if let Ok(inc_node) = inc.downcast_bound::<Node>(py) {
+                            Node::walk(inc_node, py, walker)?;
+                        }
+                    }
+                    for stmt in block.iter() {
+                        if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
+                            Node::walk(node_expr, py, walker)?;
+                        }
+                    }
+                }
+                return Ok(());
+            }
+            Node::Var { name, value } => {
+                if walker.hasattr("visit_Var").unwrap() {
+                    walker.call_method1("visit_Var", (self_.as_ref(),))?;
+                } else {
+                    visit_constant(py, walker, name.clone().into_py(py))?;
+                    if let Some(expr) = value {
+                        if let Ok(expr_py) = expr.downcast_bound::<Expression>(py) {
+                            Expression::walk(expr_py, walker)?;
+                        }
+                    }
+                }
+                return Ok(());
+            }
+            Node::Crash { expr } => {
+                if walker.hasattr("visit_Crash").unwrap() {
+                    walker.call_method1("visit_Crash", (self_.as_ref(),))?;
+                } else if let Some(some_expr) = expr {
+                    if let Ok(expr_py) = some_expr.downcast_bound::<Expression>(py) {
+                        Expression::walk(expr_py, walker)?;
+                    }
+                }
+
+                return Ok(());
+            }
+            Node::ForList {
+                name,
+                in_list,
+                block,
+            } => {
+                if walker.hasattr("visit_ForList").unwrap() {
+                    walker.call_method1("visit_ForList", (self_.as_ref(),))?;
+                } else {
+                    visit_constant(py, walker, name.clone_ref(py))?;
+                    if let Some(in_list_expr) = in_list {
+                        if let Ok(bound_in_list) = in_list_expr.downcast_bound::<Expression>(py) {
+                            Expression::walk(bound_in_list, walker)?;
+                        }
+                        for stmt in block.iter() {
+                            if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
+                                Node::walk(node_expr, py, walker)?;
+                            }
+                        }
+                    }
+                }
+
+                return Ok(());
+            }
+            Node::ForRange {
+                name,
+                start,
+                end,
+                step,
+                block,
+            } => {
+                if walker.hasattr("visit_ForRange").unwrap() {
+                    walker.call_method1("visit_ForRange", (self_.as_ref(),))?;
+                } else {
+                    visit_constant(py, walker, name.clone_ref(py))?;
+                    if let Ok(bound_start) = start.downcast_bound::<Expression>(py) {
+                        Expression::walk(bound_start, walker)?;
+                    }
+                    if let Ok(bound_end) = end.downcast_bound::<Expression>(py) {
+                        Expression::walk(bound_end, walker)?;
+                    }
+                    if let Some(step) = step {
+                        if let Ok(bound_step) = step.downcast_bound::<Expression>(py) {
+                            Expression::walk(bound_step, walker)?;
+                        }
+                    }
+                    for stmt in block.iter() {
+                        if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
+                            Node::walk(node_expr, py, walker)?;
+                        }
+                    }
+                }
+            }
+            Node::Vars { vars } => {
+                for var in vars.iter() {
+                    if let Ok(bound_var) = var.downcast_bound::<Node>(py) {
+                        Node::walk(bound_var, py, walker)?;
+                    }
+                }
+            }
+            Node::Del { expr } => {
+                if walker.hasattr("visit_Del").unwrap() {
+                    walker.call_method1("visit_Del", (self_.as_ref(),))?;
+                } else if let Ok(expr_py) = expr.downcast_bound::<Expression>(py) {
+                    Expression::walk(expr_py, walker)?;
+                }
+            }
+            Node::Break { label } => {
+                if walker.hasattr("visit_Break").unwrap() {
+                    walker.call_method1("visit_Break", (self_.as_ref(),))?;
+                } else if let Some(l) = label {
+                    visit_constant(py, walker, l.clone().into_py(py))?;
+                }
+            }
+            Node::Setting { name, mode, value } => {
+                if walker.hasattr("visit_Setting").unwrap() {
+                    walker.call_method1("visit_Setting", (self_.as_ref(),))?;
+                } else {
+                    visit_constant(py, walker, name.clone().into_py(py))?;
+                    if let Ok(expr_py) = value.downcast_bound::<Expression>(py) {
+                        Expression::walk(expr_py, walker)?;
+                    }
+                }
+                return Ok(());
+            }
+            Node::Spawn { delay, block } => {
+                if walker.hasattr("visit_Setting").unwrap() {
+                    walker.call_method1("visit_Setting", (self_.as_ref(),))?;
+                } else {
+                    if let Some(delay) = delay {
+                        if let Ok(bound_delay) = delay.downcast_bound::<Expression>(py) {
+                            Expression::walk(bound_delay, walker)?;
+                        }
+                    }
+                    for stmt in block.iter() {
+                        if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
+                            Node::walk(node_expr, py, walker)?;
+                        }
+                    }
+                }
+
+                return Ok(());
+            }
+            Node::Continue { name } => {
+                if walker.hasattr("visit_Continue").unwrap() {
+                    walker.call_method1("visit_Continue", (self_.as_ref(),))?;
+                } else if let Some(name) = name {
+                    if let Ok(bound_name) = name.downcast_bound::<Expression>(py) {
+                        Expression::walk(bound_name, walker)?;
+                    }
+                }
+            }
+            Node::Goto { label } => {
+                if walker.hasattr("visit_Goto").unwrap() {
+                    walker.call_method1("visit_Goto", (self_.as_ref(),))?;
+                } else {
+                    visit_constant(py, walker, label.clone_ref(py))?;
+                }
+            }
+            Node::Label { name, block } => {
+                if walker.hasattr("visit_Label").unwrap() {
+                    walker.call_method1("visit_Label", (self_.as_ref(),))?;
+                } else {
+                    visit_constant(py, walker, name.clone_ref(py))?;
+                    for stmt in block.iter() {
+                        if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
+                            Node::walk(node_expr, py, walker)?;
+                        }
+                    }
+                }
+            }
+            Node::TryCatch {
+                try_block,
+                catch_params,
+                catch_block,
+            } => {
+                if walker.hasattr("visit_TryCatch").unwrap() {
+                    walker.call_method1("visit_TryCatch", (self_.as_ref(),))?;
+                } else {
+                    for stmt in try_block.iter() {
+                        if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
+                            Node::walk(node_expr, py, walker)?;
+                        }
+                    }
+                    for catch_params in catch_params.iter() {
+                        for catch_param in catch_params.iter() {
+                            visit_constant(py, walker, catch_param.clone_ref(py))?;
+                        }
+                    }
+                    for stmt in catch_block.iter() {
+                        if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
+                            Node::walk(node_expr, py, walker)?;
+                        }
+                    }
+
+                }
+            },
+            Node::Switch {
+                input,
+                cases,
+                default,
+            } => {
+                if walker.hasattr("visit_Switch").unwrap() {
+                    walker.call_method1("visit_Switch", (self_.as_ref(),))?;
+                } else {
+                    if let Ok(bound_input) = input.downcast_bound::<Expression>(py) {
+                        Expression::walk(bound_input, walker)?;
+                    }
+                    for case in cases.iter() {
+                        if let Ok(switch_case) = case.downcast_bound::<SwitchCase>(py) {
+                            switch_case.borrow().walk_parts(py, walker)?;
+                        }
+                    }
+                    if let Some(default) = default {
+                        for stmt in default.iter() {
+                            if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
+                                Node::walk(node_expr, py, walker)?;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[pymethods]
 impl Node {
-    #[new]
-    fn new(node_type: NodeKind) -> Self {
-        Node { kind: node_type }
+    fn __str__(&self, py: Python<'_>) -> PyResult<String> {
+        self.__repr__(py)
+    }
+
+    fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
+        match self {
+            Node::Unknown() => todo!(),
+            Node::Expression { expr } => Ok(format!("{}", expr)),
+            Node::Crash { expr } => Ok(format!("<Crash {:?}>", expr)),
+            Node::Return { retval } => Ok(format!("<Return {}>", retval.as_ref().unwrap_or(&"...".to_string().into_py(py)))),
+            Node::Throw { expr } => Ok(format!("<Throw {:?}>", expr)),
+            Node::Del { expr } => Ok(format!("<Del {:?}>", expr)),
+            Node::Break { label } => Ok(format!("<Break {:?}>", label)),
+            Node::While { condition, block } => Ok(format!("<While {} ...>", condition)),
+            Node::DoWhile { condition, block } => Ok(format!("<DoWhile {} ...>", condition)),
+            Node::If { if_arms, else_arm } => Ok(format!("<If ...>")),
+            Node::ForInfinite { block } => Ok(format!("<ForInfinite ...>")),
+            Node::ForList { name, in_list, block } => Ok(format!("<ForList ...>")),
+            Node::ForLoop { init, test, inc, block } => Ok(format!("<ForLoop ...>")),
+            Node::ForRange { name, start, end, step, block } => Ok(format!("<ForRange ...>")),
+            Node::Var { name, value } => Ok(format!("<Var {:?} ...>", name)),
+            Node::Vars { vars } => Ok(format!("<Vars ...>")),
+            Node::Setting { name, mode, value } => Ok(format!("<Setting {} ...>", name)),
+            Node::Spawn { delay, block } => Ok(format!("<Spawn ...>")),
+            Node::Continue { name } => Ok(format!("<Continue {:?}>", name)),
+            Node::Goto { label } => Ok(format!("<Goto {}>", label)),
+            Node::Label { name, block } => Ok(format!("<Label {} ...>", name)),
+            Node::TryCatch { try_block, catch_params, catch_block } => Ok(format!("<TryCatch ...>")),
+            Node::Switch { input, cases, default } => Ok(format!("<Switch {} ...>", input)),
+        }
     }
 }
 
 #[pyclass(module = "avulto.ast")]
-pub struct Identifier {
-    pub ident: Py<PyAny>,
-}
-
-#[pymethods]
-impl Identifier {
-    fn __str__(&self) -> PyResult<String> {
-        Ok(format!("{}", self.ident))
-    }
-
-    fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("(identifier) {}", self.ident))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Expression {}
-
-#[pymethods]
-impl Expression {
-    #[new]
-    fn new() -> (Self, Node) {
-        (Expression {}, Node::new(NodeKind::Expression))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Var {
-    #[pyo3(get)]
-    name: Py<PyAny>,
-    #[pyo3(get)]
-    value: Py<PyAny>,
-}
-
-impl Var {
-    pub fn make(py: Python<'_>, name: String, value: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Var));
-        let sub = base.add_subclass(Var {
-            name: name.into_py(py),
-            value,
-        });
-
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Vars {
-    #[pyo3(get)]
-    vars: Py<PyAny>,
-}
-
-impl Vars {
-    pub fn make(py: Python<'_>, vars: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Var));
-        let sub = base.add_subclass(Vars {
-            vars
-        });
-
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Assignment {
-    #[pyo3(get)]
-    lhs: Py<PyAny>,
-    #[pyo3(get)]
-    rhs: Py<PyAny>,
-    #[pyo3(get)]
-    op: Operator,
-}
-
-impl Assignment {
-    pub fn make(
-        py: Python<'_>,
-        lhs: Py<PyAny>,
-        rhs: Py<PyAny>,
-        op: &AssignOp,
-    ) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Assign));
-        let sub = base.add_subclass(Assignment {
-            lhs,
-            rhs,
-            op: match op {
-                AssignOp::Assign => Operator::Assign,
-                AssignOp::AddAssign => Operator::AssignAdd,
-                AssignOp::SubAssign => Operator::AssignSub,
-                AssignOp::MulAssign => Operator::AssignMul,
-                AssignOp::DivAssign => Operator::AssignDiv,
-                AssignOp::ModAssign => Operator::AssignMod,
-                AssignOp::FloatModAssign => Operator::AssignFloatMod,
-                AssignOp::AssignInto => Operator::AssignInto,
-                AssignOp::BitAndAssign => Operator::AssignBitAnd,
-                AssignOp::AndAssign => Operator::AssignAnd,
-                AssignOp::BitOrAssign => Operator::AssignBitOr,
-                AssignOp::OrAssign => Operator::AssignOr,
-                AssignOp::BitXorAssign => Operator::AssignBitXor,
-                AssignOp::LShiftAssign => Operator::AssignLShift,
-                AssignOp::RShiftAssign => Operator::AssignRShift,
-            },
-        });
-
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Prefab {
-    #[pyo3(get)]
-    path: Py<PyAny>,
-    #[pyo3(get)]
-    vars: Py<PyAny>,
-}
-
-impl Prefab {
-    pub fn make(py: Python<'_>, path: Py<PyAny>, vars: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Prefab));
-        let sub = base.add_subclass(Prefab { path, vars });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-
-    pub fn vars_to_string(&self, py: Python<'_>) -> String {
-        if let Ok(vardict) = self.vars.downcast_bound::<PyDict>(py) {
-            if vardict.is_empty() {
-                return "".to_string();
-            }
-            let mut out = String::new();
-
-            for k in vardict.items() {
-                if let Ok(kl) = k.downcast::<PyList>() {
-                    out.push_str(
-                        format!("{} = {}", kl.get_item(0).unwrap(), kl.get_item(1).unwrap())
-                            .as_str(),
-                    );
-                }
-            }
-
-            return out.to_string();
-        }
-
-        "".to_string()
-    }
-}
-
-#[pymethods]
-impl Prefab {
-    fn __str__(&self) -> PyResult<String> {
-        self.__repr__()
-    }
-
-    fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("{}", self.path))
-    }
-
-    pub fn __eq__(&self, other: &Self, py: Python<'_>) -> bool {
-        if let Ok(pthstr) = self.path.downcast_bound::<PyString>(py) {
-            if let Ok(otherpthstr) = other.path.downcast_bound::<PyString>(py) {
-                if !pthstr.to_string().eq(&otherpthstr.to_string()) {
-                    return false;
-                }
-            }
-        } else if let Ok(pthpth) = self.path.downcast_bound::<Path>(py) {
-            if let Ok(otherpthpth) = other.path.downcast_bound::<Path>(py) {
-                if !pthpth.eq(otherpthpth).unwrap() {
-                    return false;
-                }
-            }
-        }
-        if let Ok(vardict) = self.vars.downcast_bound::<PyDict>(py) {
-            if let Ok(othervardict) = other.vars.downcast_bound::<PyDict>(py) {
-                if !vardict.eq(othervardict).unwrap() {
-                    return false;
-                }
-            }
-        }
-
-        true
-    }
-
-    pub fn __hash__(&self, py: Python<'_>) -> PyResult<u64> {
-        let mut s = DefaultHasher::new();
-        if let Ok(pthstr) = self.path.downcast_bound::<PyString>(py) {
-            pthstr.hash()?.hash(&mut s);
-        }
-        if let Ok(vardict) = self.vars.downcast_bound::<PyDict>(py) {
-            vardict.hash()?.hash(&mut s);
-        }
-
-        Ok(s.finish())
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Return {
-    #[pyo3(get)]
-    retval: Py<PyAny>,
-}
-
-impl Return {
-    pub fn make(py: Python<'_>, retval: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Return));
-        let sub = base.add_subclass(Return { retval });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct If {
-    #[pyo3(get)]
-    arms: Py<PyAny>,
-    #[pyo3(get)]
-    else_arm: Py<PyAny>,
-}
-
-impl If {
-    pub fn make(py: Python<'_>, arms: Py<PyAny>, else_arm: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::If));
-        let sub = base.add_subclass(If { arms, else_arm });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct IfArm {
-    #[pyo3(get)]
-    cond: Py<PyAny>,
-    #[pyo3(get)]
-    stmts: Py<PyAny>,
-}
-
-impl IfArm {
-    pub fn make(py: Python<'_>, cond: Py<PyAny>, stmts: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::IfArm));
-        let sub = base.add_subclass(IfArm { cond, stmts });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Attribute {
-    #[pyo3(get)]
-    expr: Py<PyAny>,
-    #[pyo3(get)]
-    name: Py<PyAny>,
-}
-
-impl Attribute {
-    pub fn make(py: Python<'_>, expr: Py<PyAny>, name: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Attribute));
-        let sub = base.add_subclass(Attribute { expr, name });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Ternary {
-    #[pyo3(get)]
-    cond: Py<PyAny>,
-    #[pyo3(get)]
-    if_: Py<PyAny>,
-    #[pyo3(get)]
-    else_: Py<PyAny>,
-}
-
-impl Ternary {
-    pub fn make(
-        py: Python<'_>,
-        cond: Py<PyAny>,
-        if_: Py<PyAny>,
-        else_: Py<PyAny>,
-    ) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Ternary));
-        let sub = base.add_subclass(Ternary { cond, if_, else_ });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct BinaryOp {
-    #[pyo3(get)]
-    lhs: Py<PyAny>,
-    #[pyo3(get)]
-    rhs: Py<PyAny>,
-    #[pyo3(get)]
-    op: BinaryOperator,
-}
-
-impl BinaryOp {
-    pub fn make(
-        py: Python<'_>,
-        lhs: Py<PyAny>,
-        rhs: Py<PyAny>,
-        op: &dreammaker::ast::BinaryOp,
-    ) -> PyResult<PyObject> {
-        let binary_op = BinaryOp {
-            lhs,
-            rhs,
-            op: match op {
-                dreammaker::ast::BinaryOp::Add => BinaryOperator::Add,
-                dreammaker::ast::BinaryOp::Sub => BinaryOperator::Sub,
-                dreammaker::ast::BinaryOp::Mul => BinaryOperator::Mul,
-                dreammaker::ast::BinaryOp::Div => BinaryOperator::Div,
-                dreammaker::ast::BinaryOp::Pow => BinaryOperator::Pow,
-                dreammaker::ast::BinaryOp::Mod => BinaryOperator::Mod,
-                dreammaker::ast::BinaryOp::FloatMod => BinaryOperator::FloatMod,
-                dreammaker::ast::BinaryOp::Eq => BinaryOperator::Eq,
-                dreammaker::ast::BinaryOp::NotEq => BinaryOperator::NotEq,
-                dreammaker::ast::BinaryOp::Less => BinaryOperator::Less,
-                dreammaker::ast::BinaryOp::Greater => BinaryOperator::Greater,
-                dreammaker::ast::BinaryOp::LessEq => BinaryOperator::LessEq,
-                dreammaker::ast::BinaryOp::GreaterEq => BinaryOperator::GreaterEq,
-                dreammaker::ast::BinaryOp::Equiv => BinaryOperator::Equiv,
-                dreammaker::ast::BinaryOp::NotEquiv => BinaryOperator::NotEquiv,
-                dreammaker::ast::BinaryOp::BitAnd => BinaryOperator::BitAnd,
-                dreammaker::ast::BinaryOp::BitXor => BinaryOperator::BitXor,
-                dreammaker::ast::BinaryOp::BitOr => BinaryOperator::BitOr,
-                dreammaker::ast::BinaryOp::LShift => BinaryOperator::LShift,
-                dreammaker::ast::BinaryOp::RShift => BinaryOperator::RShift,
-                dreammaker::ast::BinaryOp::And => BinaryOperator::And,
-                dreammaker::ast::BinaryOp::Or => BinaryOperator::Or,
-                dreammaker::ast::BinaryOp::In => BinaryOperator::In,
-                dreammaker::ast::BinaryOp::To => BinaryOperator::To,
-            },
-        };
-
-        let base = PyClassInitializer::from(Node::new(NodeKind::BinaryOp));
-        let sub = base.add_subclass(binary_op);
-
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(module = "avulto.ast", name = "BinaryOperator", eq, eq_int)]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub enum UnaryOperator {
-    #[pyo3(name = "NEG")]
-    Neg,
-    #[pyo3(name = "NOT")]
-    Not,
-    #[pyo3(name = "BIT_NOT")]
-    BitNot,
-    #[pyo3(name = "PRE_INCR")]
-    PreIncr,
-    #[pyo3(name = "POST_INCR")]
-    PostIncr,
-    #[pyo3(name = "PRE_DECR")]
-    PreDecr,
-    #[pyo3(name = "POST_DECR")]
-    PostDecr,
-    #[pyo3(name = "REF")]
-    Ref,
-    #[pyo3(name = "DEREF")]
-    Deref,
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct StaticField {
-    #[pyo3(get)]
-    term: Py<PyAny>,
-    #[pyo3(get)]
-    field: Py<PyAny>,
-}
-
-impl StaticField {
-    pub fn make(py: Python<'_>, term: Py<PyAny>, field: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::StaticField));
-        let sub = base.add_subclass(StaticField { term, field });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct ProcReference {
-    #[pyo3(get)]
-    term: Py<PyAny>,
-    #[pyo3(get)]
-    proc_name: Py<PyAny>,
-}
-
-impl ProcReference {
-    pub fn make(py: Python<'_>, term: Py<PyAny>, proc_name: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::ProcReference));
-        let sub = base.add_subclass(ProcReference { term, proc_name });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct UnaryOp {
-    #[pyo3(get)]
-    term: Py<PyAny>,
-    #[pyo3(get)]
-    op: UnaryOperator,
-}
-
-impl UnaryOp {
-    pub fn make(
-        py: Python<'_>,
-        term: Py<PyAny>,
-        op: &dreammaker::ast::UnaryOp,
-    ) -> PyResult<PyObject> {
-        let unary_op = UnaryOp {
-            term,
-            op: match op {
-                dreammaker::ast::UnaryOp::Neg => UnaryOperator::Neg,
-                dreammaker::ast::UnaryOp::Not => UnaryOperator::Not,
-                dreammaker::ast::UnaryOp::BitNot => UnaryOperator::BitNot,
-                dreammaker::ast::UnaryOp::PreIncr => UnaryOperator::PreIncr,
-                dreammaker::ast::UnaryOp::PostIncr => UnaryOperator::PostIncr,
-                dreammaker::ast::UnaryOp::PreDecr => UnaryOperator::PreDecr,
-                dreammaker::ast::UnaryOp::PostDecr => UnaryOperator::PostDecr,
-                dreammaker::ast::UnaryOp::Reference => UnaryOperator::Ref,
-                dreammaker::ast::UnaryOp::Dereference => UnaryOperator::Deref,
-            },
-        };
-
-        let base = PyClassInitializer::from(Node::new(NodeKind::UnaryOp));
-        let sub = base.add_subclass(unary_op);
-
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Index {
-    #[pyo3(get)]
-    expr: Py<PyAny>,
-    #[pyo3(get)]
-    index: Py<PyAny>,
-}
-
-impl Index {
-    pub fn make(py: Python<'_>, expr: Py<PyAny>, index: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Index));
-        let sub = base.add_subclass(Index { expr, index });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Call {
-    #[pyo3(get)]
-    expr: Py<PyAny>,
-    #[pyo3(get)]
-    name: Py<PyAny>,
-    #[pyo3(get)]
-    args: Py<PyAny>,
-}
-
-impl Call {
-    pub fn make(
-        py: Python<'_>,
-        expr: Py<PyAny>,
-        name: Py<PyAny>,
-        args: Py<PyAny>,
-    ) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Call));
-        let sub = base.add_subclass(Call { expr, name, args });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct ParentCall {
-    #[pyo3(get)]
-    args: Py<PyAny>,
-}
-
-impl ParentCall {
-    pub fn make(py: Python<'_>, args: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::ParentCall));
-        let sub = base.add_subclass(ParentCall { args });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct SelfCall {
-    #[pyo3(get)]
-    args: Py<PyAny>,
-}
-
-impl SelfCall {
-    pub fn make(py: Python<'_>, args: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::SelfCall));
-        let sub = base.add_subclass(SelfCall { args });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Crash {
-    #[pyo3(get)]
-    expr: Py<PyAny>,
-}
-
-impl Crash {
-    pub fn make(py: Python<'_>, expr: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Crash));
-        let sub = base.add_subclass(Crash { expr });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct ForInfinite {
-    #[pyo3(get)]
-    stmts: Py<PyAny>,
-}
-
-impl ForInfinite {
-    pub fn make(
-        py: Python<'_>,
-        stmts: Py<PyAny>,
-    ) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::ForInfinite));
-        let sub = base.add_subclass(ForInfinite {
-            stmts,
-        });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct ForLoop {
-    #[pyo3(get)]
-    init: Py<PyAny>,
-    #[pyo3(get)]
-    test: Py<PyAny>,
-    #[pyo3(get)]
-    increment: Py<PyAny>,
-    #[pyo3(get)]
-    stmts: Py<PyAny>,
-}
-
-impl ForLoop {
-    pub fn make(
-        py: Python<'_>,
-        init: Py<PyAny>,
-        test: Py<PyAny>,
-        increment: Py<PyAny>,
-        stmts: Py<PyAny>,
-    ) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::ForLoop));
-        let sub = base.add_subclass(ForLoop {
-            init,
-            test,
-            increment,
-            stmts,
-        });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct ForList {
-    #[pyo3(get)]
-    name: Py<PyAny>,
-    #[pyo3(get)]
-    in_list: Py<PyAny>,
-    #[pyo3(get)]
-    stmts: Py<PyAny>,
-}
-
-impl ForList {
-    pub fn make(
-        py: Python<'_>,
-        name: Py<PyAny>,
-        in_list: Py<PyAny>,
-        stmts: Py<PyAny>,
-    ) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::ForList));
-        let sub = base.add_subclass(ForList {
-            name,
-            in_list,
-            stmts,
-        });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct ForRange {
-    #[pyo3(get)]
-    name: Py<PyAny>,
-    #[pyo3(get)]
-    start: Py<PyAny>,
-    #[pyo3(get)]
-    end: Py<PyAny>,
-    #[pyo3(get)]
-    step: Py<PyAny>,
-    #[pyo3(get)]
-    stmts: Py<PyAny>,
-}
-
-impl ForRange {
-    pub fn make(
-        py: Python<'_>,
-        name: Py<PyAny>,
-        start: Py<PyAny>,
-        end: Py<PyAny>,
-        step: Py<PyAny>,
-        stmts: Py<PyAny>,
-    ) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::ForRange));
-        let sub = base.add_subclass(ForRange {
-            name,
-            start,
-            end,
-            step,
-            stmts,
-        });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct NewPrefab {
-    #[pyo3(get)]
-    prefab: Py<PyAny>,
-    #[pyo3(get)]
-    args: Py<PyAny>,
-}
-
-impl NewPrefab {
-    pub fn make(py: Python<'_>, prefab: Py<PyAny>, args: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::NewPrefab));
-        let sub = base.add_subclass(NewPrefab { prefab, args });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Setting {
-    #[pyo3(get)]
-    name: Py<PyAny>,
-    #[pyo3(get)]
-    mode: Py<PyAny>,
-    #[pyo3(get)]
-    value: Py<PyAny>,
-}
-
-impl Setting {
-    pub fn make(
-        py: Python<'_>,
-        name: Py<PyAny>,
-        mode: &dreammaker::ast::SettingMode,
-        value: Py<PyAny>,
-    ) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Setting));
-        let sub = base.add_subclass(Setting {
-            name,
-            mode: match mode {
-                dreammaker::ast::SettingMode::Assign => SettingMode::Assign,
-                dreammaker::ast::SettingMode::In => SettingMode::In,
-            }
-            .into_py(py),
-            value,
-        });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Label {
-    #[pyo3(get)]
-    name: Py<PyAny>,
-    #[pyo3(get)]
-    stmts: Py<PyAny>,
-}
-
-impl Label {
-    pub fn make(py: Python<'_>, name: Py<PyAny>, stmts: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Label));
-        let sub = base.add_subclass(Label { name, stmts });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct NewImplicit {
-    #[pyo3(get)]
-    args: Py<PyAny>,
-}
-
-impl NewImplicit {
-    pub fn make(py: Python<'_>, args: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::NewImplicit));
-        let sub = base.add_subclass(NewImplicit { args });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct InterpString {
-    #[pyo3(get)]
-    ident: Py<PyAny>,
-    #[pyo3(get)]
-    tokens: Py<PyAny>,
-}
-
-impl InterpString {
-    pub fn make(py: Python<'_>, ident: Py<PyAny>, tokens: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::InterpString));
-        let sub = base.add_subclass(InterpString { ident, tokens });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
 pub struct SwitchCase {
     #[pyo3(get)]
-    exact: Py<PyAny>,
+    exact: PyObject,
     #[pyo3(get)]
-    range: Py<PyAny>,
+    range: PyObject,
     #[pyo3(get)]
-    stmts: Py<PyAny>,
+    block: Vec<PyObject>,
 }
 
 impl SwitchCase {
-    pub fn make(
-        py: Python<'_>,
-        exact: Py<PyAny>,
-        range: Py<PyAny>,
-        stmts: Py<PyAny>,
-    ) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::SwitchCase));
-        let sub = base.add_subclass(SwitchCase {
-            exact,
-            range,
-            stmts,
-        });
-        Ok(Py::new(py, sub)?.to_object(py))
+    pub fn walk_parts(&self, py: Python<'_>, walker: &Bound<PyAny>) -> PyResult<()> {
+        if let Ok(bound_exact) = self.exact.downcast_bound::<PyList>(py) {
+            bound_exact.into_iter().for_each(|f| {
+                if let Ok(expr) = f.downcast::<Expression>() {
+                    Expression::walk(expr, walker);
+                }
+            });
+        }
+        if let Ok(bound_range) = self.range.downcast_bound::<PyList>(py) {
+            bound_range.into_iter().for_each(|f| {
+                if let Ok(expr) = f.downcast::<Expression>() {
+                    Expression::walk(expr, walker);
+                }
+            });
+        }
+        for stmt in self.block.iter() {
+            if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
+                Node::walk(node_expr, py, walker)?;
+            }
+        }
+
+        Ok(())
     }
 }
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Switch {
-    #[pyo3(get)]
-    input: Py<PyAny>,
-    #[pyo3(get)]
-    cases: Py<PyAny>,
-    #[pyo3(get)]
-    default: Py<PyAny>,
-}
-
-impl Switch {
-    pub fn make(
-        py: Python<'_>,
-        input: Py<PyAny>,
-        cases: Py<PyAny>,
-        default: Py<PyAny>,
-    ) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Switch));
-        let sub = base.add_subclass(Switch {
-            input,
-            cases,
-            default,
-        });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Spawn {
-    #[pyo3(get)]
-    delay: Py<PyAny>,
-    #[pyo3(get)]
-    stmts: Py<PyAny>,
-}
-
-impl Spawn {
-    pub fn make(py: Python<'_>, delay: Py<PyAny>, stmts: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Spawn));
-        let sub = base.add_subclass(Spawn { delay, stmts });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct While {
-    #[pyo3(get)]
-    cond: Py<PyAny>,
-    #[pyo3(get)]
-    stmts: Py<PyAny>,
-}
-
-impl While {
-    pub fn make(py: Python<'_>, cond: Py<PyAny>, stmts: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::While));
-        let sub = base.add_subclass(While { cond, stmts });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct DoWhile {
-    #[pyo3(get)]
-    cond: Py<PyAny>,
-    #[pyo3(get)]
-    stmts: Py<PyAny>,
-}
-
-impl DoWhile {
-    pub fn make(py: Python<'_>, cond: Py<PyAny>, stmts: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::DoWhile));
-        let sub = base.add_subclass(DoWhile { cond, stmts });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Break {
-    #[pyo3(get)]
-    ident: Py<PyAny>,
-}
-
-impl Break {
-    pub fn make(py: Python<'_>, ident: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Break));
-        let sub = base.add_subclass(Break { ident });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Continue {
-    #[pyo3(get)]
-    ident: Py<PyAny>,
-}
-
-impl Continue {
-    pub fn make(py: Python<'_>, ident: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Continue));
-        let sub = base.add_subclass(Continue { ident });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Locate {
-    #[pyo3(get)]
-    args: Py<PyAny>,
-    #[pyo3(get)]
-    in_list: Py<PyAny>,
-}
-
-impl Locate {
-    pub fn make(py: Python<'_>, args: Py<PyAny>, in_list: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Locate));
-        let sub = base.add_subclass(Locate { args, in_list });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct TryCatch {
-    #[pyo3(get)]
-    try_block: Py<PyAny>,
-    #[pyo3(get)]
-    catch_params: Py<PyAny>,
-    #[pyo3(get)]
-    catch_block: Py<PyAny>,
-}
-
-impl TryCatch {
-    pub fn make(
-        py: Python<'_>,
-        try_block: Py<PyAny>,
-        catch_params: Py<PyAny>,
-        catch_block: Py<PyAny>,
-    ) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::TryCatch));
-        let sub = base.add_subclass(TryCatch {
-            try_block,
-            catch_params,
-            catch_block,
-        });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Input {
-    #[pyo3(get)]
-    args: Py<PyAny>,
-    #[pyo3(get)]
-    input_type: Py<PyAny>,
-    #[pyo3(get)]
-    in_list: Py<PyAny>,
-}
-
-impl Input {
-    pub fn make(
-        py: Python<'_>,
-        args: Py<PyAny>,
-        input_type: Py<PyAny>,
-        in_list: Py<PyAny>,
-    ) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Input));
-        let sub = base.add_subclass(Input {
-            args,
-            input_type,
-            in_list,
-        });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct MiniExpr {
-    #[pyo3(get)]
-    ident: Py<PyAny>,
-    #[pyo3(get)]
-    fields: Py<PyAny>,
-}
-
-impl MiniExpr {
-    pub fn make(py: Python<'_>, ident: Py<PyAny>, fields: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::MiniExpr));
-        let sub = base.add_subclass(MiniExpr { ident, fields });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct NewMiniExpr {
-    #[pyo3(get)]
-    expr: Py<PyAny>,
-    #[pyo3(get)]
-    args: Py<PyAny>,
-}
-
-impl NewMiniExpr {
-    pub fn make(py: Python<'_>, expr: Py<PyAny>, args: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::NewMiniExpr));
-        let sub = base.add_subclass(NewMiniExpr { expr, args });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct DynamicCall {
-    #[pyo3(get)]
-    proc_info: Py<PyAny>,
-    #[pyo3(get)]
-    args: Py<PyAny>,
-}
-
-impl DynamicCall {
-    pub fn make(py: Python<'_>, proc_info: Py<PyAny>, args: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::DynamicCall));
-        let sub = base.add_subclass(DynamicCall { proc_info, args });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct ExternalCall {
-    #[pyo3(get)]
-    library_name: Py<PyAny>,
-    #[pyo3(get)]
-    function_name: Py<PyAny>,
-    #[pyo3(get)]
-    args: Py<PyAny>,
-}
-
-impl ExternalCall {
-    pub fn make(
-        py: Python<'_>,
-        library_name: Py<PyAny>,
-        function_name: Py<PyAny>,
-        args: Py<PyAny>,
-    ) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::ExternalCall));
-        let sub = base.add_subclass(ExternalCall {
-            library_name,
-            function_name,
-            args,
-        });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Del {
-    #[pyo3(get)]
-    expr: Py<PyAny>,
-}
-
-impl Del {
-    pub fn make(py: Python<'_>, expr: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Del));
-        let sub = base.add_subclass(Del { expr });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Throw {
-    #[pyo3(get)]
-    expr: Py<PyAny>,
-}
-
-impl Throw {
-    pub fn make(py: Python<'_>, expr: Py<PyAny>) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Throw));
-        let sub = base.add_subclass(Throw { expr });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-
-#[pyclass(extends = Node, module = "avulto.ast")]
-pub struct Goto {
-    #[pyo3(get)]
-    label: String,
-}
-
-impl Goto {
-    pub fn make(py: Python<'_>, label: String) -> PyResult<PyObject> {
-        let base = PyClassInitializer::from(Node::new(NodeKind::Goto));
-        let sub = base.add_subclass(Goto { label });
-        Ok(Py::new(py, sub)?.to_object(py))
-    }
-}
-

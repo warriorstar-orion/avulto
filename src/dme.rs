@@ -1,7 +1,13 @@
 extern crate dreammaker;
 
+use dreammaker::ast::Statement;
+use nodes::Node;
 use pyo3::{
-    create_exception, exceptions::{PyException, PyOSError, PyRuntimeError, PyValueError}, pyclass, pymethods, types::{PyAnyMethods, PyList, PyString, PyStringMethods}, Bound, IntoPy, Py, PyAny, PyObject, PyRef, PyResult, Python, ToPyObject
+    create_exception,
+    exceptions::{PyException, PyOSError, PyRuntimeError, PyValueError},
+    pyclass, pymethods,
+    types::{PyAnyMethods, PyList, PyString, PyStringMethods},
+    Bound, IntoPy, Py, PyAny, PyObject, PyRef, PyResult, Python, ToPyObject,
 };
 
 use crate::{
@@ -9,9 +15,10 @@ use crate::{
     typedecl::TypeDecl,
 };
 
-mod convert;
+pub mod expression;
 pub mod nodes;
-mod walker;
+pub mod operators;
+pub mod prefab;
 
 create_exception!(avulto.exceptions, EmptyProcError, PyException);
 create_exception!(avulto.exceptions, MissingTypeError, PyException);
@@ -44,6 +51,21 @@ impl Dme {
         out.sort();
         out.dedup();
     }
+
+    pub fn walk_stmt(
+        &self,
+        stmt: &Statement,
+        walker: &Bound<PyAny>,
+        py: Python<'_>,
+    ) -> PyResult<()> {
+        let node = Node::from_statement(py, stmt);
+        Node::walk(
+            node.into_py(py).downcast_bound::<Node>(py).unwrap(),
+            py,
+            walker,
+        )?;
+        Ok(())
+    }
 }
 
 #[pymethods]
@@ -69,7 +91,10 @@ impl Dme {
         let pp = match dreammaker::preprocessor::Preprocessor::new(&ctx, path.clone()) {
             Ok(pp) => pp,
             Err(e) => {
-                return Err(PyOSError::new_err(format!("error opening {:?}: {}", path, e)));
+                return Err(PyOSError::new_err(format!(
+                    "error opening {:?}: {}",
+                    path, e
+                )));
             }
         };
         let indents = dreammaker::indents::IndentProcessor::new(&ctx, pp);
