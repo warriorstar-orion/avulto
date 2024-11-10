@@ -51,26 +51,38 @@
       - ``visit_Crash``
       - ``visit_Del``
       - ``visit_DoWhile``
+      - ``visit_DynamicCall``
       - ``visit_Expr``
-      - ``visit_For``
+      - ``visit_ExternalCall``
+      - ``visit_Field``
+      - ``visit_ForInfinite``
       - ``visit_ForList``
+      - ``visit_ForLoop``
       - ``visit_ForRange``
       - ``visit_Goto``
+      - ``visit_Identifier``
       - ``visit_If``
+      - ``visit_Index``
+      - ``visit_Input``
       - ``visit_InterpString``
       - ``visit_Label``
-      - ``visit_New``
+      - ``visit_List``
+      - ``visit_Locate``
+      - ``visit_NewImplicit``
+      - ``visit_NewMiniExpr``
+      - ``visit_NewPrefab``
       - ``visit_ParentCall``
-      - ``visit_Prefab``
-      - ``visit_Resource``
+      - ``visit_Pick``
+      - ``visit_ProcReference``
       - ``visit_Return``
       - ``visit_SelfCall``
       - ``visit_Setting``
-      - ``visit_Spawn``
+      - ``visit_StaticField``
       - ``visit_Switch``
       - ``visit_TernaryOp``
       - ``visit_Throw``
       - ``visit_TryCatch``
+      - ``visit_UnaryOp``
       - ``visit_Var``
       - ``visit_While``
 
