@@ -6,9 +6,7 @@ use pyo3::{
     Bound, Py, PyAny, PyRef, PyRefMut, PyResult, Python,
 };
 
-use crate::path;
-
-// use crate::{dme::nodes::Prefab, path};
+use crate::{dme::prefab::Prefab, path};
 
 #[pyclass(module = "avulto", name = "dmlist")]
 pub struct DmList {
@@ -94,18 +92,18 @@ impl DmList {
                     }
                 }
             }
-        // } else if item.is_instance_of::<Prefab>() {
-        //     let item_prefab: &Bound<Prefab> = item.downcast()?;
-        //     for (idx, key) in self.keys.iter().enumerate() {
-        //         if key.bind(py).is_instance_of::<Prefab>() {
-        //             // TODO(wso): Hate hate hate hate hate hate hate
-        //             let a = key.downcast_bound::<Prefab>(py)?;
-        //             let b = a.try_borrow().unwrap();
-        //             if item_prefab.borrow().__eq__(&b, py) {
-        //                 return Ok(self.vals.get(idx).unwrap().clone_ref(py));
-        //             }
-        //         }
-        //     }
+        } else if item.is_instance_of::<Prefab>() {
+            let item_prefab: &Bound<Prefab> = item.downcast()?;
+            for (idx, key) in self.keys.iter().enumerate() {
+                if key.bind(py).is_instance_of::<Prefab>() {
+                    // TODO(wso): Hate hate hate hate hate hate hate
+                    let a = key.downcast_bound::<Prefab>(py)?;
+                    let b = a.try_borrow().unwrap();
+                    if item_prefab.borrow().__eq__(&b, py) {
+                        return Ok(self.vals.get(idx).unwrap().clone_ref(py));
+                    }
+                }
+            }
         } else if item.is_instance_of::<DmList>() {
             for (idx, key) in self.keys.iter().enumerate() {
                 if key.bind(py).is_instance_of::<DmList>() && item.eq(key).unwrap() {
