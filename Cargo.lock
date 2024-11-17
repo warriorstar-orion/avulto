@@ -130,7 +130,7 @@ dependencies = [
 
 [[package]]
 name = "avulto"
-version = "0.0.26"
+version = "0.0.27"
 dependencies = [
  "dmi",
  "dmm-tools",
@@ -1026,9 +1026,8 @@ dependencies = [
 
 [[package]]
 name = "pyo3"
-version = "0.22.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f402062616ab18202ae8319da13fa4279883a2b8a9d9f83f20dbade813ce1884"
+version = "0.23.0-dev"
+source = "git+https://github.com/PyO3/pyo3?rev=be4407cde9a8739f7c1ea4875a0287c08fb90220#be4407cde9a8739f7c1ea4875a0287c08fb90220"
 dependencies = [
  "cfg-if",
  "indoc",
@@ -1044,9 +1043,8 @@ dependencies = [
 
 [[package]]
 name = "pyo3-build-config"
-version = "0.22.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b14b5775b5ff446dd1056212d778012cbe8a0fbffd368029fd9e25b514479c38"
+version = "0.23.0-dev"
+source = "git+https://github.com/PyO3/pyo3?rev=be4407cde9a8739f7c1ea4875a0287c08fb90220#be4407cde9a8739f7c1ea4875a0287c08fb90220"
 dependencies = [
  "once_cell",
  "target-lexicon",
@@ -1054,9 +1052,8 @@ dependencies = [
 
 [[package]]
 name = "pyo3-ffi"
-version = "0.22.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ab5bcf04a2cdcbb50c7d6105de943f543f9ed92af55818fd17b660390fc8636"
+version = "0.23.0-dev"
+source = "git+https://github.com/PyO3/pyo3?rev=be4407cde9a8739f7c1ea4875a0287c08fb90220#be4407cde9a8739f7c1ea4875a0287c08fb90220"
 dependencies = [
  "libc",
  "pyo3-build-config",
@@ -1064,9 +1061,8 @@ dependencies = [
 
 [[package]]
 name = "pyo3-macros"
-version = "0.22.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fd24d897903a9e6d80b968368a34e1525aeb719d568dba8b3d4bfa5dc67d453"
+version = "0.23.0-dev"
+source = "git+https://github.com/PyO3/pyo3?rev=be4407cde9a8739f7c1ea4875a0287c08fb90220#be4407cde9a8739f7c1ea4875a0287c08fb90220"
 dependencies = [
  "proc-macro2",
  "pyo3-macros-backend",
@@ -1076,9 +1072,8 @@ dependencies = [
 
 [[package]]
 name = "pyo3-macros-backend"
-version = "0.22.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36c011a03ba1e50152b4b394b479826cad97e7a21eb52df179cd91ac411cbfbe"
+version = "0.23.0-dev"
+source = "git+https://github.com/PyO3/pyo3?rev=be4407cde9a8739f7c1ea4875a0287c08fb90220#be4407cde9a8739f7c1ea4875a0287c08fb90220"
 dependencies = [
  "heck",
  "proc-macro2",

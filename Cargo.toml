@@ -1,6 +1,6 @@
 [package]
 name = "avulto"
-version = "0.0.26"
+version = "0.0.27"
 edition = "2021"
 authors = ["Warriorstar Orion <orion@snowfrost.garden>"]
 rust-version = "1.79.0"
@@ -10,7 +10,7 @@ name = "avulto"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = {version = "0.22.4", features = ["py-clone"]}
+# pyo3 = {version = "0.22.4"}
 itertools = "0.11.0"
 lodepng = "3.7.0"
 ndarray = "0.15.6"
@@ -18,6 +18,10 @@ dmi = "0.3.4"
 image = "0.25.2"
 regex = "1.10.3"
 lazy_static = "1.4"
+
+[dependencies.pyo3]
+git = "https://github.com/PyO3/pyo3"
+rev = "be4407cde9a8739f7c1ea4875a0287c08fb90220"
 
 [dependencies.dreammaker]
 git = "https://github.com/SpaceManiac/SpacemanDMM"

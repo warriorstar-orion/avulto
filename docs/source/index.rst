@@ -19,6 +19,7 @@ API Reference
 *************
 
 .. toctree::
+   changes
    api/primitives
    api/dme
    api/dmi

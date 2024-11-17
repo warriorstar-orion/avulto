@@ -28,7 +28,7 @@ DICTIONARY = dict()
 for path in PATHS:
     if path == "/obj":
         continue
-    typedecl = ENV_FILE.typedecl(path)
+    typedecl = ENV_FILE.type_decl(path)
     DICTIONARY[path] = Entry(
         path=path,
         display_name=typedecl.value("name"),
@@ -76,7 +76,7 @@ def search():
 @app.route("/lookup/<path:obj>")
 def lookup(obj):
     obj = "/" + obj
-    typedecl = ENV_FILE.typedecl(obj)
+    typedecl = ENV_FILE.type_decl(obj)
     name = typedecl.value("name")
     if not name:
         name = obj

@@ -32,24 +32,29 @@ def test_dme_typesof(dme: DME):
 
 def test_missing_type(dme: DME):
     with pytest.raises(RuntimeError) as ex:
-        dme.typedecl("/missing_type")
+        dme.type_decl("/missing_type")
 
     assert str(ex.value) == "cannot find path /missing_type"
 
 
 def test_dme_vars(dme: DME):
-    foo = dme.typedecl("/obj/foo")
+    foo = dme.type_decl("/obj/foo")
     assert foo.var_names() == ["a", "icon", "icon_state"]
-    assert foo.value("a") == 3
+    assert foo.var_decl("a").const_val == 3
 
-    bar = dme.typedecl("/obj/foo/bar")
+    bar = dme.type_decl("/obj/foo/bar")
     assert bar.var_names() == ["a"]
-    assert bar.value("a") == 4
+    assert bar.var_decl("a").const_val == 4
 
-    baz = dme.typedecl("/obj/foo/baz")
-    assert baz.value("a") == 3
+    baz = dme.type_decl("/obj/foo/baz")
+    assert baz.var_decl("a").const_val == 3
 
 
 def test_dme_procs(dme: DME):
-    foo = dme.typedecl("/obj/foo")
+    foo = dme.type_decl("/obj/foo")
     assert sorted(foo.proc_names()) == ["proc1", "proc2"]
+
+
+def test_proc_decls(dme: DME):
+    foo = dme.type_decl("/obj/foo")
+    assert [x.name for x in foo.proc_decls("proc1")] == ["proc1"]

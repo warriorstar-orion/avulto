@@ -176,7 +176,10 @@ impl Tile {
     pub fn only(&self, prefix: &Bound<PyAny>, exact: bool, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let result = self.find(prefix, exact, py)?;
         if result.len() > 1 {
-            Err(PyRuntimeError::new_err(format!("found {} matches on tile, not 0 or 1", result.len())))
+            Err(PyRuntimeError::new_err(format!(
+                "found {} matches on tile, not 0 or 1",
+                result.len()
+            )))
         } else if result.len() == 1 {
             Ok(result[0].to_object(py))
         } else {

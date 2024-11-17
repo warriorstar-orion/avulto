@@ -6,7 +6,7 @@ use dmi::icon::Icon;
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyRuntimeError};
 use pyo3::pyclass::CompareOp;
 use pyo3::types::{PyAnyMethods, PyBytes, PyString, PyTuple};
-use pyo3::{create_exception, Bound};
+use pyo3::{create_exception, Bound, BoundObject, IntoPyObject};
 use pyo3::{
     pyclass, pymethods, types::PyList, IntoPy, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult,
     Python,
@@ -107,14 +107,14 @@ impl IconState {
             out.extend(delays);
         }
 
-        Ok(PyList::new_bound(py, out).into())
+        Ok(PyList::new(py, out)?.into())
     }
 
     #[getter]
     pub fn dirs(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
         let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
         let dirs = dmi.borrow().icon.states.get(self.idx).unwrap().dirs;
-        Ok(PyList::new_bound(
+        Ok(PyList::new(
             py,
             match dirs {
                 1 => vec![Dir::South],
@@ -133,7 +133,7 @@ impl IconState {
             }
             .iter()
             .map(|f| Py::new(py, *f).unwrap()),
-        )
+        )?
         .into())
     }
 
@@ -177,7 +177,7 @@ impl IconState {
             let mut cursor = std::io::Cursor::new(buffer);
             cursor.write_all(frame_data.as_bytes())?;
             let output = cursor.into_inner();
-            Ok(PyBytes::new_bound(py, &output).into())
+            Ok(PyBytes::new(py, &output).into())
         } else {
             Err(PyRuntimeError::new_err("invalid direction"))
         }
@@ -203,14 +203,17 @@ impl IconState {
 impl Dmi {
     #[staticmethod]
     pub fn from_file(filename: &Bound<PyAny>, py: Python<'_>) -> PyResult<Dmi> {
-        let pathlib = py.import_bound(pyo3::intern!(py, "pathlib"))?;
+        let pathlib = py.import(pyo3::intern!(py, "pathlib"))?;
 
         let path = if let Ok(pathbuf) = filename.extract::<std::path::PathBuf>() {
             pathbuf
         } else if let Ok(pystr) = filename.downcast::<PyString>() {
             PathBuf::from(&pystr.to_string())
         } else {
-            return Err(PyRuntimeError::new_err(format!("invalid filename {}", filename)));
+            return Err(PyRuntimeError::new_err(format!(
+                "invalid filename {}",
+                filename
+            )));
         };
 
         let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path.clone(),))?;
@@ -229,13 +232,27 @@ impl Dmi {
         };
 
         Icon::load(BufReader::new(file)).map_or_else(
-            |err| Err(IconError::new_err(format!("Error loading icon file: {}", err))),
-            |icon| Ok(Dmi { icon, filepath: pathlib_path.into_py(py) }))
+            |err| {
+                Err(IconError::new_err(format!(
+                    "Error loading icon file: {}",
+                    err
+                )))
+            },
+            |icon| {
+                Ok(Dmi {
+                    icon,
+                    filepath: pathlib_path
+                        .into_pyobject(py)
+                        .expect("setting icon filepath")
+                        .unbind(),
+                })
+            },
+        )
     }
 
     pub fn state_names(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
         let keys: Vec<String> = self.icon.states.iter().map(|s| s.name.clone()).collect();
-        Ok(PyList::new_bound(py, keys).into())
+        Ok(PyList::new(py, keys)?.into())
     }
 
     pub fn states(self_: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<StateIter>> {
@@ -245,7 +262,7 @@ impl Dmi {
         for (idx, _) in self_.icon.states.iter().enumerate() {
             out.push(
                 IconState {
-                    dmi: self_.into_py(py),
+                    dmi: self_.into_pyobject(py)?.into_any().unbind(),
                     idx,
                 }
                 .into_py(py),
@@ -264,7 +281,7 @@ impl Dmi {
         for (idx, state) in self_.icon.states.iter().enumerate() {
             if state.name == value {
                 return Ok(IconState {
-                    dmi: self_.into_py(py),
+                    dmi: self_.into_pyobject(py)?.into_any().unbind(),
                     idx,
                 });
             }
@@ -287,7 +304,9 @@ impl Dmi {
 
     #[getter]
     pub fn icon_dims(&self, py: Python<'_>) -> Py<PyTuple> {
-        PyTuple::new_bound(py, [self.icon.width, self.icon.height]).into_py(py)
+        PyTuple::new(py, [self.icon.width, self.icon.height])
+            .expect("icon dims")
+            .unbind()
     }
 
     fn __str__(&self, py: Python<'_>) -> PyResult<String> {

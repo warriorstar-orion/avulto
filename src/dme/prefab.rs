@@ -1,6 +1,10 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 
-use pyo3::{pyclass, pymethods, types::{PyAnyMethods, PyDict, PyDictMethods, PyList, PyString}, Bound, IntoPy, Py, PyAny, PyResult, Python, ToPyObject};
+use pyo3::{
+    pyclass, pymethods,
+    types::{PyAnyMethods, PyDict, PyDictMethods, PyList},
+    Bound, IntoPyObject, Py, PyAny, PyResult, Python,
+};
 
 use crate::path::Path;
 
@@ -9,7 +13,7 @@ use super::expression::Expression;
 #[pyclass(module = "avulto.ast")]
 pub struct Prefab {
     #[pyo3(get)]
-    pub path: Py<PyAny>,
+    pub path: Path,
     #[pyo3(get)]
     pub vars: Py<PyAny>,
 }
@@ -24,18 +28,24 @@ impl Prefab {
         let mut out: Vec<Bound<PyDict>> = Vec::new();
 
         for (k, v) in prefab.vars.iter() {
-            let var = PyDict::new_bound(py);
+            let var = PyDict::new(py);
             var.set_item(
                 k.as_str(),
-                Expression::from_expression(py, v).into_py(py),
-            );
+                Expression::parse(py, v)
+                    .into_pyobject(py)
+                    .expect("setting prefab vars")
+                    .into_any(),
+            )
+            .expect("setting prefab var item");
             out.push(var);
-        }   
+        }
         Prefab {
-            path: pypath.into_py(py),
-            vars: PyList::new_bound(py, out).to_object(py).clone_ref(py),
-
-        }     
+            path: pypath,
+            vars: PyList::new(py, out)
+                .expect("building prefab vars list")
+                .into_any()
+                .unbind(),
+        }
     }
     pub fn vars_to_string(&self, py: Python<'_>) -> String {
         if let Ok(vardict) = self.vars.downcast_bound::<PyDict>(py) {
@@ -59,9 +69,9 @@ impl Prefab {
         "".to_string()
     }
 
-    pub fn walk(self_: &Bound<Self>, walker: &Bound<PyAny>) -> PyResult<()> {
+    pub fn walk(self_: &Bound<Self>, walker: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
         if walker.hasattr("visit_Prefab").unwrap() {
-            walker.call_method1("visit_Prefab", (self_,))?;
+            walker.call_method1("visit_Prefab", (self_, py.None()))?;
         }
 
         Ok(())
@@ -79,19 +89,10 @@ impl Prefab {
     }
 
     pub fn __eq__(&self, other: &Self, py: Python<'_>) -> bool {
-        if let Ok(pthstr) = self.path.downcast_bound::<PyString>(py) {
-            if let Ok(otherpthstr) = other.path.downcast_bound::<PyString>(py) {
-                if !pthstr.to_string().eq(&otherpthstr.to_string()) {
-                    return false;
-                }
-            }
-        } else if let Ok(pthpth) = self.path.downcast_bound::<Path>(py) {
-            if let Ok(otherpthpth) = other.path.downcast_bound::<Path>(py) {
-                if !pthpth.eq(otherpthpth).unwrap() {
-                    return false;
-                }
-            }
+        if !self.path.abs.eq(&other.path.abs) {
+            return false;
         }
+
         if let Ok(vardict) = self.vars.downcast_bound::<PyDict>(py) {
             if let Ok(othervardict) = other.vars.downcast_bound::<PyDict>(py) {
                 if !vardict.eq(othervardict).unwrap() {
@@ -105,9 +106,7 @@ impl Prefab {
 
     pub fn __hash__(&self, py: Python<'_>) -> PyResult<u64> {
         let mut s = DefaultHasher::new();
-        if let Ok(pthstr) = self.path.downcast_bound::<PyString>(py) {
-            pthstr.hash()?.hash(&mut s);
-        }
+        self.path.hash(&mut s);
         if let Ok(vardict) = self.vars.downcast_bound::<PyDict>(py) {
             vardict.hash()?.hash(&mut s);
         }

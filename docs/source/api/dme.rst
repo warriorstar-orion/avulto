@@ -34,13 +34,23 @@
 
       Returns the :class:`TypeDecl` of the type given by *path* if it exists.
 
-   .. method:: walk_proc(path: Path | str, proc: str, walker)
 
-      Performs an AST walk of the proc *proc* on the object specified by *path*.
+.. class:: ProcDecl
+
+   A declaration for a specific proc on a type. Note that a type may have
+   multiple definitions of a given proc with the same name. This only represents
+   one proc definition.
+
+   .. method:: walk(walker)
+
+      Use the AST *walker* to walk this proc.
+
       The argument *walker* is expected to be a Python object which exposes
       methods for each kind of AST node you wish to visit. Each method should
-      take an argument *node*, which will be filled in with information about
-      that node in the AST. The currently available visitors are:
+      take two arguments: *node*, which will be filled in with information about
+      that node in the AST, and *source_info*, which includes lexical
+      information about the AST node, such as line, column, and filename. The
+      currently available visitors are:
 
       - ``visit_AssignOp``
       - ``visit_BinaryOp``
@@ -90,26 +100,30 @@
       will not be visited. There is currently no analogous ``generic_visit``
       support.
 
+
+.. class:: VarDecl
+
 .. class:: TypeDecl
 
    The :class:`TypeDecl` class returns basic information about a type declared
    in the :class:`DME` file.
 
+   .. method:: proc_decls(name=None) -> list[ProcDecl]
+
+      Returns a list of :class:`ProcDecl`\s for the type. If *name* is set, only
+      proc declarations with that name will be returned.
+
    .. method:: proc_names() -> list[str]
 
       Returns a list of proc names for the type declaration.
+
+   .. method:: var_decl(name: str, parents: bool=True) -> VarDecl
+
+      Returns the variable declaration of the var *name*. If *parents* is
+      :const:`True`, the type's parents will be checked for a variable
+      declaration if not specified on the current type.
 
    .. method:: var_names() -> list[str]
 
       Returns a list of variables names for the type declaration. This does not
       include variables declared in the type's parents.
-
-   .. method:: value(name: str)
-
-      Returns a Python representation of the variable *name*. This will lookup
-      values of variables declared in the type's parents.
-
-   .. method:: walk_proc(proc: str, walker)
-
-      Use the AST *walker* to walk the proc named *proc*. A convenience method
-      for :py:meth:`DME.walk_proc`.

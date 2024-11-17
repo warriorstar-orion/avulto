@@ -16,20 +16,21 @@ def dme() -> DME:
 
 def test_walker_base(dme: DME):
     class VarAndReturnWalker:
-        pass
+        def visit_Return(self, node, source_info):
+            print(node, source_info)
 
     varw = VarAndReturnWalker()
-    dme.walk_proc("/obj/test_object", "var_and_return", varw)
+    dme.type_decl("/obj/test_object").proc_decls("var_and_return")[0].walk(varw)
 
 def test_visit_call(dme: DME):
     class CallWalker:
         def __init__(self):
             self.calls = list()
 
-        def visit_Call(self, node):
+        def visit_Call(self, node, source_info):
             self.calls.append(node)
 
     walker = CallWalker()
-    dme.walk_proc("/obj/test_object", "test_visit_call", walker)
+    dme.type_decl("/obj/test_object").proc_decls("test_visit_call")[0].walk(walker)
     assert len(walker.calls) == 2
     assert all([isinstance(call, ast.Expression.Call) for call in walker.calls])

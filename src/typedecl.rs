@@ -1,24 +1,30 @@
 extern crate dreammaker;
 
-use dreammaker::constants::Constant;
+use dreammaker::objtree::NodeIndex;
 use itertools::Itertools;
-use pyo3::{
-    exceptions::PyRuntimeError,
-    prelude::*,
-    types::{PyList, PyString},
-};
+use pyo3::{exceptions::PyRuntimeError, prelude::*, types::PyList};
 
 use crate::{
-    dme::Dme,
-    helpers,
-    path::{self, Path},
+    dme::{Dme, FilledSourceLocation},
+    path::Path,
 };
+
+#[pyclass(module = "avulto")]
+pub struct VarDecl {
+    #[pyo3(get)]
+    pub name: String,
+    #[pyo3(get)]
+    pub declared_type: Option<Path>,
+    #[pyo3(get)]
+    pub const_val: Option<PyObject>,
+}
 
 #[pyclass(module = "avulto")]
 pub struct TypeDecl {
     pub dme: Py<PyAny>,
+    pub node_index: NodeIndex,
     #[pyo3(get)]
-    pub path: Py<PyAny>,
+    pub path: Path,
 }
 
 #[pyclass(module = "avulto")]
@@ -49,9 +55,14 @@ pub struct ProcDecl {
     #[pyo3(get)]
     pub type_path: Py<PyAny>,
     #[pyo3(get)]
-    pub proc_name: Py<PyAny>,
+    pub name: String,
     #[pyo3(get)]
     pub args: Py<PyAny>,
+
+    type_index: NodeIndex,
+    proc_index: usize,
+    #[pyo3(get)]
+    source_info: PyObject,
 }
 
 #[pymethods]
@@ -61,69 +72,62 @@ impl ProcDecl {
     }
 
     fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("<Proc {}/proc/{}>", self.type_path, self.proc_name))
+        Ok(format!("<Proc {}/proc/{}>", self.type_path, self.name))
+    }
+
+    pub fn walk(&self, walker: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
+        let dme = self.dme.downcast_bound::<Dme>(py).unwrap();
+        Dme::walk_proc(
+            &dme.borrow(),
+            self.type_index,
+            self.name.clone(),
+            walker,
+            self.proc_index,
+            py,
+        )
     }
 }
 
 #[pymethods]
 impl TypeDecl {
-    pub fn var_names(&self, py: Python<'_>) -> PyResult<PyObject> {
+    pub fn var_names(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
         let mut out: Vec<String> = Vec::new();
-        let bound = self.dme.downcast_bound::<Dme>(py).unwrap();
+        let dme = self.dme.downcast_bound::<Dme>(py).unwrap();
+        let objtree = &dme.borrow().objtree;
+        let type_def = &objtree[self.node_index];
 
-        let _path = self.path.extract::<path::Path>(py)?;
-        for ty in bound.borrow().objtree.iter_types() {
-            if ty.path == _path.rel {
-                for (name, _) in ty.vars.iter() {
-                    out.push(name.clone());
-                }
-                let mut x = out.into_iter().unique().collect::<Vec<String>>();
-                x.sort();
-                return Ok(PyList::new_bound(py, x).into_py(py));
-            }
+        for (name, _) in type_def.vars.iter() {
+            out.push(name.clone());
         }
-
-        Err(PyRuntimeError::new_err(format!(
-            "cannot find type {}",
-            self.path
-        )))
+        let mut x = out.into_iter().unique().collect::<Vec<String>>();
+        x.sort();
+        Ok(PyList::new(py, x)
+            .expect("passing var names list")
+            .unbind()
+            .clone_ref(py))
     }
 
-    pub fn value(&self, name: String, py: Python<'_>) -> PyResult<PyObject> {
+    #[pyo3(signature = (name, parents=true))]
+    pub fn var_decl(&self, name: String, parents: bool, py: Python<'_>) -> PyResult<PyObject> {
         let bound = self.dme.downcast_bound::<Dme>(py).unwrap();
-        let _path = self.path.extract::<path::Path>(py)?;
-
-        for ty in bound.borrow().objtree.iter_types() {
-            if ty.path == _path.rel {
-                if let Some(c) = ty.get_value(&name) {
-                    return Ok(helpers::constant_to_python_value(
-                        c.constant.as_ref().unwrap_or(Constant::null()),
-                    ));
-                } else {
-                    return Ok(py.None());
-                }
-            }
-        }
-
-        Err(PyRuntimeError::new_err(format!(
-            "cannot find value for {}/{}",
-            self.path, name
-        )))
+        let dme = bound.borrow();
+        dme.get_var_decl(name, self.node_index, parents, py)
     }
 
-    pub fn proc_names(&self, py: Python<'_>) -> PyResult<PyObject> {
+    pub fn proc_names(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
         let mut out: Vec<String> = Vec::new();
         let bound = self.dme.downcast_bound::<Dme>(py).unwrap();
-        let _path = self.path.extract::<path::Path>(py)?;
-
         for ty in bound.borrow().objtree.iter_types() {
-            if ty.path == _path.rel {
+            if ty.path == self.path.rel {
                 for (name, _) in ty.procs.iter() {
                     out.push(name.clone());
                 }
                 let mut x = out.into_iter().unique().collect::<Vec<String>>();
                 x.sort();
-                return Ok(PyList::new_bound(py, x).into_py(py));
+                return Ok(PyList::new(py, x)
+                    .expect("passing proc names list")
+                    .unbind()
+                    .clone_ref(py));
             }
         }
 
@@ -133,69 +137,63 @@ impl TypeDecl {
         )))
     }
 
-    pub fn proc_decls(&self, proc: &Bound<PyAny>, py: Python<'_>) -> PyResult<PyObject> {
-        let bound = self.dme.downcast_bound::<Dme>(py).unwrap();
-        let _path = self.path.extract::<path::Path>(py)?;
-
+    #[pyo3(signature = (name=None))]
+    pub fn proc_decls(&self, name: Option<String>, py: Python<'_>) -> PyResult<PyObject> {
+        let dme = self.dme.downcast_bound::<Dme>(py).unwrap();
+        let objtree = &dme.borrow().objtree;
         let mut out: Vec<ProcDecl> = Vec::new();
 
-        let proc_str = if let Ok(proc_str) = proc.downcast::<PyString>() {
-            proc_str.to_string()
-        } else {
-            return Err(PyRuntimeError::new_err(
-                "cannot coerce path to string".to_string(),
-            ));
-        };
-
-        for ty in bound.borrow().objtree.iter_types() {
-            if ty.path == _path.rel {
-                for (name, type_proc) in ty.procs.iter() {
-                    if name.eq(&proc_str) {
-                        for proc_value in type_proc.value.iter() {
-                            if !proc_value.location.is_builtins() {
-                                let mut args_out: Vec<ProcArg> = Vec::new();
-                                for arg in proc_value.parameters.iter() {
-                                    let arg_typepath = if arg.var_type.type_path.is_empty() {
-                                        py.None()
-                                    } else {
-                                        Path::new(
-                                            ("/".to_string()
-                                                + &arg
-                                                    .var_type
-                                                    .type_path
-                                                    .iter()
-                                                    .map(|f| f.as_str())
-                                                    .join("/"))
-                                                .as_str(),
-                                        )?
-                                        .into_py(py)
-                                    };
-                                    args_out.push(ProcArg {
-                                        arg_name: arg.name.clone().into_py(py),
-                                        arg_type: arg_typepath.into_py(py),
-                                    });
-                                }
-
-                                out.push(ProcDecl {
-                                    dme: self.dme.clone_ref(py),
-                                    proc_name: name.clone().into_py(py),
-                                    type_path: _path.clone().into_py(py),
-                                    args: PyList::new_bound(
-                                        py,
-                                        args_out
-                                            .into_iter()
-                                            .map(|f| f.into_py(py))
-                                            .collect::<Vec<Py<PyAny>>>(),
-                                    )
-                                    .into_py(py),
-                                });
-                            }
-                        }
+        let type_def = &objtree[self.node_index];
+        for (proc_name, proc) in type_def.procs.iter() {
+            if name.as_ref().is_some_and(|p| !proc_name.eq(p)) {
+                continue;
+            }
+            for (proc_index, proc_value) in proc.value.iter().enumerate() {
+                if !proc_value.location.is_builtins() {
+                    let mut args_out: Vec<ProcArg> = Vec::new();
+                    for arg in proc_value.parameters.iter() {
+                        let arg_typepath = if arg.var_type.type_path.is_empty() {
+                            py.None()
+                        } else {
+                            Path::from_tree_path(&arg.var_type.type_path).into_py(py)
+                        };
+                        args_out.push(ProcArg {
+                            arg_name: arg.name.clone().into_py(py),
+                            arg_type: arg_typepath.into_py(py),
+                        });
                     }
+
+                    out.push(ProcDecl {
+                        dme: self.dme.clone_ref(py),
+                        name: proc_name.clone(),
+                        type_path: self.path.clone().into_py(py),
+
+                        args: PyList::new_bound(
+                            py,
+                            args_out
+                                .into_iter()
+                                .map(|f| f.into_py(py))
+                                .collect::<Vec<Py<PyAny>>>(),
+                        )
+                        .into_py(py),
+
+                        proc_index,
+                        type_index: self.node_index,
+                        source_info: FilledSourceLocation {
+                            file_path: dme.borrow().file_data.borrow(py).file_ids
+                                [&proc_value.location.file]
+                                .clone_ref(py),
+                            column: proc_value.location.column,
+                            line: proc_value.location.line,
+                        }
+                        .into_pyobject(py)
+                        .expect("passing proc decl source info")
+                        .into_any()
+                        .unbind(),
+                    });
                 }
             }
         }
-
         Ok(PyList::new_bound(
             py,
             out.into_iter()
@@ -203,18 +201,6 @@ impl TypeDecl {
                 .collect::<Vec<Py<PyAny>>>(),
         )
         .into_py(py))
-    }
-
-    pub fn walk_proc(
-        &self,
-        proc: &Bound<PyAny>,
-        walker: &Bound<PyAny>,
-        py: Python<'_>,
-    ) -> PyResult<()> {
-        let bound = self.dme.downcast_bound::<Dme>(py).unwrap();
-        bound
-            .borrow()
-            .walk_proc(self.path.bind(py), proc, walker, py)
     }
 
     fn __repr__(&self) -> PyResult<String> {

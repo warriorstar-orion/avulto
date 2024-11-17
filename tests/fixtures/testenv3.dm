@@ -10,4 +10,13 @@
 
 /obj/test_object/proc/test_visit_call()
 	if(!example_call())
-		example_call()
+		example_call(var_anr_return())
+
+
+/obj/test_object_2
+
+/obj/test_object_2/proc/dupe_named_proc()
+	return
+
+/obj/test_object_2/proc/dupe_named_proc()
+	return

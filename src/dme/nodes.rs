@@ -1,14 +1,25 @@
 use core::fmt;
 use std::hash::Hash;
 
-use dreammaker::ast::Statement;
+use dreammaker::{FileId, Location};
 use pyo3::{
-    pyclass, pymethods, pymodule, types::{PyAnyMethods, PyList, PyModule, PyModuleMethods}, Bound, IntoPy, Py, PyAny, PyObject, PyResult, Python
+    pyclass, pymethods, pymodule,
+    types::{PyAnyMethods, PyList, PyModule, PyModuleMethods},
+    Bound, IntoPyObject, Py, PyAny, PyObject, PyResult, Python,
 };
 
-use super::{expression::Expression, operators::SettingMode};
+use crate::path::Path;
+
+use super::{
+    expression::{Constant, Expression},
+    operators::SettingMode,
+    Dme,
+};
 
 extern crate dreammaker;
+
+pub type PyCodeBlock = Vec<Py<Node>>;
+pub type PyExpr = Py<Expression>;
 
 #[pymodule]
 pub fn ast(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
@@ -89,727 +100,155 @@ impl fmt::Display for NodeKind {
 }
 
 #[pyclass(frozen)]
+#[derive(Clone)]
+pub struct OriginalSourceLocation {
+    /// The index into the file table.
+    pub file: FileId,
+    /// The line number, starting at 1.
+    #[pyo3(get)]
+    pub line: u32,
+    /// The column number, starting at 1.
+    #[pyo3(get)]
+    pub column: u16,
+}
+
+impl OriginalSourceLocation {
+    pub fn from_location(location: &Location) -> Py<Self> {
+        Python::with_gil(|py| {
+            OriginalSourceLocation {
+                file: location.file,
+                line: location.line,
+                column: location.column,
+            }
+            .into_pyobject(py)
+            .unwrap()
+            .unbind()
+        })
+    }
+}
+
+#[pyclass(frozen)]
 pub enum Node {
     Unknown(),
     Expression {
-        expr: PyObject,
+        expr: PyExpr,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     Crash {
-        expr: Option<PyObject>,
+        expr: Option<PyExpr>,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     Return {
-        retval: Option<PyObject>,
+        retval: Option<PyExpr>,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     Throw {
-        expr: PyObject,
+        expr: PyExpr,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     Del {
-        expr: PyObject,
+        expr: PyExpr,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     Break {
-        label: Option<PyObject>,
+        label: Option<PyExpr>,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     While {
-        condition: PyObject,
-        block: Vec<PyObject>,
+        condition: PyExpr,
+        block: PyCodeBlock,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     DoWhile {
-        condition: PyObject,
-        block: Vec<PyObject>,
+        condition: PyExpr,
+        block: PyCodeBlock,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     If {
-        if_arms: Vec<(PyObject, Vec<PyObject>)>,
-        else_arm: Option<Vec<PyObject>>,
+        if_arms: Vec<(PyExpr, PyCodeBlock)>,
+        else_arm: Option<PyCodeBlock>,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     ForInfinite {
-        block: Vec<PyObject>,
+        block: PyCodeBlock,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     ForList {
-        name: PyObject,
-        in_list: Option<PyObject>,
-        block: Vec<PyObject>,
+        var_type: Option<Path>,
+        name: PyExpr,
+        in_list: Option<PyExpr>,
+        block: PyCodeBlock,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     ForLoop {
-        init: Option<PyObject>,
-        test: Option<PyObject>,
-        inc: Option<PyObject>,
-        block: Vec<PyObject>,
+        init: Option<Py<Node>>,
+        test: Option<PyExpr>,
+        inc: Option<Py<Node>>,
+        block: PyCodeBlock,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     ForRange {
-        name: PyObject,
-        start: PyObject,
-        end: PyObject,
-        step: Option<PyObject>,
-        block: Vec<PyObject>,
+        name: PyExpr,
+        start: PyExpr,
+        end: PyExpr,
+        step: Option<PyExpr>,
+        block: PyCodeBlock,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     Var {
-        name: String,
-        value: Option<PyObject>,
+        name: PyExpr,
+        value: Option<PyExpr>,
+        declared_type: Option<Path>,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     Vars {
-        vars: Vec<PyObject>,
+        vars: Vec<Py<Node>>,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     Setting {
-        name: PyObject,
+        name: PyExpr,
         mode: SettingMode,
-        value: PyObject,
+        value: PyExpr,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     Spawn {
-        delay: Option<PyObject>,
-        block: Vec<PyObject>,
+        delay: Option<PyExpr>,
+        block: PyCodeBlock,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     Continue {
-        name: Option<PyObject>,
+        name: Option<PyExpr>,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     Goto {
-        label: PyObject,
+        label: PyExpr,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     Label {
-        name: PyObject,
-        block: Vec<PyObject>,
+        name: PyExpr,
+        block: PyCodeBlock,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     TryCatch {
-        try_block: Vec<PyObject>,
-        catch_params: Vec<Vec<PyObject>>,
-        catch_block: Vec<PyObject>,
+        try_block: PyCodeBlock,
+        catch_params: Vec<Vec<PyExpr>>,
+        catch_block: PyCodeBlock,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
     Switch {
-        input: PyObject,
-        cases: Vec<PyObject>,
-        default: Option<Vec<PyObject>>,
+        input: PyExpr,
+        cases: Vec<Py<SwitchCase>>,
+        default: Option<PyCodeBlock>,
+        source_loc: Option<Py<OriginalSourceLocation>>,
     },
 }
 
-pub fn visit_constant(_py: Python<'_>, walker: &Bound<PyAny>, constant: Py<PyAny>) -> PyResult<()> {
+pub fn visit_constant(constant: &Constant, walker: &Bound<PyAny>) -> PyResult<()> {
     if walker.hasattr("visit_Constant").unwrap() {
-        walker.call_method1("visit_Constant", (constant,))?;
+        walker.call_method1("visit_Constant", (constant.clone(),))?;
     }
 
     Ok(())
-}
-
-impl Node {
-    pub fn from_statement(py: Python<'_>, stmt: &Statement) -> PyObject {
-        match stmt {
-            Statement::Var(v) => Self::Var {
-                name: v.name.clone(),
-                value: v
-                    .value
-                    .as_ref()
-                    .map(|expr| Expression::from_expression(py, expr).into_py(py)),
-            }
-            .into_py(py),
-            Statement::Expr(expression) => Self::Expression {
-                expr: Expression::from_expression(py, expression).into_py(py),
-            }
-            .into_py(py),
-            Statement::Return(expression) => Self::Return {
-                retval: expression
-                    .as_ref()
-                    .map(|expr| Expression::from_expression(py, expr).into_py(py)),
-            }
-            .into_py(py),
-            Statement::Throw(expression) => Self::Throw {
-                expr: Expression::from_expression(py, expression).into_py(py),
-            }
-            .into_py(py),
-            Statement::While { condition, block } => Self::While {
-                condition: Expression::from_expression(py, condition).into_py(py),
-                block: block
-                    .iter()
-                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
-                    .collect::<Vec<PyObject>>(),
-            }
-            .into_py(py),
-            Statement::DoWhile { block, condition } => Self::DoWhile {
-                condition: Expression::from_expression(py, &condition.elem).into_py(py),
-                block: block
-                    .iter()
-                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
-                    .collect::<Vec<PyObject>>(),
-            }
-            .into_py(py),
-            Statement::If { arms, else_arm } => {
-                let if_arms: Vec<(PyObject, Vec<PyObject>)> = arms
-                    .iter()
-                    .map(|(cond, stmts)| {
-                        let mut stmt_nodes: Vec<Py<PyAny>> = vec![];
-                        for stmt in stmts.iter() {
-                            stmt_nodes.push(Node::from_statement(py, &stmt.elem).into_py(py));
-                        }
-
-                        (
-                            Expression::from_expression(py, &cond.elem).into_py(py),
-                            stmt_nodes,
-                        )
-                    })
-                    .collect();
-                let mut else_arm_nodes: Vec<Py<PyAny>> = vec![];
-                if let Some(else_arm_block) = else_arm {
-                    for stmt in else_arm_block.iter() {
-                        else_arm_nodes.push(Node::from_statement(py, &stmt.elem).into_py(py));
-                    }
-                }
-                Self::If {
-                    if_arms,
-                    else_arm: if else_arm_nodes.is_empty() {
-                        None
-                    } else {
-                        Some(else_arm_nodes)
-                    },
-                }
-                .into_py(py)
-            }
-            Statement::ForInfinite { block } => Self::ForInfinite {
-                block: block
-                    .iter()
-                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
-                    .collect::<Vec<PyObject>>(),
-            }
-            .into_py(py),
-            Statement::ForLoop {
-                init,
-                test,
-                inc,
-                block,
-            } => Self::ForLoop {
-                init: init
-                    .as_ref()
-                    .map(|stmt| Node::from_statement(py, stmt).into_py(py)),
-                test: test
-                    .as_ref()
-                    .map(|expr| Expression::from_expression(py, expr).into_py(py)),
-                inc: inc
-                    .as_ref()
-                    .map(|stmt| Node::from_statement(py, stmt).into_py(py)),
-                block: block
-                    .iter()
-                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
-                    .collect::<Vec<PyObject>>(),
-            }
-            .into_py(py),
-            Statement::ForList(for_list_statement) => Self::ForList {
-                name: Expression::Identifier {
-                    name: for_list_statement.name.to_string(),
-                }
-                .into_py(py),
-                in_list: for_list_statement
-                    .in_list
-                    .as_ref()
-                    .map(|expr| Expression::from_expression(py, expr).into_py(py)),
-                block: for_list_statement
-                    .block
-                    .iter()
-                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
-                    .collect::<Vec<PyObject>>(),
-            }
-            .into_py(py),
-            Statement::ForRange(for_range_statement) => Self::ForRange {
-                name: Expression::Identifier {
-                    name: for_range_statement.name.to_string(),
-                }
-                .into_py(py),
-                start: Expression::from_expression(py, &for_range_statement.start).into_py(py),
-                end: Expression::from_expression(py, &for_range_statement.end).into_py(py),
-                block: for_range_statement
-                    .block
-                    .iter()
-                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
-                    .collect::<Vec<PyObject>>(),
-                step: for_range_statement
-                    .step
-                    .as_ref()
-                    .map(|expr| Expression::from_expression(py, expr).into_py(py)),
-            }
-            .into_py(py),
-            Statement::Vars(vec) => Self::Vars {
-                vars: vec
-                    .iter()
-                    .map(|vs| {
-                        Self::Var {
-                            name: vs.name.clone(),
-                            value: vs
-                                .value
-                                .as_ref()
-                                .map(|expr| Expression::from_expression(py, expr).into_py(py)),
-                        }
-                        .into_py(py)
-                    })
-                    .collect(),
-            }
-            .into_py(py),
-            Statement::Setting { name, mode, value } => Self::Setting {
-                name: Expression::Identifier {
-                    name: name.to_string(),
-                }
-                .into_py(py),
-                mode: match mode {
-                    dreammaker::ast::SettingMode::Assign => SettingMode::Assign,
-                    dreammaker::ast::SettingMode::In => SettingMode::In,
-                },
-                value: Expression::from_expression(py, value).into_py(py),
-            }
-            .into_py(py),
-            Statement::Spawn { delay, block } => Self::Spawn {
-                delay: delay
-                    .as_ref()
-                    .map(|expr| Expression::from_expression(py, expr).into_py(py)),
-                block: block
-                    .iter()
-                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
-                    .collect::<Vec<PyObject>>(),
-            }
-            .into_py(py),
-            Statement::Switch {
-                input,
-                cases,
-                default,
-            } => {
-                let input_expr = Expression::from_expression(py, input).into_py(py);
-                let mut case_nodes: Vec<Py<PyAny>> = vec![];
-                for (case, block) in cases.iter() {
-                    let mut exact_nodes: Vec<Py<PyAny>> = vec![];
-                    let mut range_nodes: Vec<Py<PyAny>> = vec![];
-
-                    for case_type in &case.elem {
-                        match case_type {
-                            dreammaker::ast::Case::Exact(e) => {
-                                exact_nodes.push(Expression::from_expression(py, e).into_py(py));
-                            }
-                            dreammaker::ast::Case::Range(s, e) => {
-                                let range_list = PyList::new_bound(
-                                    py,
-                                    [
-                                        Expression::from_expression(py, s).into_py(py),
-                                        Expression::from_expression(py, e).into_py(py),
-                                    ],
-                                )
-                                .into_py(py);
-                                range_nodes.push(range_list);
-                            }
-                        }
-                    }
-                    case_nodes.push(
-                        SwitchCase {
-                            exact: PyList::new_bound(py, exact_nodes).into_py(py),
-                            range: PyList::new_bound(py, range_nodes).into_py(py),
-                            block: block
-                                .iter()
-                                .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
-                                .collect::<Vec<PyObject>>(),
-                        }
-                        .into_py(py),
-                    );
-                }
-
-                Self::Switch {
-                    input: input_expr,
-                    cases: case_nodes,
-                    default: default.as_ref().map(|stmts| {
-                        stmts
-                            .iter()
-                            .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
-                            .collect::<Vec<PyObject>>()
-                    }),
-                }
-                .into_py(py)
-            }
-            Statement::TryCatch {
-                try_block,
-                catch_params,
-                catch_block,
-            } => Self::TryCatch {
-                try_block: try_block
-                    .iter()
-                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
-                    .collect::<Vec<PyObject>>(),
-                catch_block: catch_block
-                    .iter()
-                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
-                    .collect::<Vec<PyObject>>(),
-                catch_params: catch_params
-                    .iter()
-                    .map(|tc| {
-                        tc.iter()
-                            .map(|tcs| Expression::Identifier { name: tcs.clone() }.into_py(py))
-                            .collect::<Vec<PyObject>>()
-                    })
-                    .collect::<Vec<Vec<PyObject>>>(),
-            }
-            .into_py(py),
-            Statement::Continue(name) => Self::Continue {
-                name: name
-                    .clone()
-                    .map(|s| Expression::Identifier { name: s.clone() }.into_py(py)),
-            }
-            .into_py(py),
-            Statement::Break(label) => Self::Break {
-                label: label
-                    .as_ref()
-                    .map(|l| Expression::Identifier { name: l.clone() }.into_py(py)),
-            }
-            .into_py(py),
-            Statement::Goto(label) => Self::Goto {
-                label: Expression::Identifier {
-                    name: label.clone(),
-                }
-                .into_py(py),
-            }
-            .into_py(py),
-            Statement::Label { name, block } => Self::Label {
-                name: Expression::Identifier { name: name.clone() }.into_py(py),
-                block: block
-                    .iter()
-                    .map(|stmt| Node::from_statement(py, &stmt.elem).into_py(py))
-                    .collect::<Vec<PyObject>>(),
-            }
-            .into_py(py),
-            Statement::Del(expression) => Self::Del {
-                expr: Expression::from_expression(py, expression).into_py(py),
-            }
-            .into_py(py),
-            Statement::Crash(expression) => Self::Crash {
-                expr: expression
-                    .as_ref()
-                    .map(|expr| Expression::from_expression(py, expr).into_py(py)),
-            }
-            .into_py(py),
-        }
-    }
-
-    pub fn walk(self_: &Bound<Self>, py: Python<'_>, walker: &Bound<PyAny>) -> PyResult<()> {
-        let node = self_.get();
-        match node {
-            Node::Unknown() => todo!(),
-            Node::Expression { expr } => {
-                if let Ok(expr_) = expr.downcast_bound::<Expression>(py) {
-                    Expression::walk(expr_, walker)?;
-                }
-            }
-            Node::Return { retval } => {
-                if walker.hasattr("visit_Return").unwrap() {
-                    walker.call_method1("visit_Return", (self_.as_ref(),))?;
-                } else if let Some(some_expr) = retval {
-                    if let Ok(expr_py) = some_expr.downcast_bound::<Expression>(py) {
-                        Expression::walk(expr_py, walker)?;
-                    }
-                }
-
-                return Ok(());
-            }
-            Node::Throw { expr } => {
-                if walker.hasattr("visit_Throw").unwrap() {
-                    walker.call_method1("visit_Throw", (self_.as_ref(),))?;
-                } else if let Ok(expr_py) = expr.downcast_bound::<Expression>(py) {
-                    Expression::walk(expr_py, walker)?;
-                }
-            }
-            Node::While { condition, block } => {
-                if walker.hasattr("visit_While").unwrap() {
-                    walker.call_method1("visit_While", (self_.as_ref(),))?;
-                } else {
-                    if let Ok(cond_expr) = condition.downcast_bound::<Expression>(py) {
-                        Expression::walk(cond_expr, walker)?;
-                    }
-                    for stmt in block.iter() {
-                        if let Ok(node) = stmt.downcast_bound::<Node>(py) {
-                            Node::walk(node, py, walker)?;
-                        }
-                    }
-                }
-                return Ok(());
-            }
-            Node::DoWhile { condition, block } => {
-                if walker.hasattr("visit_DoWhile").unwrap() {
-                    walker.call_method1("visit_DoWhile", (self_.as_ref(),))?;
-                } else {
-                    if let Ok(bound_condition) = condition.downcast_bound::<Expression>(py) {
-                        Expression::walk(bound_condition, walker)?;
-                    }
-                    for stmt in block.iter() {
-                        if let Ok(node) = stmt.downcast_bound::<Node>(py) {
-                            Node::walk(node, py, walker)?;
-                        }
-                    }
-                }
-            }
-            Node::If { if_arms, else_arm } => {
-                if walker.hasattr("visit_If").unwrap() {
-                    walker.call_method1("visit_If", (self_.as_ref(),))?;
-                } else {
-                    for (cond, block) in if_arms.iter() {
-                        if let Ok(cond_expr) = cond.downcast_bound::<Expression>(py) {
-                            Expression::walk(cond_expr, walker)?;
-                        }
-                        for stmt in block.iter() {
-                            if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
-                                Node::walk(node_expr, py, walker)?;
-                            }
-                        }
-                    }
-                    if let Some(else_arm_block) = else_arm {
-                        for stmt in else_arm_block.iter() {
-                            if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
-                                Node::walk(node_expr, py, walker)?;
-                            }
-                        }
-                    }
-                }
-                return Ok(());
-            }
-            Node::ForInfinite { block } => {
-                if walker.hasattr("visit_ForInfinite").unwrap() {
-                    walker.call_method1("visit_ForInfinite", (self_.as_ref(),))?;
-                } else {
-                    for stmt in block.iter() {
-                        if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
-                            Node::walk(node_expr, py, walker)?;
-                        }
-                    }
-                }
-                return Ok(());
-            }
-            Node::ForLoop {
-                init,
-                test,
-                inc,
-                block,
-            } => {
-                if walker.hasattr("visit_ForLoop").unwrap() {
-                    walker.call_method1("visit_ForLoop", (self_.as_ref(),))?;
-                } else {
-                    if let Some(init) = init {
-                        if let Ok(init_node) = init.downcast_bound::<Node>(py) {
-                            Node::walk(init_node, py, walker)?;
-                        }
-                    }
-                    if let Some(test) = test {
-                        if let Ok(bound_test) = test.downcast_bound::<Expression>(py) {
-                            Expression::walk(bound_test, walker)?;
-                        }
-                    }
-                    if let Some(inc) = inc {
-                        if let Ok(inc_node) = inc.downcast_bound::<Node>(py) {
-                            Node::walk(inc_node, py, walker)?;
-                        }
-                    }
-                    for stmt in block.iter() {
-                        if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
-                            Node::walk(node_expr, py, walker)?;
-                        }
-                    }
-                }
-                return Ok(());
-            }
-            Node::Var { name, value } => {
-                if walker.hasattr("visit_Var").unwrap() {
-                    walker.call_method1("visit_Var", (self_.as_ref(),))?;
-                } else {
-                    visit_constant(py, walker, name.clone().into_py(py))?;
-                    if let Some(expr) = value {
-                        if let Ok(expr_py) = expr.downcast_bound::<Expression>(py) {
-                            Expression::walk(expr_py, walker)?;
-                        }
-                    }
-                }
-                return Ok(());
-            }
-            Node::Crash { expr } => {
-                if walker.hasattr("visit_Crash").unwrap() {
-                    walker.call_method1("visit_Crash", (self_.as_ref(),))?;
-                } else if let Some(some_expr) = expr {
-                    if let Ok(expr_py) = some_expr.downcast_bound::<Expression>(py) {
-                        Expression::walk(expr_py, walker)?;
-                    }
-                }
-
-                return Ok(());
-            }
-            Node::ForList {
-                name,
-                in_list,
-                block,
-            } => {
-                if walker.hasattr("visit_ForList").unwrap() {
-                    walker.call_method1("visit_ForList", (self_.as_ref(),))?;
-                } else {
-                    visit_constant(py, walker, name.clone_ref(py))?;
-                    if let Some(in_list_expr) = in_list {
-                        if let Ok(bound_in_list) = in_list_expr.downcast_bound::<Expression>(py) {
-                            Expression::walk(bound_in_list, walker)?;
-                        }
-                        for stmt in block.iter() {
-                            if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
-                                Node::walk(node_expr, py, walker)?;
-                            }
-                        }
-                    }
-                }
-
-                return Ok(());
-            }
-            Node::ForRange {
-                name,
-                start,
-                end,
-                step,
-                block,
-            } => {
-                if walker.hasattr("visit_ForRange").unwrap() {
-                    walker.call_method1("visit_ForRange", (self_.as_ref(),))?;
-                } else {
-                    visit_constant(py, walker, name.clone_ref(py))?;
-                    if let Ok(bound_start) = start.downcast_bound::<Expression>(py) {
-                        Expression::walk(bound_start, walker)?;
-                    }
-                    if let Ok(bound_end) = end.downcast_bound::<Expression>(py) {
-                        Expression::walk(bound_end, walker)?;
-                    }
-                    if let Some(step) = step {
-                        if let Ok(bound_step) = step.downcast_bound::<Expression>(py) {
-                            Expression::walk(bound_step, walker)?;
-                        }
-                    }
-                    for stmt in block.iter() {
-                        if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
-                            Node::walk(node_expr, py, walker)?;
-                        }
-                    }
-                }
-            }
-            Node::Vars { vars } => {
-                for var in vars.iter() {
-                    if let Ok(bound_var) = var.downcast_bound::<Node>(py) {
-                        Node::walk(bound_var, py, walker)?;
-                    }
-                }
-            }
-            Node::Del { expr } => {
-                if walker.hasattr("visit_Del").unwrap() {
-                    walker.call_method1("visit_Del", (self_.as_ref(),))?;
-                } else if let Ok(expr_py) = expr.downcast_bound::<Expression>(py) {
-                    Expression::walk(expr_py, walker)?;
-                }
-            }
-            Node::Break { label } => {
-                if walker.hasattr("visit_Break").unwrap() {
-                    walker.call_method1("visit_Break", (self_.as_ref(),))?;
-                } else if let Some(l) = label {
-                    visit_constant(py, walker, l.clone().into_py(py))?;
-                }
-            }
-            Node::Setting { name, mode: _, value } => {
-                if walker.hasattr("visit_Setting").unwrap() {
-                    walker.call_method1("visit_Setting", (self_.as_ref(),))?;
-                } else {
-                    visit_constant(py, walker, name.clone().into_py(py))?;
-                    if let Ok(expr_py) = value.downcast_bound::<Expression>(py) {
-                        Expression::walk(expr_py, walker)?;
-                    }
-                }
-                return Ok(());
-            }
-            Node::Spawn { delay, block } => {
-                if walker.hasattr("visit_Setting").unwrap() {
-                    walker.call_method1("visit_Setting", (self_.as_ref(),))?;
-                } else {
-                    if let Some(delay) = delay {
-                        if let Ok(bound_delay) = delay.downcast_bound::<Expression>(py) {
-                            Expression::walk(bound_delay, walker)?;
-                        }
-                    }
-                    for stmt in block.iter() {
-                        if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
-                            Node::walk(node_expr, py, walker)?;
-                        }
-                    }
-                }
-
-                return Ok(());
-            }
-            Node::Continue { name } => {
-                if walker.hasattr("visit_Continue").unwrap() {
-                    walker.call_method1("visit_Continue", (self_.as_ref(),))?;
-                } else if let Some(name) = name {
-                    if let Ok(bound_name) = name.downcast_bound::<Expression>(py) {
-                        Expression::walk(bound_name, walker)?;
-                    }
-                }
-            }
-            Node::Goto { label } => {
-                if walker.hasattr("visit_Goto").unwrap() {
-                    walker.call_method1("visit_Goto", (self_.as_ref(),))?;
-                } else {
-                    visit_constant(py, walker, label.clone_ref(py))?;
-                }
-            }
-            Node::Label { name, block } => {
-                if walker.hasattr("visit_Label").unwrap() {
-                    walker.call_method1("visit_Label", (self_.as_ref(),))?;
-                } else {
-                    visit_constant(py, walker, name.clone_ref(py))?;
-                    for stmt in block.iter() {
-                        if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
-                            Node::walk(node_expr, py, walker)?;
-                        }
-                    }
-                }
-            }
-            Node::TryCatch {
-                try_block,
-                catch_params,
-                catch_block,
-            } => {
-                if walker.hasattr("visit_TryCatch").unwrap() {
-                    walker.call_method1("visit_TryCatch", (self_.as_ref(),))?;
-                } else {
-                    for stmt in try_block.iter() {
-                        if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
-                            Node::walk(node_expr, py, walker)?;
-                        }
-                    }
-                    for catch_params in catch_params.iter() {
-                        for catch_param in catch_params.iter() {
-                            visit_constant(py, walker, catch_param.clone_ref(py))?;
-                        }
-                    }
-                    for stmt in catch_block.iter() {
-                        if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
-                            Node::walk(node_expr, py, walker)?;
-                        }
-                    }
-
-                }
-            },
-            Node::Switch {
-                input,
-                cases,
-                default,
-            } => {
-                if walker.hasattr("visit_Switch").unwrap() {
-                    walker.call_method1("visit_Switch", (self_.as_ref(),))?;
-                } else {
-                    if let Ok(bound_input) = input.downcast_bound::<Expression>(py) {
-                        Expression::walk(bound_input, walker)?;
-                    }
-                    for case in cases.iter() {
-                        if let Ok(switch_case) = case.downcast_bound::<SwitchCase>(py) {
-                            switch_case.borrow().walk_parts(py, walker)?;
-                        }
-                    }
-                    if let Some(default) = default {
-                        for stmt in default.iter() {
-                            if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
-                                Node::walk(node_expr, py, walker)?;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
 }
 
 #[pymethods]
@@ -817,29 +256,29 @@ impl Node {
     #[getter]
     fn get_kind(&self, py: Python<'_>) -> PyResult<PyObject> {
         match self {
-            Node::Unknown() => Ok(NodeKind::Unknown.into_py(py)),
-            Node::Expression { expr } => expr.call_method0(py, "kind"),
-            Node::Crash { .. } => Ok(NodeKind::Crash.into_py(py)),
-            Node::Return { .. } => Ok(NodeKind::Return.into_py(py)),
-            Node::Throw { .. } => Ok(NodeKind::Throw.into_py(py)),
-            Node::Del { .. } => Ok(NodeKind::Del.into_py(py)),
-            Node::Break { .. } => Ok(NodeKind::Break.into_py(py)),
-            Node::While { .. } => Ok(NodeKind::While.into_py(py)),
-            Node::DoWhile { .. } => Ok(NodeKind::DoWhile.into_py(py)),
-            Node::If { .. } => Ok(NodeKind::If.into_py(py)),
-            Node::ForInfinite { .. } => Ok(NodeKind::ForInfinite.into_py(py)),
-            Node::ForList { .. } => Ok(NodeKind::ForList.into_py(py)),
-            Node::ForLoop { .. } => Ok(NodeKind::ForLoop.into_py(py)),
-            Node::ForRange { .. } => Ok(NodeKind::ForRange.into_py(py)),
-            Node::Var { .. } => Ok(NodeKind::Var.into_py(py)),
-            Node::Vars { .. } => Ok(NodeKind::Vars.into_py(py)),
-            Node::Setting { .. } => Ok(NodeKind::Setting.into_py(py)),
-            Node::Spawn { .. } => Ok(NodeKind::Spawn.into_py(py)),
-            Node::Continue { .. } => Ok(NodeKind::Continue.into_py(py)),
-            Node::Goto { .. } => Ok(NodeKind::Goto.into_py(py)),
-            Node::Label { .. } => Ok(NodeKind::Label.into_py(py)),
-            Node::TryCatch { .. } => Ok(NodeKind::TryCatch.into_py(py)),
-            Node::Switch { .. } => Ok(NodeKind::Switch.into_py(py)),
+            Node::Unknown() => Ok(Py::new(py, NodeKind::Unknown).unwrap().into_any()),
+            Node::Expression { expr, .. } => expr.call_method0(py, "kind"),
+            Node::Crash { .. } => Ok(Py::new(py, NodeKind::Crash).unwrap().into_any()),
+            Node::Return { .. } => Ok(Py::new(py, NodeKind::Return).unwrap().into_any()),
+            Node::Throw { .. } => Ok(Py::new(py, NodeKind::Throw).unwrap().into_any()),
+            Node::Del { .. } => Ok(Py::new(py, NodeKind::Del).unwrap().into_any()),
+            Node::Break { .. } => Ok(Py::new(py, NodeKind::Break).unwrap().into_any()),
+            Node::While { .. } => Ok(Py::new(py, NodeKind::While).unwrap().into_any()),
+            Node::DoWhile { .. } => Ok(Py::new(py, NodeKind::DoWhile).unwrap().into_any()),
+            Node::If { .. } => Ok(Py::new(py, NodeKind::If).unwrap().into_any()),
+            Node::ForInfinite { .. } => Ok(Py::new(py, NodeKind::ForInfinite).unwrap().into_any()),
+            Node::ForList { .. } => Ok(Py::new(py, NodeKind::ForList).unwrap().into_any()),
+            Node::ForLoop { .. } => Ok(Py::new(py, NodeKind::ForLoop).unwrap().into_any()),
+            Node::ForRange { .. } => Ok(Py::new(py, NodeKind::ForRange).unwrap().into_any()),
+            Node::Var { .. } => Ok(Py::new(py, NodeKind::Var).unwrap().into_any()),
+            Node::Vars { .. } => Ok(Py::new(py, NodeKind::Vars).unwrap().into_any()),
+            Node::Setting { .. } => Ok(Py::new(py, NodeKind::Setting).unwrap().into_any()),
+            Node::Spawn { .. } => Ok(Py::new(py, NodeKind::Spawn).unwrap().into_any()),
+            Node::Continue { .. } => Ok(Py::new(py, NodeKind::Continue).unwrap().into_any()),
+            Node::Goto { .. } => Ok(Py::new(py, NodeKind::Goto).unwrap().into_any()),
+            Node::Label { .. } => Ok(Py::new(py, NodeKind::Label).unwrap().into_any()),
+            Node::TryCatch { .. } => Ok(Py::new(py, NodeKind::TryCatch).unwrap().into_any()),
+            Node::Switch { .. } => Ok(Py::new(py, NodeKind::Switch).unwrap().into_any()),
         }
     }
 
@@ -850,28 +289,42 @@ impl Node {
     fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
         match self {
             Node::Unknown() => todo!(),
-            Node::Expression { expr } => Ok(format!("{}", expr)),
-            Node::Crash { expr } => Ok(format!("<Crash {:?}>", expr)),
-            Node::Return { retval } => Ok(format!("<Return {}>", retval.as_ref().unwrap_or(&"...".to_string().into_py(py)))),
-            Node::Throw { expr } => Ok(format!("<Throw {:?}>", expr)),
-            Node::Del { expr } => Ok(format!("<Del {:?}>", expr)),
-            Node::Break { label } => Ok(format!("<Break {:?}>", label)),
-            Node::While { condition, block: _ } => Ok(format!("<While {} ...>", condition)),
-            Node::DoWhile { condition, block: _ } => Ok(format!("<DoWhile {} ...>", condition)),
+            Node::Expression { expr, .. } => Ok(format!("{}", expr)),
+            Node::Crash { expr, .. } => Ok(format!("<Crash {:?}>", expr)),
+            Node::Return { retval, .. } => Ok(format!(
+                "<Return {}>",
+                retval
+                    .as_ref()
+                    .map_or(py.None(), |f| f.clone_ref(py).into_any())
+            )),
+            Node::Throw { expr, .. } => Ok(format!("<Throw {:?}>", expr)),
+            Node::Del { expr, .. } => Ok(format!("<Del {:?}>", expr)),
+            Node::Break { label, .. } => Ok(format!("<Break {:?}>", label)),
+            Node::While { condition, .. } => Ok(format!("<While {} ...>", condition)),
+            Node::DoWhile { condition, .. } => Ok(format!("<DoWhile {} ...>", condition)),
             Node::If { .. } => Ok("<If ...>".to_string()),
             Node::ForInfinite { .. } => Ok("<ForInfinite ...>".to_string()),
             Node::ForList { .. } => Ok("<ForList ...>".to_string()),
             Node::ForLoop { .. } => Ok("<ForLoop ...>".to_string()),
             Node::ForRange { .. } => Ok("<ForRange ...>".to_string()),
-            Node::Var { name, value: _ } => Ok(format!("<Var {:?} ...>", name)),
+            Node::Var {
+                name,
+                declared_type,
+                ..
+            } => {
+                if let Some(path) = declared_type {
+                    return Ok(format!("<Var var{}/{} ...>", path.rel, name));
+                }
+                Ok(format!("<Var var/{} ...>", name))
+            }
             Node::Vars { .. } => Ok("<Vars ...>".to_string()),
-            Node::Setting { name, mode: _, value: _ } => Ok(format!("<Setting {} ...>", name)),
-            Node::Spawn { delay: _, block: _ } => Ok("<Spawn ...>".to_string()),
-            Node::Continue { name } => Ok(format!("<Continue {:?}>", name)),
-            Node::Goto { label } => Ok(format!("<Goto {}>", label)),
-            Node::Label { name, block: _ } => Ok(format!("<Label {} ...>", name)),
+            Node::Setting { name, .. } => Ok(format!("<Setting {} ...>", name)),
+            Node::Spawn { .. } => Ok("<Spawn ...>".to_string()),
+            Node::Continue { name, .. } => Ok(format!("<Continue {:?}>", name)),
+            Node::Goto { label, .. } => Ok(format!("<Goto {}>", label)),
+            Node::Label { name, .. } => Ok(format!("<Label {} ...>", name)),
             Node::TryCatch { .. } => Ok("<TryCatch ...>".to_string()),
-            Node::Switch { input, cases: _, default: _ } => Ok(format!("<Switch {} ...>", input)),
+            Node::Switch { input, .. } => Ok(format!("<Switch {} ...>", input)),
         }
     }
 }
@@ -879,33 +332,40 @@ impl Node {
 #[pyclass(module = "avulto.ast")]
 pub struct SwitchCase {
     #[pyo3(get)]
-    exact: PyObject,
+    pub(crate) exact: Py<PyList>,
     #[pyo3(get)]
-    range: PyObject,
+    pub(crate) range: Py<PyList>,
     #[pyo3(get)]
-    block: Vec<PyObject>,
+    pub(crate) block: PyCodeBlock,
 }
 
 impl SwitchCase {
-    pub fn walk_parts(&self, py: Python<'_>, walker: &Bound<PyAny>) -> PyResult<()> {
-        if let Ok(bound_exact) = self.exact.downcast_bound::<PyList>(py) {
-            bound_exact.into_iter().for_each(|f| {
-                if let Ok(expr) = f.downcast::<Expression>() {
-                    Expression::walk(expr, walker);
-                }
-            });
+    pub fn walk_parts(
+        &self,
+        dme: &Bound<Dme>,
+        walker: &Bound<PyAny>,
+        py: Python<'_>,
+    ) -> PyResult<()> {
+        for f in self.exact.bind(py).into_iter() {
+            Expression::walk(&f.downcast_into::<Expression>().unwrap(), dme, walker, py)?;
         }
-        if let Ok(bound_range) = self.range.downcast_bound::<PyList>(py) {
-            bound_range.into_iter().for_each(|f| {
-                if let Ok(expr) = f.downcast::<Expression>() {
-                    Expression::walk(expr, walker);
-                }
-            });
-        }
-        for stmt in self.block.iter() {
-            if let Ok(node_expr) = stmt.downcast_bound::<Node>(py) {
-                Node::walk(node_expr, py, walker)?;
+        for f in self.range.bind(py).into_iter() {
+            if let Ok(list) = f.downcast::<PyList>() {
+                list.try_iter()?.for_each(|x| {
+                    if let Ok(range) = x {
+                        let _ = Expression::walk(
+                            &range.into_any().downcast_into::<Expression>().unwrap(),
+                            dme,
+                            walker,
+                            py,
+                        );
+                    }
+                });
             }
+        }
+
+        for stmt in self.block.iter() {
+            Node::walk(stmt.bind(py), dme, walker, py)?;
         }
 
         Ok(())

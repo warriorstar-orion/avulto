@@ -29,7 +29,7 @@ def fix_map(filename):
         for airlock in tile.find("/obj/machinery/door/airlock"):
             props = tile.prefab_vars(airlock)
             if "name" in props:
-                area_name = dme.typedecl(tile.area_path()).value("name")
+                area_name = dme.type_decl(tile.area_path()).value("name")
                 airlock_name = tile.prefab_var(airlock, "name")
                 area_name = area_name.replace("\\improper ", "").replace(
                     "\\proper ", ""
@@ -44,7 +44,7 @@ def fix_map(filename):
         for windoor in tile.find("/obj/machinery/door/window"):
             props = tile.prefab_vars(windoor)
             if "name" in props:
-                area_name = dme.typedecl(tile.area_path()).value("name")
+                area_name = dme.type_decl(tile.area_path()).value("name")
                 windoor_name = tile.prefab_var(windoor, "name")
                 area_name = area_name.replace("\\improper ", "").replace(
                     "\\proper ", ""

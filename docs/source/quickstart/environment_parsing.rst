@@ -28,7 +28,7 @@ list. We can get this list like so:
 	dme = DME.from_file("paradise.dme")
 
 	for pth in dme.typesof('/datum/uplink_item'):
-		typedecl = dme.typedecl(pth)
+		typedecl = dme.type_decl(pth)
 		print(f"Name: {typedecl.value('name')} Cost: {typedecl.value('cost')}")
 
 

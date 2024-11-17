@@ -1,16 +1,20 @@
 use std::borrow::Borrow;
 
-use dreammaker::constants::Constant;
+use dreammaker::constants::{ConstFn, Constant};
 use pyo3::{
     exceptions::PyRuntimeError,
     pyclass, pyfunction, pymethods,
     types::{PyAnyMethods, PyBool, PyFloat, PyInt, PyString},
-    Bound, IntoPy, Py, PyAny, PyObject, PyResult, Python, ToPyObject,
+    Bound, IntoPyObject, Py, PyAny, PyObject, PyResult, Python, ToPyObject,
 };
 
 use dmm_tools::dmi::Dir as SDir;
 
-use crate::{dmlist::DmList, path::Path};
+use crate::{
+    dme::{expression::Expression, nodes::PyExpr},
+    dmlist::DmList,
+    path::Path,
+};
 
 #[pyclass(eq, eq_int)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -85,7 +89,7 @@ pub fn as_dir(c: i32) -> PyResult<Dir> {
     }
 }
 
-pub fn python_value_to_constant(val: &Bound<PyAny>) -> Option<dreammaker::constants::Constant> {
+pub fn python_value_to_constant(val: &Bound<PyAny>) -> Option<Constant> {
     if val.is_instance_of::<PyBool>() {
         let val = val.extract::<bool>().unwrap();
         Some(Constant::Float(if val { 1.0 } else { 0.0 }))
@@ -106,10 +110,108 @@ pub fn python_value_to_constant(val: &Bound<PyAny>) -> Option<dreammaker::consta
     }
 }
 
+fn args_list_to_listexpr(l: &[(Constant, Option<Constant>)]) -> Expression {
+    Python::with_gil(|py| {
+        let mut keys: Vec<PyExpr> = vec![];
+        let mut vals: Vec<PyExpr> = vec![];
+
+        for (key, value) in l.iter() {
+            keys.push(
+                Py::new(py, constant_to_ast_expression(key)).expect("constant to ast: list key"),
+            );
+            vals.push(
+                Py::new(
+                    py,
+                    constant_to_ast_expression(&value.as_ref().unwrap_or(&Constant::Null(None))),
+                )
+                .expect("constant to ast: list value"),
+            );
+        }
+
+        return Expression::List {
+            source_loc: None,
+            list: Py::new(
+                py,
+                DmList {
+                    keys: keys.iter().map(|k| k.clone_ref(py).into_any()).collect(),
+                    vals: vals.iter().map(|k| k.clone_ref(py).into_any()).collect(),
+                },
+            )
+            .expect("constant to ast: list construction"),
+        };
+    })
+}
+
+fn constant_to_ast_expression(c: &dreammaker::constants::Constant) -> Expression {
+    Python::with_gil(|py| match c {
+        Constant::Null(_) => Expression::Constant {
+            constant: crate::dme::expression::Constant::Null(),
+            source_loc: None,
+        },
+        Constant::New { .. } => todo!("no constant_to_ast_expression for Constant::New"),
+        Constant::List(l) => args_list_to_listexpr(l),
+        Constant::Call(const_fn, args) => Expression::Call {
+            source_loc: None,
+            expr: Expression::null(None, py),
+            name: match const_fn {
+                ConstFn::Icon => Expression::ident("icon".to_string(), None, py),
+                ConstFn::Matrix => Expression::ident("matrix".to_string(), None, py),
+                ConstFn::Newlist => Expression::ident("list".to_string(), None, py),
+                ConstFn::Sound => Expression::ident("sound".to_string(), None, py),
+                ConstFn::Filter => Expression::ident("filter".to_string(), None, py),
+                ConstFn::File => Expression::ident("file".to_string(), None, py),
+                ConstFn::Generator => Expression::ident("generator".to_string(), None, py),
+            },
+            args: args
+                .iter()
+                .map(|(k, v)| {
+                    Py::new(
+                        py,
+                        Expression::List {
+                            source_loc: None,
+                            list: Py::new(
+                                py,
+                                DmList {
+                                    keys: vec![Py::new(py, constant_to_ast_expression(k))
+                                        .expect("const call arg key")
+                                        .into_any()],
+                                    vals: vec![Py::new(
+                                        py,
+                                        constant_to_ast_expression(
+                                            v.as_ref().unwrap_or(&Constant::Null(None)),
+                                        ),
+                                    )
+                                    .expect("const call arg val")
+                                    .into_any()],
+                                },
+                            )
+                            .expect("const call arg list"),
+                        },
+                    )
+                    .expect("const call arg wrapper")
+                })
+                .collect(),
+        },
+        Constant::Prefab(_) => todo!("no constant_to_ast_expression for Constant::Prefab"),
+        Constant::String(ident2) => Expression::Constant {
+            source_loc: None,
+            constant: crate::dme::expression::Constant::String(ident2.to_string()),
+        },
+        Constant::Resource(ident2) => Expression::Identifier {
+            source_loc: None,
+            name: ident2.to_string(),
+        },
+        Constant::Float(f) => Expression::Constant {
+            source_loc: None,
+            constant: crate::dme::expression::Constant::Float(*f),
+        },
+    })
+}
+
 pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> PyObject {
     Python::with_gil(|py| match c {
         Constant::Null(_) => py.None(),
-        Constant::New { type_: _, args: _ } => todo!(),
+        Constant::New { .. } => py.None(),
         Constant::List(l) => {
             let mut keys: Vec<Py<PyAny>> = vec![];
             let mut vals: Vec<Py<PyAny>> = vec![];
@@ -128,13 +230,17 @@ pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> PyObject
                 );
             }
 
-            DmList { keys, vals }.into_py(py).clone_ref(py)
+            Py::new(py, DmList { keys, vals })
+                .expect("constant to dmlist")
+                .into_any()
         }
-        Constant::Call(_, _) => todo!(),
-        Constant::Prefab(p) => {
-            Path::new(p.to_string().as_str()).unwrap().into_py(py)
-            // p.to_string().to_object(py)
-        }
+        // TODO: How the fuck do I represent these in plain old Python
+        Constant::Call(_, _) => py.None(),
+        Constant::Prefab(p) => Path::from_tree_path(&p.path)
+            .into_pyobject(py)
+            .expect("constant to prefab")
+            .into_any()
+            .unbind(),
         Constant::String(s) => s.to_object(py),
         Constant::Resource(s) => s.to_object(py),
         Constant::Float(f) => {

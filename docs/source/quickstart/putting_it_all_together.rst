@@ -31,7 +31,7 @@ Since Avulto has access to all this information, we can do this in one script:
     known_dirs = dict()
     def get_iconstate_dirs(turf_path):
         if turf_path not in known_dirs:
-            typedecl = dme.typedecl(turf)
+            typedecl = dme.type_decl(turf)
             icon = typedecl.value('icon')
             icon_state = typedecl.value('icon_state')
             if icon not in dmi_files:

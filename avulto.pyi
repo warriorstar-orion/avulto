@@ -9,6 +9,13 @@ class Path:
     stem: str
     """The parent path."""
     parent: Path
+    """Whether or not the path is `/`."""
+    is_root: bool
+
+    """Returns the *absolute* representation of the path, rooted at `/datum`."""
+    abs: str
+    """Returns the *relative* or *declared* representation of the path."""
+    rel: str
 
     def __init__(self, value):
         """Returns a new path."""
@@ -98,6 +105,29 @@ class DMM:
     def tiledef(self, x: int, y: int, z: int) -> Tile:
         """Return the tile definition at coords (`x`, `y`, `z`)."""
 
+
+class ProcDecl:
+    """
+    A single proc declaration.
+    """
+
+    def walk(walker: any):
+        """Walks the proc AST with *walker*, calling any `visit_*` method names on *walker* if they exist for AST node types."""
+
+
+class VarDecl:
+    """
+    A single variable declaration.
+    """
+
+    """The name of the variable."""
+    name: str
+    """The declared type of the variable, if specified."""
+    declared_type: Path | None
+    """The variable's value, if it can be evaluated as a constant expression."""
+    const_val: any | None
+
+
 class TypeDecl:
     """
     A single type declaration.
@@ -105,10 +135,12 @@ class TypeDecl:
 
     def proc_names(self) -> list[str]:
         """Return a list of proc names for the type declaration."""
+    def proc_decls(self, name=None) -> list[ProcDecl]:
+        """Return proc declarations for the type. If *name* is set, only return proc declarations with this name."""
     def var_names(self) -> list[str]:
         """Return a list of variable names for the type declaration."""
-    def value(self, name: str) -> Any:
-        """Return a Python representation of the variable `name`."""
+    def var_decl(self, name, parents=True) -> VarDecl:
+        """Return the proc declaration for variable *name*. If *parents* is True, check up type path if this type does not have this variable set."""
 
 class DME:
     """
@@ -129,7 +161,7 @@ class DME:
         """Returns a list of type paths with the given `prefix`."""
     def subtypesof(self, prefix: Path | str) -> list[str]:
         """Returns a list of type paths with the given `prefix`, excluding `prefix` itself."""
-    def typedecl(self, path: Path | str) -> TypeDecl:
+    def type_decl(self, path: Path | str) -> TypeDecl:
         """Return the type declaration of the given `path`."""
 
 class Dir:

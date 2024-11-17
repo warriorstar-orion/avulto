@@ -1,9 +1,11 @@
 use std::fmt;
 
+use dreammaker::ast::TreePath;
+use itertools::Itertools;
 use pyo3::{
     create_exception,
     exceptions::{PyException, PyTypeError},
-    pyclass, IntoPy, Python,
+    pyclass, IntoPyObject, Python,
 };
 use pyo3::{
     pyclass::CompareOp,
@@ -36,8 +38,8 @@ const CORE_TYPES: &[&str] = &[
     "particles",
 ];
 
-#[derive(Clone, Eq, Hash, PartialOrd, Ord, PartialEq)]
 #[pyclass(module = "avulto")]
+#[derive(Clone, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub struct Path {
     // We can either do a bunch of munging when displaying paths, which happens a lot,
     // or do a bunch of munging when operating on paths, which happens a lot,
@@ -82,6 +84,12 @@ impl Path {
         let rel = to_relative_path(value);
         let abs = to_absolute_path(rel.as_str());
         Path { abs, rel }
+    }
+
+    pub fn from_tree_path(tree_path: &TreePath) -> Self {
+        return Self::make_trusted(
+            ("/".to_string() + tree_path.iter().map(|f| f.as_str()).join("/").as_str()).as_str(),
+        );
     }
 
     pub fn make_untrusted(value: &str) -> Result<Path, String> {
@@ -230,7 +238,7 @@ impl Path {
     }
 
     #[getter]
-    fn get_parent(&self) -> PyResult<Self> {
+    pub fn get_parent(&self) -> PyResult<Self> {
         if self.abs == "/" {
             return Ok(self.clone());
         }
@@ -268,11 +276,13 @@ impl Path {
         // TODO: Still not sure how to handle "/obj/foo" in {p("/obj/foo")} and
         // p("/obj/foo") in {"/obj/foo"} if there's a mismatch between if the
         // string is absolute or relative
-        (&self.abs)
-            .into_py(py)
-            .call_method0(py, "__hash__")
+        self.abs
+            .clone()
+            .into_pyobject(py)?
+            .into_any()
+            .call_method0("__hash__")
             .unwrap()
-            .extract::<isize>(py)
+            .extract::<isize>()
     }
 
     fn __str__(&self) -> PyResult<String> {

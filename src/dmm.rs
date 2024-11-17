@@ -116,7 +116,7 @@ impl CoordIterator {
 impl Dmm {
     #[staticmethod]
     fn from_file(filename: &Bound<PyAny>, py: Python<'_>) -> PyResult<Dmm> {
-        let pathlib = py.import_bound(pyo3::intern!(py, "pathlib"))?;
+        let pathlib = py.import(pyo3::intern!(py, "pathlib"))?;
         let path = if let Ok(pathbuf) = filename.extract::<std::path::PathBuf>() {
             pathbuf
         } else if let Ok(pystr) = filename.downcast::<PyString>() {
