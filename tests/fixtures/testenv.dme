@@ -7,6 +7,5 @@
 // END_PREFERENCES
 // BEGIN_INCLUDE
 #include "testenv.dm"
-#include "testenv3.dm"
 #include "map1.dmm"
 // END_INCLUDE

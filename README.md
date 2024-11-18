@@ -19,10 +19,7 @@ Avulto is available as a [release][] on PyPI. See the **Development** section
 below for directions on using the library locally.
 
 A Quickstart and the API reference are available at the library's [documentation site][]
-and in the `docs/` directory of the repository.
-
-Avulto's API is documented in full in its [stub file][], but the most important
-parts of its API are below.
+and in the `docs/` directory of the repository. Its API is documented in full in its [stub file][].
 
 [documentation site]: https://warriorstar-orion.github.io/avulto/
 [release]: https://pypi.org/project/avulto/
@@ -42,10 +39,12 @@ $ python -m pytest
 
 ### Planned Development
 
-- More DMI icon data.
-- Getting image data directly through SpacemanDMM.
+- DMI file modification.
 - Better errors and consistent API surface area.
-- More reflection data, including method names.
+- More improvement of AST walking and code reflection API.
+- Pre-defined AST walker superclass with useful behaviors.
+- Ability to create new tile definitions in DMM files.
+- Passing compiler defines to parser.
 
 ## License
 
