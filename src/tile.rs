@@ -3,9 +3,10 @@ extern crate dmm_tools;
 use dmm_tools::dmm::Prefab;
 use pyo3::conversion::ToPyObject;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
-use pyo3::pyclass::CompareOp;
 use pyo3::types::{PyAnyMethods, PyDict, PyList, PyString};
-use pyo3::{pyclass, pymethods, Bound, IntoPy, Py, PyAny, PyErr, PyObject, PyResult, Python};
+use pyo3::{
+    pyclass, pymethods, Bound, IntoPy, Py, PyAny, PyErr, PyObject, PyResult, Python,
+};
 
 use crate::dmm::{Address, Dmm};
 use crate::helpers::{constant_to_python_value, python_value_to_constant};
@@ -93,13 +94,13 @@ impl Tile {
         let prefabs = &map.dictionary[&key];
 
         for prefab in prefabs {
-            let d = PyDict::new_bound(py);
+            let d = PyDict::new(py);
             d.set_item("name", prefab.path.clone())?;
 
             if !prefab.vars.is_empty() {
                 let mut vars: Vec<Bound<PyDict>> = Vec::new();
                 for (name, constant) in prefab.vars.iter() {
-                    let var = PyDict::new_bound(py);
+                    let var = PyDict::new(py);
                     var.set_item("name", name)?;
                     var.set_item("value", constant_to_python_value(constant))?;
                     vars.push(var);
@@ -110,7 +111,7 @@ impl Tile {
             out.push(d);
         }
 
-        Ok(PyList::new_bound(py, out).into())
+        Ok(PyList::new(py, out).unwrap().into_any().unbind())
     }
 
     pub fn del_prefab(&self, index: i32, py: Python<'_>) {
@@ -331,7 +332,36 @@ impl Tile {
         ))
     }
 
-    pub fn __richcmp__(&self, other: &Bound<PyAny>, op: CompareOp, py: Python<'_>) -> PyObject {
+    fn __eq__(&self, other: &Bound<PyAny>, py: Python<'_>) -> bool {
+        let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
+        let key = match self.addr {
+            Address::Key(k) => k,
+            Address::Coords(c) => map[c],
+        };
+        let prefabs = &map.dictionary[&key];
+        if let Ok(other) = other.extract::<Py<Self>>() {
+            let otile = &other.bind(py).borrow();
+            let obound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
+            let omap = &obound.borrow().map;
+            let okey = match otile.addr {
+                Address::Key(k) => k,
+                Address::Coords(c) => omap[c],
+            };
+            let oprefabs = &omap.dictionary[&okey];
+
+            for (f, s) in prefabs.iter().zip(oprefabs.iter()) {
+                if !f.eq(s) {
+                    return false;
+                }
+            }
+
+            true
+        } else {
+            false
+        }
+    }
+
+    fn __ne__(&self, other: &Bound<PyAny>, py: Python<'_>) -> bool {
         let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
         let key = match self.addr {
             Address::Key(k) => k,
@@ -339,57 +369,26 @@ impl Tile {
         };
         let prefabs = &map.dictionary[&key];
 
-        match op {
-            CompareOp::Eq => {
-                if let Ok(other) = other.extract::<Py<Self>>() {
-                    let otile = &other.bind(py).borrow();
-                    let obound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-                    let omap = &obound.borrow().map;
-                    let okey = match otile.addr {
-                        Address::Key(k) => k,
-                        Address::Coords(c) => omap[c],
-                    };
-                    let oprefabs = &omap.dictionary[&okey];
+        if let Ok(other) = other.extract::<Py<Self>>() {
+            let otile = &other.bind(py).borrow();
+            let obound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
+            let omap = &obound.borrow().map;
 
-                    for (f, s) in prefabs.iter().zip(oprefabs.iter()) {
-                        if !f.eq(s) {
-                            return false.into_py(py);
-                        }
-                    }
+            let okey = match otile.addr {
+                Address::Key(k) => k,
+                Address::Coords(c) => omap[c],
+            };
+            let oprefabs = &omap.dictionary[&okey];
 
-                    true.into_py(py)
-                } else {
-                    println!("failed");
-                    false.into_py(py)
+            for (f, s) in prefabs.iter().zip(oprefabs.iter()) {
+                if !f.eq(s) {
+                    return true;
                 }
             }
 
-            CompareOp::Ne => {
-                if let Ok(other) = other.extract::<Py<Self>>() {
-                    let otile = &other.bind(py).borrow();
-                    let obound = self.dmm.downcast_bound::<Dmm>(py).unwrap();
-                    let omap = &obound.borrow().map;
-
-                    let okey = match otile.addr {
-                        Address::Key(k) => k,
-                        Address::Coords(c) => omap[c],
-                    };
-                    let oprefabs = &omap.dictionary[&okey];
-
-                    for (f, s) in prefabs.iter().zip(oprefabs.iter()) {
-                        if !f.eq(s) {
-                            return true.into_py(py);
-                        }
-                    }
-
-                    false.into_py(py)
-                } else {
-                    println!("failed");
-                    false.into_py(py)
-                }
-            }
-
-            _ => py.NotImplemented(),
+            false
+        } else {
+            false
         }
     }
 }

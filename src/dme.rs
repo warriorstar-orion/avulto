@@ -35,6 +35,55 @@ create_exception!(avulto.exceptions, EmptyProcError, PyException);
 create_exception!(avulto.exceptions, MissingTypeError, PyException);
 create_exception!(avulto.exceptions, MissingProcError, PyException);
 
+#[pyclass(module = "avulto")]
+pub struct DmeTypeAccessor {
+    pub dme: Py<Dme>,
+}
+
+#[pymethods]
+impl DmeTypeAccessor {
+    fn __getitem__(&self, path: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<TypeDecl>> {
+        let dme = self.dme.bind(py).borrow();
+        let objpath = if let Ok(patht) = path.extract::<path::Path>() {
+            patht.rel
+        } else if let Ok(pystr) = path.downcast::<PyString>() {
+            pystr.to_string()
+        } else {
+            return Err(PyValueError::new_err(format!("invalid path {:?}", path)));
+        };
+
+        let search_string = if objpath.as_str().eq("/") {
+            ""
+        } else {
+            objpath.as_str()
+        };
+        match dme.objtree.find(search_string) {
+            Some(type_ref) => {
+                let type_ref_index = type_ref.index();
+                let dme = dme
+                    .into_pyobject(py)
+                    .expect("passing dme")
+                    .clone()
+                    .as_unbound()
+                    .clone_ref(py)
+                    .into_any();
+                Ok(TypeDecl {
+                    dme,
+                    path: Path::make_trusted(objpath.as_str()),
+                    node_index: type_ref_index,
+                }
+                .into_pyobject(py)
+                .expect("building typedecl")
+                .into())
+            }
+            None => Err(PyRuntimeError::new_err(format!(
+                "cannot find path {}",
+                objpath
+            ))),
+        }
+    }
+}
+
 #[pyclass(module = "avulto", name = "DME")]
 pub struct Dme {
     pub objtree: dreammaker::objtree::ObjectTree,
@@ -256,13 +305,24 @@ impl Dme {
         }
 
         let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path,))?;
-        Ok(Dme {
+        let dme = Dme {
             objtree: tree,
             filepath: pathlib_path.into(),
             procs_parsed: parse_procs,
             file_data: Py::new(py, FileData::from_file_list(ctx.file_list(), py))
                 .expect("passing file list"),
-        })
+        };
+        Ok(dme)
+    }
+
+    #[getter]
+    fn get_types(self_: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<DmeTypeAccessor>> {
+        Py::new(
+            py,
+            DmeTypeAccessor {
+                dme: self_.into_pyobject(py)?.unbind(),
+            },
+        )
     }
 
     fn type_decl(

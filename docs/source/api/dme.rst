@@ -3,17 +3,17 @@
 
 .. class:: DME
 
-   The :class:`DME` class provides reflection information for a BYOND project. This
-   includes looking up available types, proc and var names on those types, and
-   basic support for AST walking.
+   The :class:`DME` class provides reflection information for a BYOND project.
+   This includes looking up available types, proc and var names on those types,
+   and basic support for AST walking.
 
    :class:`DME` instances are created with the following methods:
 
    .. staticmethod:: from_file(filename: str | os.PathLike[str], parse_procs=False) -> DME
 
       Read the BYOND environment from the *filename* referring to a ".dme" file.
-      If the optional *parse_procs* argument is :const:`True`, reflection data is
-      made available for all procs.
+      If the optional *parse_procs* argument is :const:`True`, reflection data
+      is made available for all procs.
 
       :raises: :class:`OSError`: If the file is not found or there was an error opening it.
       :raises: :class:`RuntimeError`: If there was an error parsing the DME environment.
@@ -102,6 +102,24 @@
 
 
 .. class:: VarDecl
+
+   The :class:`VarDecl` class returns basic information about a variable
+   declared on a :class:`TypeDecl` type declaration.
+
+   .. property:: name
+      :type: str
+
+      The name of the variable.
+
+   .. property:: declared_type
+      :type: Path | None
+
+      The type of the variable, if available and declared.
+
+   .. property:: const_val
+      :type: any | None
+
+      The initial value of the variable, if expressable as a constant.
 
 .. class:: TypeDecl
 

@@ -19,6 +19,24 @@ pub struct VarDecl {
     pub const_val: Option<PyObject>,
 }
 
+#[pymethods]
+impl VarDecl {
+    fn __str__(&self) -> PyResult<String> {
+        self.__repr__()
+    }
+
+    fn __repr__(&self) -> PyResult<String> {
+        match &self.declared_type {
+            None => Ok(format!("<Var {}>", self.name)),
+            Some(p) => Ok(format!(
+                "<Var {}/{}>",
+                p.rel.strip_prefix('/').unwrap(),
+                self.name
+            )),
+        }
+    }
+}
+
 #[pyclass(module = "avulto")]
 pub struct TypeDecl {
     pub dme: Py<PyAny>,
@@ -155,27 +173,32 @@ impl TypeDecl {
                         let arg_typepath = if arg.var_type.type_path.is_empty() {
                             py.None()
                         } else {
-                            Path::from_tree_path(&arg.var_type.type_path).into_py(py)
+                            Path::from_tree_path(&arg.var_type.type_path)
+                                .into_pyobject(py)?
+                                .into_any()
+                                .unbind()
                         };
                         args_out.push(ProcArg {
-                            arg_name: arg.name.clone().into_py(py),
-                            arg_type: arg_typepath.into_py(py),
+                            arg_name: arg.name.clone().into_pyobject(py)?.into(),
+                            arg_type: arg_typepath.into_pyobject(py)?.into(),
                         });
                     }
 
                     out.push(ProcDecl {
                         dme: self.dme.clone_ref(py),
                         name: proc_name.clone(),
-                        type_path: self.path.clone().into_py(py),
+                        type_path: self.path.clone().into_pyobject(py)?.into_any().unbind(),
 
-                        args: PyList::new_bound(
+                        args: PyList::new(
                             py,
                             args_out
                                 .into_iter()
-                                .map(|f| f.into_py(py))
+                                .map(|f| f.into_pyobject(py).unwrap().into_any().unbind())
                                 .collect::<Vec<Py<PyAny>>>(),
-                        )
-                        .into_py(py),
+                        )?
+                        .into_pyobject(py)?
+                        .into_any()
+                        .unbind(),
 
                         proc_index,
                         type_index: self.node_index,
@@ -194,16 +217,17 @@ impl TypeDecl {
                 }
             }
         }
-        Ok(PyList::new_bound(
+        Ok(PyList::new(
             py,
             out.into_iter()
-                .map(|f| f.into_py(py))
+                .map(|f| f.into_pyobject(py).unwrap().into_any().unbind())
                 .collect::<Vec<Py<PyAny>>>(),
-        )
-        .into_py(py))
+        )?
+        .into_any()
+        .unbind())
     }
 
     fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("<TypeDecl {}>", self.path))
+        Ok(format!("<Type {}>", self.path))
     }
 }

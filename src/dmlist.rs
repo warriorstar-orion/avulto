@@ -89,11 +89,13 @@ impl DmList {
         if let Ok(pystr) = item.downcast::<PyString>() {
             for (idx, key) in self.keys.iter().enumerate() {
                 if let Ok(key_expr) = key.downcast_bound::<Expression>(py) {
-                    if let Expression::Constant { constant, .. } = key_expr.get() {
-                        if let crate::dme::expression::Constant::String(s) = constant {
-                            if pystr.to_str().unwrap().eq(s) {
-                                return Ok(self.vals.get(idx).unwrap().clone_ref(py));
-                            }
+                    if let Expression::Constant {
+                        constant: crate::dme::expression::Constant::String(s),
+                        ..
+                    } = key_expr.get()
+                    {
+                        if pystr.to_str().unwrap().eq(s) {
+                            return Ok(self.vals.get(idx).unwrap().clone_ref(py));
                         }
                     };
                 } else if key.bind(py).is_instance_of::<PyString>() {
@@ -106,13 +108,10 @@ impl DmList {
         } else if let Ok(pypth) = item.extract::<path::Path>() {
             for (idx, key) in self.keys.iter().enumerate() {
                 if let Ok(key_expr) = key.downcast_bound::<Expression>(py) {
-                    match key_expr.get() {
-                        Expression::Prefab { prefab, .. } => {
-                            if pypth.eq(&prefab.borrow(py).path) {
-                                return Ok(self.vals.get(idx).unwrap().clone_ref(py));
-                            }
+                    if let Expression::Prefab { prefab, .. } = key_expr.get() {
+                        if pypth.eq(&prefab.borrow(py).path) {
+                            return Ok(self.vals.get(idx).unwrap().clone_ref(py));
                         }
-                        _ => {}
                     }
                 } else if let Ok(keypth) = key.extract::<path::Path>(py) {
                     if pypth.eq(&keypth) {
@@ -151,13 +150,10 @@ impl DmList {
                         return Ok(self.vals.get(idx).unwrap().clone_ref(py));
                     }
                 } else if let Ok(key_expr) = key.downcast_bound::<Expression>(py) {
-                    match key_expr.get() {
-                        Expression::List { list, .. } => {
-                            if item.as_ref().eq(list.clone_ref(py)).unwrap() {
-                                return Ok(self.vals.get(idx).unwrap().clone_ref(py));
-                            }
+                    if let Expression::List { list, .. } = key_expr.get() {
+                        if item.as_ref().eq(list.clone_ref(py)).unwrap() {
+                            return Ok(self.vals.get(idx).unwrap().clone_ref(py));
                         }
-                        _ => {}
                     }
                 }
             }

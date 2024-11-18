@@ -8,7 +8,8 @@ use itertools::iproduct;
 use pyo3::exceptions::{PyOSError, PyRuntimeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyList, PyString, PyTuple};
 use pyo3::{
-    pyclass, pymethods, Bound, IntoPy, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult, Python,
+    pyclass, pymethods, Bound, IntoPy, IntoPyObject, Py, PyAny, PyObject, PyRef, PyRefMut,
+    PyResult, Python,
 };
 
 use crate::tile::Tile;
@@ -142,7 +143,7 @@ impl Dmm {
                 y: dim.1 as i32,
                 z: dim.2 as i32,
             },
-            filepath: pathlib_path.into_py(py),
+            filepath: pathlib_path.unbind(),
         })
     }
 
@@ -165,7 +166,7 @@ impl Dmm {
 
     fn tiledef(self_: PyRef<'_, Self>, x: i32, y: i32, z: i32) -> Tile {
         Python::with_gil(|py| Tile {
-            dmm: self_.into_py(py),
+            dmm: self_.into_pyobject(py).unwrap().into_any().unbind(),
             addr: Address::Coords(dmm_tools::dmm::Coord3 { x, y, z }),
         })
     }

@@ -31,3 +31,8 @@ def test_dmm_get_objvar(dmm: DMM):
     assert dmm.tiledef(7, 7, 1).find("/obj/foo") == [0]
     assert dmm.tiledef(7, 7, 1).find(p("/obj/foo")) == [0]
     assert dmm.tiledef(7, 7, 1).prefab_var(0, "a") == 4
+
+
+def test_dmm_tile_eq(dmm: DMM):
+    assert dmm.tiledef(7, 7, 1) == dmm.tiledef(7, 7, 1)
+    assert dmm.tiledef(1, 1, 1) == dmm.tiledef(1, 2, 1)
