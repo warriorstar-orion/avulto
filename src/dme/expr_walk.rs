@@ -1,4 +1,4 @@
-use pyo3::{types::PyAnyMethods, Bound, PyAny, PyResult, Python};
+use pyo3::{types::PyAnyMethods, Bound, BoundObject, PyAny, PyResult, Python};
 
 use super::{expression::Expression, nodes::visit_constant, prefab::Prefab, Dme};
 
@@ -9,8 +9,40 @@ impl Expression {
         walker: &Bound<PyAny>,
         py: Python<'_>,
     ) -> PyResult<()> {
+        let self_expr = self_.get();
+
         if walker.hasattr("visit_Expr").unwrap() {
-            walker.call_method1("visit_Expr", (self_, py.None()))?;
+            // TODO: Pain
+            let source_loc = match self_expr {
+                Expression::Constant { source_loc, .. } => source_loc,
+                Expression::Identifier { source_loc, .. } => source_loc,
+                Expression::List { source_loc, .. } => source_loc,
+                Expression::BinaryOp { source_loc, .. } => source_loc,
+                Expression::AssignOp { source_loc, .. } => source_loc,
+                Expression::TernaryOp { source_loc, .. } => source_loc,
+                Expression::InterpString { source_loc, .. } => source_loc,
+                Expression::Locate { source_loc, .. } => source_loc,
+                Expression::Prefab { source_loc, .. } => source_loc,
+                Expression::Index { source_loc, .. } => source_loc,
+                Expression::Field { source_loc, .. } => source_loc,
+                Expression::StaticField { source_loc, .. } => source_loc,
+                Expression::Call { source_loc, .. } => source_loc,
+                Expression::SelfCall { source_loc, .. } => source_loc,
+                Expression::ParentCall { source_loc, .. } => source_loc,
+                Expression::UnaryOp { source_loc, .. } => source_loc,
+                Expression::ProcReference { source_loc, .. } => source_loc,
+                Expression::ExternalCall { source_loc, .. } => source_loc,
+                Expression::NewMiniExpr { source_loc, .. } => source_loc,
+                Expression::NewImplicit { source_loc, .. } => source_loc,
+                Expression::NewPrefab { source_loc, .. } => source_loc,
+                Expression::DynamicCall { source_loc, .. } => source_loc,
+                Expression::Input { source_loc, .. } => source_loc,
+                Expression::Pick { source_loc, .. } => source_loc,
+            };
+            walker.call_method1(
+                "visit_Expr",
+                (self_, dme.borrow().populate_source_loc(source_loc, py)),
+            )?;
 
             return Ok(());
         }

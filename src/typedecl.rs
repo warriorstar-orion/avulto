@@ -1,8 +1,14 @@
 extern crate dreammaker;
 
+use std::collections::HashSet;
+
 use dreammaker::objtree::NodeIndex;
 use itertools::Itertools;
-use pyo3::{exceptions::PyRuntimeError, prelude::*, types::PyList};
+use pyo3::{
+    exceptions::{PyRuntimeError, PyValueError},
+    prelude::*,
+    types::PyList,
+};
 
 use crate::{
     dme::{Dme, FilledSourceLocation},
@@ -108,21 +114,58 @@ impl ProcDecl {
 
 #[pymethods]
 impl TypeDecl {
-    pub fn var_names(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
-        let mut out: Vec<String> = Vec::new();
+    #[pyo3(signature = (declared=false, modified=false, unmodified=false))]
+    pub fn var_names(
+        &self,
+        declared: bool,
+        modified: bool,
+        unmodified: bool,
+        py: Python<'_>,
+    ) -> PyResult<Py<PyList>> {
+        if !declared && !modified && !unmodified {
+            return Err(PyValueError::new_err(
+                "at least one of declared, modified, or unmodified must be True",
+            ));
+        }
+
         let dme = self.dme.downcast_bound::<Dme>(py).unwrap();
         let objtree = &dme.borrow().objtree;
-        let type_def = &objtree[self.node_index];
 
-        for (name, _) in type_def.vars.iter() {
-            out.push(name.clone());
+        let mut type_ref = objtree.find(self.path.rel.as_str());
+
+        let mut leaf_declared_names: HashSet<String> = HashSet::new();
+        let mut leaf_undeclared_names: HashSet<String> = HashSet::new();
+        let mut parent_names: HashSet<String> = HashSet::new();
+
+        while let Some(ty) = type_ref {
+            for (var_name, type_var) in ty.vars.iter() {
+                if ty.index() == self.node_index {
+                    if let Some(_decl) = &type_var.declaration {
+                        leaf_declared_names.insert(var_name.to_string());
+                    } else {
+                        leaf_undeclared_names.insert(var_name.to_string());
+                    }
+                } else {
+                    parent_names.insert(var_name.to_string());
+                }
+            }
+            type_ref = ty.parent_type_without_root();
         }
-        let mut x = out.into_iter().unique().collect::<Vec<String>>();
-        x.sort();
-        Ok(PyList::new(py, x)
-            .expect("passing var names list")
-            .unbind()
-            .clone_ref(py))
+
+        let mut out: HashSet<&String> = HashSet::new();
+        if unmodified {
+            out = parent_names.difference(&leaf_declared_names).collect();
+        }
+        if modified {
+            out.extend(&leaf_undeclared_names);
+        }
+        if declared {
+            out.extend(&leaf_declared_names);
+        }
+
+        Ok(PyList::new(py, Vec::from_iter(out))?
+            .into_pyobject(py)?
+            .unbind())
     }
 
     #[pyo3(signature = (name, parents=true))]
@@ -132,27 +175,57 @@ impl TypeDecl {
         dme.get_var_decl(name, self.node_index, parents, py)
     }
 
-    pub fn proc_names(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
-        let mut out: Vec<String> = Vec::new();
-        let bound = self.dme.downcast_bound::<Dme>(py).unwrap();
-        for ty in bound.borrow().objtree.iter_types() {
-            if ty.path == self.path.rel {
-                for (name, _) in ty.procs.iter() {
-                    out.push(name.clone());
+    #[pyo3(signature = (declared=false, modified=false, unmodified=false))]
+    pub fn proc_names(
+        &self,
+        declared: bool,
+        modified: bool,
+        unmodified: bool,
+        py: Python<'_>,
+    ) -> PyResult<Py<PyList>> {
+        if !declared && !modified && !unmodified {
+            return Err(PyValueError::new_err(
+                "at least one of declared, modified, or unmodified must be True",
+            ));
+        }
+        let dme = self.dme.downcast_bound::<Dme>(py).unwrap();
+        let objtree = &dme.borrow().objtree;
+
+        let mut type_ref = objtree.find(self.path.rel.as_str());
+
+        let mut leaf_declared_names: HashSet<String> = HashSet::new();
+        let mut leaf_undeclared_names: HashSet<String> = HashSet::new();
+        let mut parent_names: HashSet<String> = HashSet::new();
+
+        while let Some(ty) = type_ref {
+            for (proc_name, type_proc) in ty.procs.iter() {
+                if ty.index() == self.node_index {
+                    if let Some(_decl) = &type_proc.declaration {
+                        leaf_declared_names.insert(proc_name.to_string());
+                    } else {
+                        leaf_undeclared_names.insert(proc_name.to_string());
+                    }
+                } else {
+                    parent_names.insert(proc_name.to_string());
                 }
-                let mut x = out.into_iter().unique().collect::<Vec<String>>();
-                x.sort();
-                return Ok(PyList::new(py, x)
-                    .expect("passing proc names list")
-                    .unbind()
-                    .clone_ref(py));
             }
+            type_ref = ty.parent_type_without_root();
         }
 
-        Err(PyRuntimeError::new_err(format!(
-            "cannot find type {}",
-            self.path
-        )))
+        let mut out: HashSet<&String> = HashSet::new();
+        if unmodified {
+            out = parent_names.difference(&leaf_declared_names).collect();
+        }
+        if modified {
+            out.extend(&leaf_undeclared_names);
+        }
+        if declared {
+            out.extend(&leaf_declared_names);
+        }
+
+        Ok(PyList::new(py, Vec::from_iter(out))?
+            .into_pyobject(py)?
+            .unbind())
     }
 
     #[pyo3(signature = (name=None))]

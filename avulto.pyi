@@ -133,11 +133,11 @@ class TypeDecl:
     A single type declaration.
     """
 
-    def proc_names(self) -> list[str]:
+    def proc_names(self, declared=False, modified=False, unmodified=False) -> list[str]:
         """Return a list of proc names for the type declaration."""
     def proc_decls(self, name=None) -> list[ProcDecl]:
         """Return proc declarations for the type. If *name* is set, only return proc declarations with this name."""
-    def var_names(self) -> list[str]:
+    def var_names(self, declared=False, modified=False, unmodified=False) -> list[str]:
         """Return a list of variable names for the type declaration."""
     def var_decl(self, name, parents=True) -> VarDecl:
         """Return the proc declaration for variable *name*. If *parents* is True, check up type path if this type does not have this variable set."""
