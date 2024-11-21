@@ -39,11 +39,12 @@ def test_missing_type(dme: DME):
 
 def test_dme_vars(dme: DME):
     foo = dme.type_decl("/obj/foo")
-    assert foo.var_names() == ["a", "icon", "icon_state"]
+    var_names = foo.var_names(declared=True, unmodified=True)
+    assert all([x in var_names for x in ["a", "icon", "icon_state"]])
     assert foo.var_decl("a").const_val == 3
 
     bar = dme.type_decl("/obj/foo/bar")
-    assert bar.var_names() == ["a"]
+    assert bar.var_names(modified=True) == ["a"]
     assert bar.var_decl("a").const_val == 4
 
     baz = dme.type_decl("/obj/foo/baz")
@@ -52,7 +53,7 @@ def test_dme_vars(dme: DME):
 
 def test_dme_procs(dme: DME):
     foo = dme.type_decl("/obj/foo")
-    assert sorted(foo.proc_names()) == ["proc1", "proc2"]
+    assert sorted(foo.proc_names(declared=True)) == ["proc1", "proc2"]
 
 
 def test_proc_decls(dme: DME):
