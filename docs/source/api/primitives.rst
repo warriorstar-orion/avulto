@@ -94,6 +94,18 @@ Several parts of Avulto are useful with all of its APIs.
    .. property:: z
       :type: int
 
+.. class:: Dmlist
+
+   A primitive, read-only representation of a DM list. This is used when
+   returning constant values of lists from the AST walker, and prefab values
+   from the DMM reader. They are not constructable.
+
+   Dmlists only support iterating over keys, and indexing with keys.
+
+   .. method:: keys()
+
+      Returns an interator over the list's keys.
+
 .. class:: Dir
 
    Representation of BYOND directions.

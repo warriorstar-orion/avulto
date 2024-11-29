@@ -69,14 +69,27 @@
       than one prefab with the given *prefix*. If *exact* is :const:`True`, then
       the prefab path must match exactly.
 
-   Once the indexes of the atoms you wish to work with are returned from
+   Once the indexes of the prefabs you wish to work with are returned from
    :func:`Tile.find` or :func:`Tile.only`, they may be used to operate on the
    prefabs of the tile with the following methods.
 
-   .. NOTE::
+   Prefabs
+   =======
 
-      Methods that modify tile prefabs currently apply to the preset, not the
-      individual tile. Future releases will hopefully provide a way to do both.
+   Every Tile is made up of an ordered list of *prefabs*. Each prefab
+   corresponds to an atom on that tile's definition, and has a path and optional
+   set of varedits.
+
+   Avulto attempts to represent variable edit values with native Python values
+   whenever possible. When a varedit is a type path, it is represented with a
+   :class:`Path`. When a varedit is a list, it is represented as
+   :class:`Dmlist`.
+
+   Prefabs are always accessed via their index, which can be retrieved with
+   :func:`Tile.find` or :func:`Tile.only`.
+
+   Reading Prefab Data
+   ^^^^^^^^^^^^^^^^^^^
 
    .. method:: prefab_path(index: int) -> Path
 
@@ -89,6 +102,16 @@
    .. method:: prefab_var(index: int, name: str)
 
       Returns a Python representation of the value of the var *name* at *index*.
+
+      :raises: :class:`KeyError` if the var *name* has not been edited at *index*.
+
+   .. method:: get_prefab_var(index: int, name: str, default: any)
+
+      Returns a Python representation of the value of the var *name* at prefab
+      *index*. If the var *name* has not been edited, returns *default*.
+
+   Modifying Prefab Data
+   ^^^^^^^^^^^^^^^^^^^^^
 
    .. method:: set_prefab_var(index: int, name: str, val)
 
