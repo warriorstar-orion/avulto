@@ -2,7 +2,7 @@ extern crate dmm_tools;
 
 use dmm_tools::dmm::Prefab;
 use pyo3::conversion::ToPyObject;
-use pyo3::exceptions::{PyRuntimeError, PyValueError};
+use pyo3::exceptions::{PyIndexError, PyKeyError, PyRuntimeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyDict, PyList, PyString};
 use pyo3::{
     pyclass, pymethods, Bound, IntoPy, Py, PyAny, PyErr, PyObject, PyResult, Python,
@@ -195,21 +195,31 @@ impl Tile {
             Address::Coords(c) => map[c],
         };
         let prefabs = &map.dictionary[&key];
+        if index as usize >= prefabs.len() {
+            return Err(PyIndexError::new_err("list index out of range"));
+        }
 
         let binding = prefabs[index as usize].path.clone();
         let s = binding.as_str();
         path::Path::new(s)
     }
 
-    pub fn prefab_var(&self, index: i32, name: String, py: Python<'_>) -> PyObject {
+    pub fn prefab_var(&self, index: i32, name: String, py: Python<'_>) -> PyResult<PyObject> {
         let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],
         };
         let prefabs = &map.dictionary[&key];
+        if index as usize >= prefabs.len()  {
+            return Err(PyIndexError::new_err("list index out of range"));
+        }
+        let prefab = &prefabs[index as usize];
+        if !prefab.vars.contains_key(&name) {
+            return Err(PyKeyError::new_err(format!("no varedit {}", name)));
+        }
 
-        constant_to_python_value(prefabs[index as usize].vars.get(&name).unwrap())
+        Ok(constant_to_python_value(prefab.vars.get(&name).unwrap()))
     }
 
     #[pyo3(signature = (index, name, default=None))]
@@ -219,26 +229,30 @@ impl Tile {
         name: String,
         default: Option<&Bound<PyAny>>,
         py: Python<'_>,
-    ) -> PyObject {
+    ) -> PyResult<PyObject> {
         let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],
         };
         let prefabs = &map.dictionary[&key];
+        if index as usize >= prefabs.len() {
+            return Err(PyIndexError::new_err("list index out of range"));
+        }
+
         let vars = &prefabs[index as usize].vars;
         if vars.contains_key(&name) {
-            return constant_to_python_value(vars.get(&name).unwrap());
+            return Ok(constant_to_python_value(vars.get(&name).unwrap()));
         }
 
         if let Some(t) = default {
-            return t.into_py(py);
+            return Ok(t.into_py(py));
         }
 
-        py.None()
+        Ok(py.None())
     }
 
-    pub fn prefab_vars(&self, index: i32, py: Python<'_>) -> Vec<String> {
+    pub fn prefab_vars(&self, index: i32, py: Python<'_>) -> PyResult<Vec<String>> {
         let map = &self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow().map;
         let mut vec = Vec::new();
         let key = match self.addr {
@@ -246,12 +260,15 @@ impl Tile {
             Address::Coords(c) => map[c],
         };
         let prefabs = &map.dictionary[&key];
+        if index as usize >= prefabs.len() {
+            return Err(PyIndexError::new_err("list index out of range"));
+        }
 
         prefabs[index as usize].vars.iter().for_each(|(name, _)| {
             vec.push(name.clone());
         });
 
-        vec
+        Ok(vec)
     }
 
     pub fn set_prefab_var(
@@ -319,6 +336,23 @@ impl Tile {
                 Address::Coords(c) => c.to_string(),
             }
         )))
+    }
+
+    fn make_unique(&mut self, py: Python<'_>) -> PyResult<()> {
+        let map = &mut self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow_mut().map;
+        let dmm = self.dmm.downcast_bound::<Dmm>(py).unwrap();
+        match self.addr {
+            Address::Key(_) => {
+                return Err(PyErr::new::<PyRuntimeError, &str>("can only make Tiles from DMM#tiledef(x, y, z) unique"));
+            },
+            Address::Coords(c) => {
+                let new_key = dmm.borrow_mut().generate_new_key();
+                let dim = map.grid.dim();
+                map.dictionary.insert(new_key, map.dictionary[&map[c]].clone());
+                map.grid[(c.z as usize - 1, dim.1 - c.y as usize, c.x as usize - 1)] = new_key;
+            },
+        }
+        Ok(())
     }
 
     fn __repr__(&self, py: Python<'_>) -> PyResult<String> {

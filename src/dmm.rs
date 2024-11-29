@@ -1,9 +1,12 @@
 extern crate dmm_tools;
 
-use std::collections::btree_map;
+use std::io;
+use std::borrow::BorrowMut;
+use std::collections::{btree_map, HashMap, HashSet};
 use std::collections::btree_map::Keys as BTreeMapKeysIter;
 use std::path::{Path, PathBuf};
 
+use dmm_tools::dmm::{Key, Prefab};
 use itertools::iproduct;
 use pyo3::exceptions::{PyOSError, PyRuntimeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyList, PyString, PyTuple};
@@ -113,6 +116,61 @@ impl CoordIterator {
     }
 }
 
+impl Dmm {
+    pub fn generate_new_key(&mut self) -> Key {
+        let mut key: Key = Default::default();
+        while self.map.dictionary.contains_key(&key) {
+            key = key.next();
+        }
+
+        self.map.dictionary.insert(key, vec![]);
+        self.map.adjust_key_length();
+        key
+    }
+
+    pub fn coalesce_duplicate_tiles(&mut self) {
+        let mut coords_using_keys: HashMap<Key, Vec<dmm_tools::dmm::Coord3>> = HashMap::default();
+        let map = &mut self.map;
+
+        // First collect all known keys
+        map.iter_levels().for_each(|(z, zlvl)| {
+            zlvl.iter_top_down().for_each(|(coord, key)| {
+                coords_using_keys.entry(key).or_default().push(coord.z(z));
+            });
+        });
+
+        // Then find our prefab collisions, moving the collided keys over to the first one we found
+        // Then update the coords we know of and move them to the first key
+        let mut unused_keys: HashSet<Key> = HashSet::default();
+        let mut prefab_collisions: HashMap<&Vec<Prefab>, &Key> = HashMap::default();
+        for (key, prefabs) in &map.dictionary {
+            if prefab_collisions.contains_key(prefabs) {
+                unused_keys.insert(*key);
+                if let Some(coords) = coords_using_keys.get(key) {
+                    for coord in coords {
+                        let dim = map.grid.dim();
+                        let raw = (coord.z as usize - 1, dim.1 - coord.y as usize, coord.x as usize - 1);
+                        map.grid[raw] = *prefab_collisions[prefabs];
+                    }
+                }
+            } else {
+                prefab_collisions.insert(prefabs, key);
+            }
+        }
+
+        for key in unused_keys {
+            map.dictionary.borrow_mut().remove_entry(&key);
+        }    
+
+        map.adjust_key_length();
+    }
+
+    fn to_file(&mut self, path: &Path) -> io::Result<()> {
+        self.coalesce_duplicate_tiles();
+        self.map.to_file(path)
+    }
+}
+
 #[pymethods]
 impl Dmm {
     #[staticmethod]
@@ -147,13 +205,13 @@ impl Dmm {
         })
     }
 
-    fn save_to(&self, filename: &Bound<PyAny>) -> PyResult<()> {
+    fn save_to(&mut self, filename: &Bound<PyAny>) -> PyResult<()> {
         if let Ok(path) = filename.extract::<std::path::PathBuf>() {
-            if let Ok(()) = self.map.to_file(&path) {
+            if let Ok(()) = self.to_file(&path) {
                 return Ok(());
             }
         } else if let Ok(pystr) = filename.downcast::<PyString>() {
-            if let Ok(()) = self.map.to_file(Path::new(&pystr.to_string())) {
+            if let Ok(()) = self.to_file(Path::new(&pystr.to_string())) {
                 return Ok(());
             }
         }
