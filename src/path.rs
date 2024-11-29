@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 use dreammaker::ast::TreePath;
 use itertools::Itertools;
@@ -90,6 +90,11 @@ impl Path {
         return Self::make_trusted(
             ("/".to_string() + tree_path.iter().map(|f| f.as_str()).join("/").as_str()).as_str(),
         );
+    }
+
+    pub fn to_tree_path(&self) -> TreePath {
+        let parts = self.rel.split('/').map(String::from).collect();
+        parts
     }
 
     pub fn make_untrusted(value: &str) -> Result<Path, String> {
