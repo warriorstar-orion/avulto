@@ -11,7 +11,7 @@ use crate::{
     path,
 };
 
-#[pyclass(module = "avulto", name = "dmlist")]
+#[pyclass(module = "avulto", name = "Dmlist")]
 pub struct DmList {
     // Not PyExprs because we also want to use these for DMM constants
     // and constant value decls, without all the redirection of AST
@@ -170,7 +170,7 @@ impl DmList {
 
     fn __str__(&self, py: Python<'_>) -> PyResult<String> {
         let mut out = String::new();
-        out.push_str("dmlist[");
+        out.push_str("Dmlist[");
         for i in 0..self.keys.len() {
             out.push('\n');
             let k = self.keys.get(i).unwrap();
