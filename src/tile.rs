@@ -339,17 +339,18 @@ impl Tile {
     }
 
     fn make_unique(&mut self, py: Python<'_>) -> PyResult<()> {
-        let map = &mut self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow_mut().map;
-        let dmm = self.dmm.downcast_bound::<Dmm>(py).unwrap();
+        let mut dmm = self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow_mut();
+        
         match self.addr {
             Address::Key(_) => {
                 return Err(PyErr::new::<PyRuntimeError, &str>("can only make Tiles from DMM#tiledef(x, y, z) unique"));
             },
             Address::Coords(c) => {
-                let new_key = dmm.borrow_mut().generate_new_key();
-                let dim = map.grid.dim();
-                map.dictionary.insert(new_key, map.dictionary[&map[c]].clone());
-                map.grid[(c.z as usize - 1, dim.1 - c.y as usize, c.x as usize - 1)] = new_key;
+                let new_key = dmm.generate_new_key();
+                let dim = dmm.map.grid.dim();
+                let current_dict = dmm.map.dictionary[&dmm.map[c]].clone();
+                dmm.map.dictionary.insert(new_key, current_dict);
+                dmm.map.grid[(c.z as usize - 1, dim.1 - c.y as usize, c.x as usize - 1)] = new_key;
             },
         }
         Ok(())
