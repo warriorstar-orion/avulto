@@ -237,10 +237,21 @@ impl Dme {
                 .constant
                 .as_ref()
                 .map(helpers::constant_to_python_value);
+            let mut source_loc: Option<PyObject> = None;
+            if !var.value.location.is_builtins() {
+                let osl = Some(OriginalSourceLocation::from_location(&var.value.location));
+                source_loc = Some(self.populate_source_loc(&osl, py).into_pyobject(py).unwrap().unbind());
+            } else if let Some(decl) = &var.declaration {
+                if !decl.location.is_builtins() {
+                    let osl = Some(OriginalSourceLocation::from_location(&decl.location));
+                    source_loc = Some(self.populate_source_loc(&osl, py).into_pyobject(py).unwrap().unbind());
+                }
+            }
             return Ok(VarDecl {
                 name,
                 declared_type,
                 const_val,
+                source_loc,
             }
             .into_pyobject(py)
             .expect("building var_decl")
