@@ -2,6 +2,12 @@ import os
 from typing import Iterator, Any
 import pathlib
 
+class Coord3:
+    """A three-dimensional integer coordinate. These are currently only returned by certain DMM properties, and are not constructable."""
+    x: int
+    y: int
+    z: int
+
 class Path:
     """A DM typepath."""
 
@@ -88,7 +94,7 @@ class Tile:
 class DMM:
     """A DMM file."""
 
-    extents: tuple[int, int, int]
+    size: Coord3
     """The number of tiles in each of the map's three dimensions."""
     filepath: pathlib.Path
     """The original filename of the DMM."""
