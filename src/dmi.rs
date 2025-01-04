@@ -1,11 +1,11 @@
 use std::fs::File;
-use std::io::{self, BufReader, Write};
+use std::io::{self, BufReader};
 use std::path::PathBuf;
 
 use dmi::icon::Icon;
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyRuntimeError};
 use pyo3::pyclass::CompareOp;
-use pyo3::types::{PyAnyMethods, PyBytes, PyString, PyTuple};
+use pyo3::types::{PyAnyMethods, PyBytes, PyInt, PyString, PyTuple};
 use pyo3::{create_exception, Bound, BoundObject, IntoPyObject};
 use pyo3::{
     pyclass, pymethods, types::PyList, IntoPy, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult,
@@ -160,9 +160,10 @@ impl IconState {
         let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
         let binding = dmi.borrow();
         let state = binding.icon.states.get(self.idx).unwrap();
+        let direction_index: dmi::dirs::Dirs;
 
         if let Ok(diridx) = dir.extract::<Dir>() {
-            let diridx = match diridx {
+            direction_index = match diridx {
                 Dir::North => dmi::dirs::Dirs::NORTH,
                 Dir::South => dmi::dirs::Dirs::SOUTH,
                 Dir::East => dmi::dirs::Dirs::EAST,
@@ -171,16 +172,28 @@ impl IconState {
                 Dir::Northwest => dmi::dirs::Dirs::NORTHWEST,
                 Dir::Southeast => dmi::dirs::Dirs::SOUTHEAST,
                 Dir::Southwest => dmi::dirs::Dirs::SOUTHWEST,
+            }
+        } else if let Ok(dirint) = dir.downcast::<PyInt>() {
+            direction_index = match dirint.extract::<u8>().unwrap() {
+                1 => dmi::dirs::Dirs::NORTH,
+                2 => dmi::dirs::Dirs::SOUTH,
+                4 => dmi::dirs::Dirs::EAST,
+                8 => dmi::dirs::Dirs::WEST,
+                5 => dmi::dirs::Dirs::NORTHEAST,
+                9 => dmi::dirs::Dirs::NORTHWEST,
+                6 => dmi::dirs::Dirs::SOUTHEAST,
+                10 => dmi::dirs::Dirs::SOUTHWEST,
+                _ => {
+                    return Err(PyRuntimeError::new_err("invalid direction"));
+                }
             };
-            let frame_data = state.get_image(&diridx, frame).unwrap();
-            let buffer = Vec::new();
-            let mut cursor = std::io::Cursor::new(buffer);
-            cursor.write_all(frame_data.as_bytes())?;
-            let output = cursor.into_inner();
-            Ok(PyBytes::new(py, &output).into())
         } else {
-            Err(PyRuntimeError::new_err("invalid direction"))
-        }
+            return Err(PyRuntimeError::new_err("invalid direction"));
+        };
+        let frame_data = state.get_image(&direction_index, frame).unwrap();
+        let rgba8_data = frame_data.to_rgba8();
+        let rgba8_vec: Vec<u8> = rgba8_data.into_raw();
+        Ok(PyBytes::new(py, &rgba8_vec).into())
     }
 
     fn __str__(&self, py: Python<'_>) -> PyResult<String> {
