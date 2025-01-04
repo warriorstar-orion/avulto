@@ -11,7 +11,7 @@ use pyo3::{
 };
 
 use crate::{
-    dme::{Dme, FilledSourceLocation},
+    dme::{nodes::OriginalSourceLocation, Dme, FilledSourceLocation},
     path::Path,
 };
 
@@ -23,6 +23,8 @@ pub struct VarDecl {
     pub declared_type: Option<Path>,
     #[pyo3(get)]
     pub const_val: Option<PyObject>,
+    #[pyo3(get)]
+    pub source_loc: Option<PyObject>,
 }
 
 #[pymethods]
@@ -124,7 +126,7 @@ impl TypeDecl {
     ) -> PyResult<Py<PyList>> {
         if !declared && !modified && !unmodified {
             return Err(PyValueError::new_err(
-                "at least one of declared, modified, or unmodified must be True",
+                "at least one of `declared`, `modified`, or `unmodified` must be True",
             ));
         }
 
@@ -139,7 +141,7 @@ impl TypeDecl {
 
         while let Some(ty) = type_ref {
             for (var_name, type_var) in ty.vars.iter() {
-                if ty.index() == self.node_index {
+                if ty.index() == self.node_index {    
                     if let Some(_decl) = &type_var.declaration {
                         leaf_declared_names.insert(var_name.to_string());
                     } else {
