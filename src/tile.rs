@@ -340,7 +340,7 @@ impl Tile {
 
     fn make_unique(&mut self, py: Python<'_>) -> PyResult<()> {
         let mut dmm = self.dmm.downcast_bound::<Dmm>(py).unwrap().borrow_mut();
-        
+
         match self.addr {
             Address::Key(_) => {
                 return Err(PyErr::new::<PyRuntimeError, &str>("can only make Tiles from DMM#tiledef(x, y, z) unique"));

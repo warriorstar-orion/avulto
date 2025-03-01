@@ -3,15 +3,14 @@ extern crate dreammaker;
 use std::collections::HashSet;
 
 use dreammaker::objtree::NodeIndex;
-use itertools::Itertools;
 use pyo3::{
-    exceptions::{PyRuntimeError, PyValueError},
+    exceptions::PyValueError,
     prelude::*,
     types::PyList,
 };
 
 use crate::{
-    dme::{nodes::OriginalSourceLocation, Dme, FilledSourceLocation},
+    dme::{Dme, FilledSourceLocation},
     path::Path,
 };
 
@@ -141,7 +140,7 @@ impl TypeDecl {
 
         while let Some(ty) = type_ref {
             for (var_name, type_var) in ty.vars.iter() {
-                if ty.index() == self.node_index {    
+                if ty.index() == self.node_index {
                     if let Some(_decl) = &type_var.declaration {
                         leaf_declared_names.insert(var_name.to_string());
                     } else {
@@ -303,6 +302,6 @@ impl TypeDecl {
     }
 
     fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("<Type {}>", self.path))
+        Ok(format!("<Type {}>", self.path.rel))
     }
 }
