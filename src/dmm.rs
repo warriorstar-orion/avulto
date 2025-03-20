@@ -11,8 +11,7 @@ use itertools::iproduct;
 use pyo3::exceptions::{PyOSError, PyRuntimeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyList, PyString, PyTuple};
 use pyo3::{
-    pyclass, pymethods, Bound, IntoPy, IntoPyObject, Py, PyAny, PyObject, PyRef, PyRefMut,
-    PyResult, Python,
+    pyclass, pymethods, Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult, Python
 };
 
 use crate::tile::Tile;
@@ -97,10 +96,10 @@ impl KeyIterator {
     fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> Option<PyObject> {
         slf.iter.next().map(|c| {
             Tile {
-                dmm: slf.dmm.bind(py).into_py(py),
+                dmm: slf.dmm.bind(py).into_py_any(py).unwrap(),
                 addr: Address::Key(*c),
             }
-            .into_py(py)
+            .into_py_any(py).unwrap()
         })
     }
 }
@@ -112,7 +111,7 @@ impl CoordIterator {
         slf
     }
     fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> Option<PyObject> {
-        slf.iter.next().map(|c| c.into_py(py))
+        slf.iter.next().map(|c| c.into_py_any(py).unwrap())
     }
 }
 
@@ -165,7 +164,7 @@ impl Dmm {
         map.adjust_key_length();
     }
 
-    fn to_file(&mut self, path: &Path) -> io::Result<()> {
+    fn write_to_file(&mut self, path: &Path) -> io::Result<()> {
         self.coalesce_duplicate_tiles();
         self.map.to_file(path)
     }
@@ -207,11 +206,11 @@ impl Dmm {
 
     fn save_to(&mut self, filename: &Bound<PyAny>) -> PyResult<()> {
         if let Ok(path) = filename.extract::<std::path::PathBuf>() {
-            if let Ok(()) = self.to_file(&path) {
+            if let Ok(()) = self.write_to_file(&path) {
                 return Ok(());
             }
         } else if let Ok(pystr) = filename.downcast::<PyString>() {
-            if let Ok(()) = self.to_file(Path::new(&pystr.to_string())) {
+            if let Ok(()) = self.write_to_file(Path::new(&pystr.to_string())) {
                 return Ok(());
             }
         }
@@ -242,7 +241,7 @@ impl Dmm {
 
     fn tiles(self_: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<KeyIterator>> {
         let self_ = &self_;
-        let owner = self_.into_py(self_.py());
+        let owner = self_.into_py_any(self_.py()).unwrap();
         let it = KeyIterator {
             dmm: owner,
             // WARNING: According to the Nomicon this is one of the most 'wildly

@@ -6,9 +6,9 @@ use dmi::icon::Icon;
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyRuntimeError};
 use pyo3::pyclass::CompareOp;
 use pyo3::types::{PyAnyMethods, PyBytes, PyInt, PyString, PyTuple};
-use pyo3::{create_exception, Bound, BoundObject, IntoPyObject};
+use pyo3::{create_exception, Bound, BoundObject, IntoPyObject, IntoPyObjectExt};
 use pyo3::{
-    pyclass, pymethods, types::PyList, IntoPy, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult,
+    pyclass, pymethods, types::PyList, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult,
     Python,
 };
 
@@ -278,7 +278,7 @@ impl Dmi {
                     dmi: self_.into_pyobject(py)?.into_any().unbind(),
                     idx,
                 }
-                .into_py(py),
+                .into_py_any(py).unwrap(),
             );
         }
 
@@ -351,7 +351,7 @@ impl StateIter {
         if let Some(n) = slf.inner.next() {
             let cell = n.downcast_bound::<IconState>(slf.py()).unwrap();
             let state = cell.borrow_mut();
-            return Some(state.into_py(slf.py()));
+            return Some(state.into_py_any(slf.py()).unwrap());
         }
 
         None

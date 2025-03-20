@@ -1,11 +1,10 @@
 extern crate dmm_tools;
 
 use dmm_tools::dmm::Prefab;
-use pyo3::conversion::ToPyObject;
 use pyo3::exceptions::{PyIndexError, PyKeyError, PyRuntimeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyDict, PyList, PyString};
 use pyo3::{
-    pyclass, pymethods, Bound, IntoPy, Py, PyAny, PyErr, PyObject, PyResult, Python,
+    pyclass, pymethods, Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyObject, PyResult, Python
 };
 
 use crate::dmm::{Address, Dmm};
@@ -176,15 +175,13 @@ impl Tile {
     #[pyo3(signature = (prefix, exact=false))]
     pub fn only(&self, prefix: &Bound<PyAny>, exact: bool, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let result = self.find(prefix, exact, py)?;
-        if result.len() > 1 {
-            Err(PyRuntimeError::new_err(format!(
+        match result.len().cmp(&1) {
+            std::cmp::Ordering::Less => Ok(py.None()),
+            std::cmp::Ordering::Equal => Ok(result[0].into_py_any(py).unwrap()),
+            std::cmp::Ordering::Greater => Err(PyRuntimeError::new_err(format!(
                 "found {} matches on tile, not 0 or 1",
                 result.len()
-            )))
-        } else if result.len() == 1 {
-            Ok(result[0].to_object(py))
-        } else {
-            Ok(py.None())
+            ))),
         }
     }
 
@@ -246,7 +243,7 @@ impl Tile {
         }
 
         if let Some(t) = default {
-            return Ok(t.into_py(py));
+            return Ok(t.into_py_any(py).unwrap());
         }
 
         Ok(py.None())

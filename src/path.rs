@@ -1,4 +1,4 @@
-use std::{fmt, str::FromStr};
+use std::fmt;
 
 use dreammaker::ast::TreePath;
 use itertools::Itertools;

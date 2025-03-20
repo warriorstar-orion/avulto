@@ -130,7 +130,7 @@ dependencies = [
 
 [[package]]
 name = "avulto"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "dmi",
  "dmm-tools",
@@ -234,7 +234,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d067ad48b8650848b989a59a86c6c36a995d02d2bf778d45c3c5d57bc2718f02"
 dependencies = [
  "smallvec",
- "target-lexicon",
+ "target-lexicon 0.12.16",
 ]
 
 [[package]]
@@ -1026,9 +1026,9 @@ dependencies = [
 
 [[package]]
 name = "pyo3"
-version = "0.23.1"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ebb0c0cc0de9678e53be9ccf8a2ab53045e6e3a8be03393ceccc5e7396ccb40"
+checksum = "7f1c6c3591120564d64db2261bec5f910ae454f01def849b9c22835a84695e86"
 dependencies = [
  "cfg-if",
  "indoc",
@@ -1044,19 +1044,19 @@ dependencies = [
 
 [[package]]
 name = "pyo3-build-config"
-version = "0.23.1"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "80e3ce69c4ec34476534b490e412b871ba03a82e35604c3dfb95fcb6bfb60c09"
+checksum = "e9b6c2b34cf71427ea37c7001aefbaeb85886a074795e35f161f5aecc7620a7a"
 dependencies = [
  "once_cell",
- "target-lexicon",
+ "target-lexicon 0.13.2",
 ]
 
 [[package]]
 name = "pyo3-ffi"
-version = "0.23.1"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b09f311c76b36dfd6dd6f7fa6f9f18e7e46a1c937110d283e80b12ba2468a75"
+checksum = "5507651906a46432cdda02cd02dd0319f6064f1374c9147c45b978621d2c3a9c"
 dependencies = [
  "libc",
  "pyo3-build-config",
@@ -1064,9 +1064,9 @@ dependencies = [
 
 [[package]]
 name = "pyo3-macros"
-version = "0.23.1"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd4f74086536d1e1deaff99ec0387481fb3325c82e4e48be0e75ab3d3fcb487a"
+checksum = "b0d394b5b4fd8d97d48336bb0dd2aebabad39f1d294edd6bcd2cccf2eefe6f42"
 dependencies = [
  "proc-macro2",
  "pyo3-macros-backend",
@@ -1076,9 +1076,9 @@ dependencies = [
 
 [[package]]
 name = "pyo3-macros-backend"
-version = "0.23.1"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e77dfeb76b32bbf069144a5ea0a36176ab59c8db9ce28732d0f06f096bbfbc8"
+checksum = "fd72da09cfa943b1080f621f024d2ef7e2773df7badd51aa30a2be1f8caa7c8e"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -1394,6 +1394,12 @@ name = "target-lexicon"
 version = "0.12.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
+
+[[package]]
+name = "target-lexicon"
+version = "0.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e502f78cdbb8ba4718f566c418c52bc729126ffd16baee5baa718cf25dd5a69a"
 
 [[package]]
 name = "termcolor"
