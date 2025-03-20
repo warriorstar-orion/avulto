@@ -11,17 +11,17 @@ class Coord3:
 class Path:
     """A DM typepath."""
 
-    """The final part of the path."""
     stem: str
+    """The final part of the path."""
+    parent: "Path"
     """The parent path."""
-    parent: Path
-    """Whether or not the path is `/`."""
     is_root: bool
+    """Whether or not the path is `/`."""
 
-    """Returns the *absolute* representation of the path, rooted at `/datum`."""
     abs: str
-    """Returns the *relative* or *declared* representation of the path."""
+    """Returns the *absolute* representation of the path, rooted at `/datum`."""
     rel: str
+    """Returns the *relative* or *declared* representation of the path."""
 
     def __init__(self, value):
         """Returns a new path."""
@@ -39,17 +39,17 @@ class Path:
         itself.
         """
 
-    def __truediv__(self, other: str|"Path") -> Path:
+    def __truediv__(self, other: str|"Path") -> "Path":
         """Return the path with the specified suffix."""
 
 class Tile:
     """An individual map tile definition."""
 
-    """Returns the path of the tile's area. Returns only the first area if multiple exist."""
     area_path: Path
+    """Returns the path of the tile's area. Returns only the first area if multiple exist."""
 
-    """Returns the path of the tile's turf. Returns only the first area if multiple exist."""
     turf_path: Path
+    """Returns the path of the tile's turf. Returns only the first area if multiple exist."""
 
     def add_path(self, index, path: Path | str):
         """Add a prefab with the given `path` at `index`."""
@@ -81,7 +81,7 @@ class Tile:
         Returns the value of the property `name` on the prefab at `index`. If
         the property does not exist, return `default`.
         """
-    
+
     def prefab_vars(self, index: int) -> list[str]:
         """
         Return the list of variable names on the prefab at `index`.
@@ -117,7 +117,7 @@ class ProcDecl:
     A single proc declaration.
     """
 
-    def walk(walker: any):
+    def walk(self, walker: any):
         """Walks the proc AST with *walker*, calling any `visit_*` method names on *walker* if they exist for AST node types."""
 
 
@@ -126,12 +126,12 @@ class VarDecl:
     A single variable declaration.
     """
 
-    """The name of the variable."""
     name: str
-    """The declared type of the variable, if specified."""
+    """The name of the variable."""
     declared_type: Path | None
-    """The variable's value, if it can be evaluated as a constant expression."""
+    """The declared type of the variable, if specified."""
     const_val: any | None
+    """The variable's value, if it can be evaluated as a constant expression."""
 
 
 class TypeDecl:
@@ -154,6 +154,8 @@ class DME:
     """
     filepath: pathlib.Path
     """The original filename of the DMM."""
+    types: dict[Path, TypeDecl]
+    """A mapping of type paths to their declarations."""
 
     @staticmethod
     def from_file(filename: os.PathLike | str, parse_procs: bool = False) -> "DME":
@@ -173,14 +175,14 @@ class DME:
 class Dir:
     """An enumeration of directions used in icons."""
 
-    NORTH: Dir
-    SOUTH: Dir
-    EAST: Dir
-    WEST: Dir
-    NORTHEAST: Dir
-    NORTHWEST: Dir
-    SOUTHEAST: Dir
-    SOUTHWEST: Dir
+    NORTH: "Dir"
+    SOUTH: "Dir"
+    EAST: "Dir"
+    WEST: "Dir"
+    NORTHEAST: "Dir"
+    NORTHWEST: "Dir"
+    SOUTHEAST: "Dir"
+    SOUTHWEST: "Dir"
 
 class Rect:
     left: int
