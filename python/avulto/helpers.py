@@ -1,30 +1,30 @@
 import random
 
-from avulto import Dmlist
+from avulto import Dmlist, DME
 
-def fill_with_ones(list_to_pad):
-    if not isinstance(list_to_pad, Dmlist):
-        return list_to_pad
+def fill_with_ones(l: Dmlist):
+    if not isinstance(l, Dmlist):
+        return l
 
-    final_list = dict()
+    final_list = {}
 
-    for key in list_to_pad.keys():
-        if list_to_pad[key]:
-            final_list[key] = list_to_pad[key]
+    for key in l.keys():
+        if l[key]:
+            final_list[key] = l[key]
         else:
             final_list[key] = 1
 
     return final_list
 
 
-def pickweight(L):
+def pickweight(l):
     total = 0
     item = None
-    for item, val in L.items():
+    for item, val in l.items():
         total += val
 
     total = random.uniform(0, total)
-    for item, val in L.items():
+    for item, val in l.items():
         total -= val
         if total <= 0:
             return item
@@ -38,8 +38,8 @@ def pick_weight_recursive(list_to_pick):
         result = pickweight(fill_with_ones(result))
     return result
 
-def prob(P):
+def prob(p):
     r = random.randint(1, 100)
-    if r <= P:
+    if r <= p:
         return 1
     return 0
