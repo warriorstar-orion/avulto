@@ -33,7 +33,12 @@
    .. method:: typedecl(path: Path | str) -> TypeDecl
 
       Returns the :class:`TypeDecl` of the type given by *path* if it exists.
+      Note that the dictionary :attr:`types` is analogous to using this method.
 
+   .. property:: types
+      :type: dict[Path, TypeDecl]
+
+      A mapping of type paths to their :class:`TypeDecl`\s.
 
 .. class:: ProcDecl
 

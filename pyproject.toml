@@ -20,3 +20,4 @@ archs = "AMD64"
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
+python-source = "python"
