@@ -13,7 +13,7 @@ SpacemanDMM_, and is fast and versatile.
    Introduction <self>
 
 .. toctree::
-   quickstart/intro
+   quickstart
 
 API Reference
 *************
