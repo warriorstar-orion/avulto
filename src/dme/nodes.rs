@@ -8,7 +8,7 @@ use pyo3::{
     Bound, IntoPyObject, Py, PyAny, PyObject, PyResult, Python,
 };
 
-use crate::path::Path;
+use crate::{dme::prefab::Prefab, path::Path};
 
 use super::{
     expression::{Constant, Expression},
@@ -26,6 +26,7 @@ pub fn ast(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<Expression>()?;
     m.add_class::<Node>()?;
     m.add_class::<NodeKind>()?;
+    m.add_class::<Prefab>()?;
     Ok(())
 }
 

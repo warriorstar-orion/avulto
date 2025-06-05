@@ -85,7 +85,7 @@ impl Prefab {
     }
 
     fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("{}", self.path))
+        Ok(format!("{}", self.path.rel))
     }
 
     pub fn __eq__(&self, other: &Self, py: Python<'_>) -> bool {
