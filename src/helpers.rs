@@ -4,13 +4,13 @@ use dreammaker::constants::{Constant, Pop};
 use pyo3::{
     exceptions::PyRuntimeError,
     pyclass, pyfunction, pymethods,
-    types::{PyAnyMethods, PyBool, PyFloat, PyInt, PyString},
+    types::{PyAnyMethods, PyBool, PyDict, PyFloat, PyInt, PyList, PyString},
     Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyObject, PyResult, Python,
 };
 
 use dmm_tools::dmi::Dir as SDir;
 
-use crate::{dmlist::DmList, path::Path};
+use crate::{dme::prefab::Prefab, dmlist::DmList, path::Path};
 
 #[pyclass(eq, eq_int)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -152,11 +152,35 @@ pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> PyObject
         }
         // TODO: How the fuck do I represent these in plain old Python
         Constant::Call(_, _) => py.None(),
-        Constant::Prefab(p) => Path::from_tree_path(&p.path)
-            .into_pyobject(py)
-            .expect("constant to prefab")
-            .into_any()
-            .unbind(),
+        Constant::Prefab(p) => {
+            if p.vars.is_empty() {
+                Path::from_tree_path(&p.path)
+                    .into_pyobject(py)
+                    .expect("constant to prefab")
+                    .into_any()
+                    .unbind()
+            } else {
+                let mut out: Vec<Bound<PyDict>> = Vec::new();
+
+                for (k, v) in p.vars.iter() {
+                    let var = PyDict::new(py);
+                    var.set_item(k.as_str(), constant_to_python_value(v))
+                        .expect("setting prefab var item");
+                    out.push(var);
+                }
+                Prefab {
+                    path: Path::from_tree_path(&p.path),
+                    vars: PyList::new(py, out)
+                        .expect("building prefab vars list")
+                        .into_any()
+                        .unbind(),
+                }
+                .into_pyobject(py)
+                .expect("prefab to pyobject")
+                .into_any()
+                .unbind()
+            }
+        }
         Constant::String(s) => s.into_py_any(py).unwrap(),
         Constant::Resource(s) => s.into_py_any(py).unwrap(),
         Constant::Float(f) => {
