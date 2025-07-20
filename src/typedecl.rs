@@ -50,6 +50,8 @@ pub struct TypeDecl {
     pub node_index: NodeIndex,
     #[pyo3(get)]
     pub path: Path,
+    #[pyo3(get)]
+    pub source_loc: Option<PyObject>,
 }
 
 #[pyclass(module = "avulto")]

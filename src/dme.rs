@@ -60,6 +60,8 @@ impl DmeTypeAccessor {
         match dme.objtree.find(search_string) {
             Some(type_ref) => {
                 let type_ref_index = type_ref.index();
+                let osl = Some(OriginalSourceLocation::from_location(&type_ref.location));
+                let source_loc = Some(dme.populate_source_loc(&osl, py).into_pyobject(py).unwrap().unbind());
                 let dme = dme
                     .into_pyobject(py)
                     .expect("passing dme")
@@ -71,6 +73,7 @@ impl DmeTypeAccessor {
                     dme,
                     path: Path::make_trusted(objpath.as_str()),
                     node_index: type_ref_index,
+                    source_loc,
                 }
                 .into_pyobject(py)
                 .expect("building typedecl")
@@ -357,6 +360,9 @@ impl Dme {
         match self_.objtree.find(search_string) {
             Some(type_ref) => {
                 let type_ref_index = type_ref.index();
+                let osl = Some(OriginalSourceLocation::from_location(&type_ref.location));
+                let source_loc = Some(self_.populate_source_loc(&osl, py).into_pyobject(py).unwrap().unbind());
+
                 let dme = self_
                     .into_pyobject(py)
                     .expect("passing dme")
@@ -364,10 +370,12 @@ impl Dme {
                     .as_unbound()
                     .clone_ref(py)
                     .into_any();
+
                 Ok(TypeDecl {
                     dme,
                     path: Path::make_trusted(objpath.as_str()),
                     node_index: type_ref_index,
+                    source_loc,
                 }
                 .into_pyobject(py)
                 .expect("building typedecl")
