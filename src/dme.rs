@@ -9,11 +9,7 @@ use dreammaker::{
 };
 use nodes::{Node, OriginalSourceLocation};
 use pyo3::{
-    create_exception,
-    exceptions::{PyException, PyOSError, PyRuntimeError, PyValueError},
-    pyclass, pymethods,
-    types::{PyAnyMethods, PyList, PyString, PyStringMethods},
-    Bound, IntoPyObject, Py, PyAny, PyObject, PyRef, PyResult, Python,
+    create_exception, exceptions::{PyException, PyOSError, PyRuntimeError, PyValueError}, pyclass, pymethods, types::{PyAnyMethods, PyList, PyString, PyStringMethods}, Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyObject, PyRef, PyResult, Python
 };
 
 use crate::{
@@ -101,7 +97,7 @@ pub struct FileData {
     pub(crate) file_ids: HashMap<FileId, Py<PyAny>>,
 }
 
-#[pyclass]
+#[pyclass(module = "avulto", name = "SourceLoc")]
 pub struct FilledSourceLocation {
     #[pyo3(get)]
     pub file_path: Py<PyAny>,
@@ -111,6 +107,22 @@ pub struct FilledSourceLocation {
     /// The column number, starting at 1.
     #[pyo3(get)]
     pub column: u16,
+}
+
+#[pymethods]
+impl FilledSourceLocation {
+    fn __str__(&self, py: Python<'_>) -> PyResult<String> {
+        self.__repr__(py)
+    }
+
+    fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
+        Ok(format!(
+            "{}:{}:{}",
+            self.file_path.bind(py).call_method("__str__", (), None)?,
+            self.line,
+            self.column
+        ))
+    }
 }
 
 impl FileData {

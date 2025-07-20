@@ -53,7 +53,7 @@
       The argument *walker* is expected to be a Python object which exposes
       methods for each kind of AST node you wish to visit. Each method should
       take two arguments: *node*, which will be filled in with information about
-      that node in the AST, and *source_info*, which includes lexical
+      that node in the AST, and *source_loc*, which includes lexical
       information about the AST node, such as line, column, and filename. The
       currently available visitors are:
 

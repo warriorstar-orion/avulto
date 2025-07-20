@@ -89,7 +89,7 @@ pub struct ProcDecl {
     type_index: NodeIndex,
     proc_index: usize,
     #[pyo3(get)]
-    source_info: PyObject,
+    source_loc: PyObject,
 }
 
 #[pymethods]
@@ -278,7 +278,7 @@ impl TypeDecl {
 
                         proc_index,
                         type_index: self.node_index,
-                        source_info: FilledSourceLocation {
+                        source_loc: FilledSourceLocation {
                             file_path: dme.borrow().file_data.borrow(py).file_ids
                                 [&proc_value.location.file]
                                 .clone_ref(py),

@@ -16,21 +16,21 @@ def dme() -> DME:
 
 def test_walker_base(dme: DME):
     class VarAndReturnWalker:
-        def visit_Return(self, node, source_info):
+        def visit_Return(self, node, source_loc):
             pass
-            # print(node, source_info)
+            # print(node, source_loc)
 
-        def visit_Expr(self, node, source_info):
+        def visit_Expr(self, node, source_loc):
             pass
-            # print(node, source_info)
+            # print(node, source_loc)
 
-        def visit_Call(self, node, source_info):
+        def visit_Call(self, node, source_loc):
             pass
-            # print(node, source_info)
+            # print(node, source_loc)
 
-        def visit_Identifier(self, node, source_info):
+        def visit_Identifier(self, node, source_loc):
             pass
-            # print(node, source_info)
+            # print(node, source_loc)
 
     varw = VarAndReturnWalker()
     dme.type_decl("/obj/test_object").proc_decls("var_and_return")[0].walk(varw)
@@ -40,7 +40,7 @@ def test_visit_call(dme: DME):
         def __init__(self):
             self.calls = list()
 
-        def visit_Call(self, node, source_info):
+        def visit_Call(self, node, source_loc):
             self.calls.append(node)
 
     walker = CallWalker()
