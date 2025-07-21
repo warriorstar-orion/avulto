@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use dreammaker::{
     ast::{Spanned, Statement},
     objtree::NodeIndex,
-    FileId, FileList,
+    FileId, FileList, Location,
 };
 use nodes::{Node, OriginalSourceLocation};
 use pyo3::{
@@ -174,10 +174,18 @@ impl Dme {
         loc.as_ref()
             .map(|f| {
                 let g = f.borrow(py);
-                FilledSourceLocation {
-                    file_path: self.file_data.borrow(py).file_ids[&g.file].clone_ref(py),
-                    line: g.line,
-                    column: g.column,
+                if g.file == Location::builtins().file {
+                    FilledSourceLocation {
+                        file_path: "(builtins)".into_py_any(py).unwrap(),
+                        line: 1,
+                        column: 1,
+                    }
+                } else {
+                    return FilledSourceLocation {
+                        file_path: self.file_data.borrow(py).file_ids[&g.file].clone_ref(py),
+                        line: g.line,
+                        column: g.column,
+                    };
                 }
             })
             .map_or(py.None(), |g| {
