@@ -45,16 +45,6 @@ fn avulto(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<helpers::Dir>()?;
     m.add_function(wrap_pyfunction!(helpers::as_dir, m)?)?;
 
-    let pth_submodule = PyModule::new(_py, "paths")?;
-    pth_submodule.add("Root", path::Path::new("/").unwrap())?;
-    pth_submodule.add("Area", path::Path::new("/area").unwrap())?;
-    pth_submodule.add("Turf", path::Path::new("/turf").unwrap())?;
-    pth_submodule.add("Obj", path::Path::new("/obj").unwrap())?;
-    pth_submodule.add("Mob", path::Path::new("/mob").unwrap())?;
-    pth_submodule.add("Datum", path::Path::new("/datum").unwrap())?;
-
-    m.add_submodule(&pth_submodule)?;
-
     m.add_wrapped(wrap_pymodule!(dme::nodes::ast))?;
     let sys = PyModule::import(_py, "sys")?;
     let sys_modules: Bound<'_, PyDict> = sys.getattr("modules")?.downcast_into()?;

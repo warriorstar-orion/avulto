@@ -1,28 +1,19 @@
-from avulto import Path as p, paths
-
-
-def test_paths():
-    assert paths.Area == p("/area")
-    assert paths.Turf == p("/turf")
-    assert paths.Obj == p("/obj")
-    assert paths.Mob == p("/mob")
-    assert paths.Datum == p("/datum")
-    assert paths.Root == p("/")
+from avulto import Path as p
 
 
 def test_isparent():
-    assert paths.Root.parent_of(p("/datum"))
+    assert p("/").parent_of(p("/datum"))
     assert p("/obj/foo").parent_of(p("/obj/foo/bar"))
     assert p("/obj").parent_of("/obj/foo")
 
 
 def test_ischild():
-    assert paths.Area.child_of(paths.Root)
+    assert p("/area").child_of("/")
     assert p("/obj/foo").child_of("/obj")
 
 
 def test_concat():
-    assert paths.Root / "foo" == p("/foo")
+    assert p("/") / "foo" == p("/foo")
 
 
 def test_suffix():

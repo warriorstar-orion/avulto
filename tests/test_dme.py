@@ -59,3 +59,8 @@ def test_dme_procs(dme: DME):
 def test_proc_decls(dme: DME):
     foo = dme.type_decl("/obj/foo")
     assert [x.name for x in foo.proc_decls("proc1")] == ["proc1"]
+
+
+def test_builtin_source_loc(dme: DME):
+    db = dme.types["/database"]
+    assert str(db.source_loc) == "(builtins):1:1"

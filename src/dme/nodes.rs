@@ -8,7 +8,13 @@ use pyo3::{
     Bound, IntoPyObject, Py, PyAny, PyObject, PyResult, Python,
 };
 
-use crate::{dme::prefab::Prefab, path::Path};
+use crate::{
+    dme::{
+        operators::{AssignOperator, BinaryOperator, UnaryOperator},
+        prefab::Prefab,
+    },
+    path::Path,
+};
 
 use super::{
     expression::{Constant, Expression},
@@ -23,6 +29,11 @@ pub type PyExpr = Py<Expression>;
 
 #[pymodule]
 pub fn ast(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
+    m.add_class::<UnaryOperator>()?;
+    m.add_class::<AssignOperator>()?;
+    m.add_class::<SettingMode>()?;
+    m.add_class::<BinaryOperator>()?;
+
     m.add_class::<Expression>()?;
     m.add_class::<Node>()?;
     m.add_class::<NodeKind>()?;

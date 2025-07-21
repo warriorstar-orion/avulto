@@ -162,7 +162,7 @@ class ProcDecl:
     source_loc: SourceLoc
     """The source location of the proc declaration."""
 
-    def walk(self, walker: any):
+    def walk(self, walker: Any):
         """Walks the proc AST with *walker*, calling any `visit_*` method names on *walker* if they exist for AST node types."""
 
 class VarDecl:
@@ -174,7 +174,7 @@ class VarDecl:
     """The name of the variable."""
     declared_type: Path | None
     """The declared type of the variable, if specified."""
-    const_val: any | None
+    const_val: Any | None
     """The variable's value, if it can be evaluated as a constant expression."""
 
 class TypeDecl:
@@ -206,7 +206,7 @@ class DME:
 
     filepath: pathlib.Path
     """The original filename of the DMM."""
-    types: dict[Path, TypeDecl]
+    types: dict[Path | str, TypeDecl]
     """A mapping of type paths to their declarations."""
 
     @staticmethod
@@ -306,10 +306,10 @@ class DmList:
     returning constant values of lists from the AST walker, and prefab values
     from the DMM reader. They are not constructable.
 
-    Dmlists only support iterating over keys, and indexing with keys.    
+    Dmlists only support iterating over keys, and indexing with keys.
     """
 
-    def keys(self) -> Iterator[any]:
+    def keys(self) -> Iterator[Any]:
         """
         Iterates over the keys in the list.
         """
