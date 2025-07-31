@@ -189,7 +189,7 @@ impl Dme {
                 }
             })
             .map_or(py.None(), |g| {
-                g.into_pyobject(py).unwrap().into_any().into()
+                g.into_py_any(py).unwrap()
             })
     }
 
@@ -270,16 +270,13 @@ impl Dme {
                     source_loc = Some(self.populate_source_loc(&osl, py).into_pyobject(py).unwrap().unbind());
                 }
             }
-            return Ok(VarDecl {
+            return VarDecl {
                 name,
                 declared_type,
                 const_val,
                 source_loc,
             }
-            .into_pyobject(py)
-            .expect("building var_decl")
-            .into_any()
-            .unbind());
+            .into_py_any(py);
         }
 
         if parents && !type_def.is_root() {
@@ -381,7 +378,7 @@ impl Dme {
             Some(type_ref) => {
                 let type_ref_index = type_ref.index();
                 let osl = Some(OriginalSourceLocation::from_location(&type_ref.location));
-                let source_loc = Some(self_.populate_source_loc(&osl, py).into_pyobject(py).unwrap().unbind());
+                let source_loc = Some(self_.populate_source_loc(&osl, py).into_py_any(py).unwrap());
 
                 let dme = self_
                     .into_pyobject(py)

@@ -11,7 +11,7 @@ use pyo3::{
 use crate::{
     dme::{
         operators::{AssignOperator, BinaryOperator, UnaryOperator},
-        prefab::Prefab,
+        prefab::Prefab, FilledSourceLocation,
     },
     path::Path,
 };
@@ -29,6 +29,7 @@ pub type PyExpr = Py<Expression>;
 
 #[pymodule]
 pub fn ast(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
+    m.add_class::<FilledSourceLocation>()?;
     m.add_class::<UnaryOperator>()?;
     m.add_class::<AssignOperator>()?;
     m.add_class::<SettingMode>()?;
