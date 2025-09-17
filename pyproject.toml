@@ -1,7 +1,7 @@
 [project]
 name = "avulto"
 requires-python = ">=3.10"
-version = "0.1.18"
+version = "0.1.19"
 authors = [
     {name = "Warriorstar Orion", email = "orion@snowfrost.garden"}
 ]
@@ -22,12 +22,8 @@ archs = "AMD64"
 features = ["pyo3/extension-module"]
 python-source = "python"
 
-[tool.uv.sources]
-avulto = { workspace = true }
-
 [dependency-groups]
 dev = [
-    "avulto",
     "ipython>=8.37.0",
     "pytest>=8.4.1",
 ]

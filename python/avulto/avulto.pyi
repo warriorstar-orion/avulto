@@ -172,6 +172,8 @@ class VarDecl:
 
     name: str
     """The name of the variable."""
+    type_path: Path
+    """The type path the proc is declared on."""
     declared_type: Path | None
     """The declared type of the variable, if specified."""
     const_val: Any | None
@@ -300,7 +302,7 @@ class DMI:
     def data_rgba8(self, rect: Rect) -> bytes:
         """Return the byte data of the spritesheet in 8-bit RGBA."""
 
-class DmList:
+class Dmlist:
     """
     A primitive, read-only representation of a DM list. This is used when
     returning constant values of lists from the AST walker, and prefab values
@@ -313,3 +315,5 @@ class DmList:
         """
         Iterates over the keys in the list.
         """
+
+    def __getitem__(self, k) -> Any: ...

@@ -123,6 +123,10 @@ impl FilledSourceLocation {
             self.column
         ))
     }
+
+    fn is_builtin(&self, py: Python<'_>) -> PyResult<bool> {
+        self.file_path.bind(py).eq("(builtins)")
+    }
 }
 
 impl FileData {
@@ -281,6 +285,7 @@ impl Dme {
             }
             return VarDecl {
                 name,
+                type_path: Path::make_trusted(&type_def.path).into_py_any(py).unwrap(),
                 declared_type,
                 const_val,
                 source_loc,

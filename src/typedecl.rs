@@ -19,6 +19,8 @@ pub struct VarDecl {
     #[pyo3(get)]
     pub name: String,
     #[pyo3(get)]
+    pub type_path: Py<PyAny>,
+    #[pyo3(get)]
     pub declared_type: Option<Path>,
     #[pyo3(get)]
     pub const_val: Option<PyObject>,
@@ -36,7 +38,8 @@ impl VarDecl {
         match &self.declared_type {
             None => Ok(format!("<Var {}>", self.name)),
             Some(p) => Ok(format!(
-                "<Var {}/{}>",
+                "<Var {}/{}/{}>",
+                self.type_path,
                 p.rel.strip_prefix('/').unwrap(),
                 self.name
             )),

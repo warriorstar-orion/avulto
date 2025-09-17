@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from avulto import DME
+from avulto import DME, Path as p
 
 
 def get_fixture_path(name):
@@ -69,3 +69,9 @@ def test_builtin_source_loc(dme: DME):
 def test_root_lookups(dme: DME):
     root = dme.types["/"]
     assert "hell_yeah" in root.proc_names(declared=True)
+
+
+def test_var_decl_type_path(dme: DME):
+    foo = dme.types["/obj/foo"]
+    var_decl = foo.var_decl("a")
+    assert p("/obj/foo") == var_decl.type_path
