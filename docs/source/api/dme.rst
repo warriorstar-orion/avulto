@@ -18,7 +18,19 @@
       :raises: :class:`OSError`: If the file is not found or there was an error opening it.
       :raises: :class:`RuntimeError`: If there was an error parsing the DME environment.
 
-   Once instantiated, the following methods are available:
+   Once instantiated, the following properties and methods are available:
+
+   .. property:: types
+      :type: dict[Path, TypeDecl]
+
+      A mapping of type paths to their :class:`TypeDecl`\s. This is a shortcut to
+      :attr:`typedecl`. In other words,
+
+      .. code-block:: python
+
+          td = dme.typedecl("/obj/machinery")
+          # is equivalent to
+          td = dme.types["/obj/machinery"]
 
    .. method:: typesof(prefix: Path | str) -> list[Path]
 
@@ -35,16 +47,17 @@
       Returns the :class:`TypeDecl` of the type given by *path* if it exists.
       Note that the dictionary :attr:`types` is analogous to using this method.
 
-   .. property:: types
-      :type: dict[Path, TypeDecl]
-
-      A mapping of type paths to their :class:`TypeDecl`\s.
-
 .. class:: ProcDecl
 
    A declaration for a specific proc on a type. Note that a type may have
    multiple definitions of a given proc with the same name. This only represents
    one proc definition.
+
+   .. property:: source_loc
+      :type: SourceLoc
+
+      The :class:`SourceLoc` of the proc's declaration, as determined by the
+      parser.
 
    .. method:: walk(walker)
 
@@ -131,14 +144,34 @@
    The :class:`TypeDecl` class returns basic information about a type declared
    in the :class:`DME` file.
 
+   .. property:: path
+      :type: Path
+
+      The path of the type.
+
+   .. property:: source_loc
+      :type: SourceLoc
+
+      The :class:`SourceLoc` of the type's initial declaration, as determined by
+      the parser.
+
    .. method:: proc_decls(name=None) -> list[ProcDecl]
 
       Returns a list of :class:`ProcDecl`\s for the type. If *name* is set, only
       proc declarations with that name will be returned.
 
-   .. method:: proc_names() -> list[str]
+   .. method:: proc_names(self, declared=False, modified=False, unmodified=False) -> list[str]
 
-      Returns a list of proc names for the type declaration.
+      Returns a list of proc names associated with the type. At least one of the
+      arguments must be true:
+
+      - If *declared* is true, the list of proc names will include names
+        declared on the type directly.
+      - If *modified* is true, the list of proc names will include names of
+        proc declared on a parent type but changed by this type.
+      - if *unmodified* is true, the list of proc names will include names
+        of proc which were declared on a parent type and unchanged by this
+        type.
 
    .. method:: var_decl(name: str, parents: bool=True) -> VarDecl
 
@@ -146,7 +179,16 @@
       :const:`True`, the type's parents will be checked for a variable
       declaration if not specified on the current type.
 
-   .. method:: var_names() -> list[str]
+   .. method:: var_names(self, declared=False, modified=False, unmodified=False) -> list[str]
 
-      Returns a list of variables names for the type declaration. This does not
-      include variables declared in the type's parents.
+      Returns a list of variables names for the type declaration.
+
+      At least one of the arguments must be true:
+
+      - If *declared* is true, the list of variable names will include names
+        declared on the type directly.
+      - If *modified* is true, the list of variable names will include names of
+        variables declared on a parent type but changed by this type.
+      - if *unmodified* is true, the list of variable names will include names
+        of variables which were declared on a parent type and unchanged by this
+        type.

@@ -2,7 +2,10 @@ import random
 
 from avulto import Dmlist, DME
 
-def fill_with_ones(l: Dmlist):
+def fill_with_ones(l: Dmlist) -> dict:
+    """
+    Returns a dictionary version of the passed in Dmlist with all unset values set to 1.
+    """
     if not isinstance(l, Dmlist):
         return l
 
@@ -17,7 +20,10 @@ def fill_with_ones(l: Dmlist):
     return final_list
 
 
-def pickweight(l):
+def pickweight(l: dict):
+    """
+    Returns a weighted pick from the items in l.
+    """
     total = 0
     item = None
     for item, val in l.items():

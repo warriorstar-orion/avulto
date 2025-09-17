@@ -115,7 +115,6 @@ with an uplink, and it has many uplink items, like so:
 		reference = "GAR"
 		cost = 30
 
-
 You want to get a listing of every uplink item, and how much it costs, in one
 list. We can get this list like so:
 
@@ -128,9 +127,10 @@ list. We can get this list like so:
 	dme = DME.from_file("paradise.dme")
 
 	for pth in dme.typesof('/datum/uplink_item'):
-		typedecl = dme.type_decl(pth)
-		print(f"Name: {typedecl.value('name')} Cost: {typedecl.value('cost')}")
-
+		typedecl = dme.types[pth]
+		name = typedecl.var_decl('name').const_val
+		cost = typedecl.var_decl('cost').const_val
+		print(f"Name: {name} Cost: {cost}")
 
 And the result will end up looking something like this:
 
@@ -181,9 +181,9 @@ Since Avulto has access to all this information, we can do this in one script:
     known_dirs = dict()
     def get_iconstate_dirs(turf_path):
         if turf_path not in known_dirs:
-            typedecl = dme.type_decl(turf)
-            icon = typedecl.value('icon')
-            icon_state = typedecl.value('icon_state')
+            typedecl = dme.types[turf]
+            icon = typedecl.var_decl('icon').const_val
+            icon_state = typedecl.var_decl('icon_state').const_val
             if icon not in dmi_files:
                 dmi_files[icon] = DMI.from_file(icon)
             dmi = dmi_files[icon]
@@ -196,7 +196,7 @@ Since Avulto has access to all this information, we can do this in one script:
         dmm = DMM.from_file(mapfile)
         modified = False
         for tile in dmm.tiles():
-            turf = tile.find('/turf')[0]
+            turf = tile.only('/turf')
             turf_dir = tile.get_prefab_var(turf, 'dir', Dir.SOUTH)
             if turf_dir not in get_iconstate_dirs(tile.turf_path()):
                 modified = True

@@ -14,6 +14,11 @@
 
    Once instantiated, the following properties and methods are available:
 
+   .. property:: filepath
+      :type: pathlib.Path
+
+      A Pathlib path pointing to the DMM's original filename.
+
    .. property:: size
       :type: Coord3
 

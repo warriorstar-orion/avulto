@@ -5,7 +5,6 @@ Several parts of Avulto are useful with all of its APIs.
 
 .. class:: Path
 
-
    :class:`Path` wraps type paths and provides several useful methods and
    properties for manipulating and comparing paths::
 
@@ -79,6 +78,27 @@ Several parts of Avulto are useful with all of its APIs.
 
       Returns whether we are a child of *path*. If *strict* is :const:`True`, a
       path will not count as a child of itself.
+
+.. class:: SourceLoc
+
+   :class:`SourceLoc` contains source file information about types, procs, and
+   vars. This is useful for tasks like linters which want to show line and
+   column-level information about a finding.
+
+   .. property:: file_path
+      :type: pathlib.Path
+
+      The file path of the source location.
+
+   .. property:: line
+      :type: int
+
+      The line number.
+
+   .. property:: column
+      :type: int
+
+      The column number.
 
 .. class:: Coord3
 

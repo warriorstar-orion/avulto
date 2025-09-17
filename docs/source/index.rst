@@ -20,6 +20,7 @@ API Reference
 
 .. toctree::
    api/primitives
+   api/helpers
    api/dme
    api/dmi
    api/dmm
