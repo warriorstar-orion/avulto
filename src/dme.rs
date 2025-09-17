@@ -181,11 +181,20 @@ impl Dme {
                         column: 1,
                     }
                 } else {
-                    return FilledSourceLocation {
-                        file_path: self.file_data.borrow(py).file_ids[&g.file].clone_ref(py),
-                        line: g.line,
-                        column: g.column,
-                    };
+                    let ids = &self.file_data.borrow(py).file_ids;
+                    if ids.contains_key(&g.file) {
+                        return FilledSourceLocation {
+                            file_path: self.file_data.borrow(py).file_ids[&g.file].clone_ref(py),
+                            line: g.line,
+                            column: g.column,
+                        };
+                    } else {
+                        FilledSourceLocation {
+                            file_path: "(builtins)".into_py_any(py).unwrap(),
+                            line: 1,
+                            column: 1,
+                        }
+                    }
                 }
             })
             .map_or(py.None(), |g| {

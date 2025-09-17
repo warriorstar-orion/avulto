@@ -39,3 +39,6 @@
 
 /obj/test_object_2/proc/dupe_named_proc()
 	return
+
+/proc/hell_yeah(foo)
+	return foo

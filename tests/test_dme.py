@@ -64,3 +64,8 @@ def test_proc_decls(dme: DME):
 def test_builtin_source_loc(dme: DME):
     db = dme.types["/database"]
     assert str(db.source_loc) == "(builtins):1:1"
+
+
+def test_root_lookups(dme: DME):
+    root = dme.types["/"]
+    assert "hell_yeah" in root.proc_names(declared=True)

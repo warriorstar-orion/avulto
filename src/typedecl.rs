@@ -134,7 +134,8 @@ impl TypeDecl {
         let dme = self.dme.downcast_bound::<Dme>(py).unwrap();
         let objtree = &dme.borrow().objtree;
 
-        let mut type_ref = objtree.find(self.path.rel.as_str());
+        let search_string = if self.path.rel.eq("/") { "" } else { self.path.rel.as_str()};
+        let mut type_ref = objtree.find(search_string);
 
         let mut leaf_declared_names: HashSet<String> = HashSet::new();
         let mut leaf_undeclared_names: HashSet<String> = HashSet::new();
@@ -194,7 +195,8 @@ impl TypeDecl {
         let dme = self.dme.downcast_bound::<Dme>(py).unwrap();
         let objtree = &dme.borrow().objtree;
 
-        let mut type_ref = objtree.find(self.path.rel.as_str());
+        let search_string = if self.path.rel.eq("/") { "" } else { self.path.rel.as_str()};
+        let mut type_ref = objtree.find(search_string);
 
         let mut leaf_declared_names: HashSet<String> = HashSet::new();
         let mut leaf_undeclared_names: HashSet<String> = HashSet::new();
