@@ -1,7 +1,7 @@
 [project]
 name = "avulto"
 requires-python = ">=3.10"
-version = "0.1.19"
+version = "0.1.20"
 authors = [
     {name = "Warriorstar Orion", email = "orion@snowfrost.garden"}
 ]
@@ -21,6 +21,7 @@ archs = "AMD64"
 [tool.maturin]
 features = ["pyo3/extension-module"]
 python-source = "python"
+sdist-include = ["LICENSE", "README.md"]
 
 [dependency-groups]
 dev = [

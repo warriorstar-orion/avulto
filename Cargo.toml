@@ -1,6 +1,6 @@
 [package]
 name = "avulto"
-version = "0.1.19"
+version = "0.1.20"
 edition = "2021"
 authors = ["Warriorstar Orion <orion@snowfrost.garden>"]
 rust-version = "1.79.0"
