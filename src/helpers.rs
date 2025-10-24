@@ -12,8 +12,8 @@ use dmm_tools::dmi::Dir as SDir;
 
 use crate::{dme::prefab::Prefab, dmlist::DmList, path::Path};
 
-#[pyclass(eq, eq_int)]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[pyclass(eq, eq_int, ord)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub enum Dir {
     #[pyo3(name = "NORTH")]
     North = 1,
@@ -86,7 +86,7 @@ pub fn as_dir(c: i32) -> PyResult<Dir> {
 }
 
 pub fn python_value_to_constant(val: &Bound<PyAny>) -> Option<Constant> {
-    return Python::attach(|py| {
+    Python::attach(|py| {
         if val.is_instance_of::<PyBool>() {
             let val = val.extract::<bool>().unwrap();
             Some(Constant::Float(if val { 1.0 } else { 0.0 }))
@@ -121,7 +121,7 @@ pub fn python_value_to_constant(val: &Bound<PyAny>) -> Option<Constant> {
         } else {
             None
         }
-    });
+    })
 }
 
 pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> Py<PyAny> {

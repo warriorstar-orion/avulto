@@ -1,9 +1,9 @@
 [package]
 name = "avulto"
 version = "0.1.22"
-edition = "2021"
+edition = "2024"
 authors = ["Warriorstar Orion <orion@snowfrost.garden>"]
-rust-version = "1.79.0"
+rust-version = "1.86.0"
 description = "A Python API for working with BYOND projects."
 
 [lib]
@@ -19,6 +19,7 @@ dmi = "0.3.4"
 image = "0.25.2"
 regex = "1.10.3"
 lazy_static = "1.4"
+oxipng = "9.1.5"
 
 [dependencies.dreammaker]
 git = "https://github.com/SpaceManiac/SpacemanDMM"

@@ -87,9 +87,9 @@ impl Path {
     }
 
     pub fn from_tree_path(tree_path: &TreePath) -> Self {
-        return Self::make_trusted(
+        Self::make_trusted(
             ("/".to_string() + tree_path.iter().map(|f| f.as_str()).join("/").as_str()).as_str(),
-        );
+        )
     }
 
     pub fn to_tree_path(&self) -> TreePath {

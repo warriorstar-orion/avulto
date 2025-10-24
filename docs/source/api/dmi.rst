@@ -12,6 +12,10 @@
 
       Read the BYOND Icon file from the *filename* referring to a ".dmi" file.
 
+   .. staticmethod:: new(dims: tuple[int, int]) -> DMI
+
+      Create a new DMI expecting states with the given dimensions *dims*.
+
    Once instantiated, the following methods and properties are available:
 
    .. property:: filepath
@@ -42,9 +46,20 @@
 
       Returns the :class:`IconState` with the given *name*.
 
-Individual icon states are represented by :class:`IconState`.
+Individual icon states are represented by :class:`IconState` and can be accessed
+directly via `IconState.states`.
 
 .. class:: IconState
+
+   .. staticmethod:: from_data(data: dict[Dir, list[bytes]], width: int = 32, height: int = 32, name: str = "", delays: list[float] | None = None, loops: int = 0, rewind: bool = False, movement: bool = False)
+
+      Construct an icon state with the given *data* and other arguments.
+
+      *data* must be a dict mapping :class:`Dir`\s to lists of `bytes`
+      containing RGBA image data. The number of images in each list must be the
+      same, and if there is more than one frame in the icon state, *delays* must
+      contain the same number of delay intervals as there are images in the
+      state.
 
    .. property:: name
       :type: str
