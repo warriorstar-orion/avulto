@@ -3,7 +3,7 @@ use pyo3::{
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyInt, PyString, PyStringMethods},
-    Bound, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult, Python,
+    Bound, Py, PyAny, PyRef, PyRefMut, PyResult, Python,
 };
 
 use crate::{
@@ -16,12 +16,12 @@ pub struct DmList {
     // Not PyExprs because we also want to use these for DMM constants
     // and constant value decls, without all the redirection of AST
     // nodes
-    pub keys: Vec<PyObject>,
-    pub vals: Vec<PyObject>,
+    pub keys: Vec<Py<PyAny>>,
+    pub vals: Vec<Py<PyAny>>,
 }
 
 impl DmList {
-    pub fn push(mut self, key: PyObject, value: PyObject) {
+    pub fn push(mut self, key: Py<PyAny>, value: Py<PyAny>) {
         self.keys.push(key);
         self.vals.push(value);
     }
@@ -45,7 +45,7 @@ impl DmListIter {
 
 #[pyclass]
 struct DmListKeyIter {
-    list: Vec<PyObject>,
+    list: Vec<Py<PyAny>>,
     index: usize,
 }
 
@@ -55,8 +55,8 @@ impl DmListKeyIter {
         slf
     }
 
-    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<PyObject> {
-        return Python::with_gil(|py| {
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<Py<PyAny>> {
+        return Python::attach(|py| {
             let index = slf.index;
             slf.index += 1;
             slf.list.get(index).map(|user| user.clone_ref(py))
@@ -74,8 +74,8 @@ impl DmList {
         Py::new(slf.py(), iter)
     }
 
-    fn __getitem__(&self, item: &Bound<PyAny>, py: Python<'_>) -> PyResult<PyObject> {
-        if let Ok(i) = item.downcast::<PyInt>() {
+    fn __getitem__(&self, item: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        if let Ok(i) = item.cast::<PyInt>() {
             let idx = i.extract::<usize>().unwrap();
             if self.keys.len() <= idx {
                 return Err(pyo3::exceptions::PyIndexError::new_err(
@@ -86,9 +86,9 @@ impl DmList {
             return Ok(key.clone_ref(py));
         }
 
-        if let Ok(pystr) = item.downcast::<PyString>() {
+        if let Ok(pystr) = item.cast::<PyString>() {
             for (idx, key) in self.keys.iter().enumerate() {
-                if let Ok(key_expr) = key.downcast_bound::<Expression>(py) {
+                if let Ok(key_expr) = key.cast_bound::<Expression>(py) {
                     if let Expression::Constant {
                         constant: crate::dme::expression::Constant::String(s),
                         ..
@@ -99,7 +99,7 @@ impl DmList {
                         }
                     };
                 } else if key.bind(py).is_instance_of::<PyString>() {
-                    let key_str = key.downcast_bound::<PyString>(py)?;
+                    let key_str = key.cast_bound::<PyString>(py)?;
                     if pystr.to_str().unwrap().eq(key_str) {
                         return Ok(self.vals.get(idx).unwrap().clone_ref(py));
                     }
@@ -107,7 +107,7 @@ impl DmList {
             }
         } else if let Ok(pypth) = item.extract::<path::Path>() {
             for (idx, key) in self.keys.iter().enumerate() {
-                if let Ok(key_expr) = key.downcast_bound::<Expression>(py) {
+                if let Ok(key_expr) = key.cast_bound::<Expression>(py) {
                     if let Expression::Prefab { prefab, .. } = key_expr.get() {
                         if pypth.eq(&prefab.borrow(py).path) {
                             return Ok(self.vals.get(idx).unwrap().clone_ref(py));
@@ -117,22 +117,22 @@ impl DmList {
                     if pypth.eq(&keypth) {
                         return Ok(self.vals.get(idx).unwrap().clone_ref(py));
                     }
-                } else if let Ok(key_prefab) = key.downcast_bound::<Prefab>(py) {
+                } else if let Ok(key_prefab) = key.cast_bound::<Prefab>(py) {
                     if pypth.eq(&key_prefab.borrow().path) {
                         return Ok(self.vals.get(idx).unwrap().clone_ref(py));
                     }
                 }
             }
-        } else if let Ok(item_prefab) = item.downcast::<Prefab>() {
+        } else if let Ok(item_prefab) = item.cast::<Prefab>() {
             for (idx, key) in self.keys.iter().enumerate() {
-                if let Ok(key_prefab) = key.downcast_bound::<Prefab>(py) {
+                if let Ok(key_prefab) = key.cast_bound::<Prefab>(py) {
                     if item_prefab
                         .borrow()
                         .__eq__(&key_prefab.try_borrow().unwrap(), py)
                     {
                         return Ok(self.vals.get(idx).unwrap().clone_ref(py));
                     }
-                } else if let Ok(key_expr) = key.downcast_bound::<Expression>(py) {
+                } else if let Ok(key_expr) = key.cast_bound::<Expression>(py) {
                     if let Expression::Prefab { prefab, .. } = key_expr.get() {
                         if item_prefab
                             .borrow()
@@ -143,15 +143,15 @@ impl DmList {
                     }
                 }
             }
-        } else if let Ok(item_dmlist) = item.downcast::<DmList>() {
+        } else if let Ok(item_dmlist) = item.cast::<DmList>() {
             for (idx, key) in self.keys.iter().enumerate() {
-                if let Ok(key_list) = key.downcast_bound::<DmList>(py) {
+                if let Ok(key_list) = key.cast_bound::<DmList>(py) {
                     if key_list.eq(item_dmlist).unwrap() {
                         return Ok(self.vals.get(idx).unwrap().clone_ref(py));
                     }
-                } else if let Ok(key_expr) = key.downcast_bound::<Expression>(py) {
+                } else if let Ok(key_expr) = key.cast_bound::<Expression>(py) {
                     if let Expression::List { list, .. } = key_expr.get() {
-                        if item.as_ref().eq(list.clone_ref(py)).unwrap() {
+                        if item_dmlist.eq(list.clone_ref(py)).unwrap() {
                             return Ok(self.vals.get(idx).unwrap().clone_ref(py));
                         }
                     }

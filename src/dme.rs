@@ -9,7 +9,11 @@ use dreammaker::{
 };
 use nodes::{Node, OriginalSourceLocation};
 use pyo3::{
-    create_exception, exceptions::{PyException, PyOSError, PyRuntimeError, PyValueError}, pyclass, pymethods, types::{PyAnyMethods, PyList, PyString, PyStringMethods}, Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyObject, PyRef, PyResult, Python
+    create_exception,
+    exceptions::{PyException, PyOSError, PyRuntimeError, PyValueError},
+    pyclass, pymethods,
+    types::{PyAnyMethods, PyList, PyString, PyStringMethods},
+    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyRef, PyResult, Python,
 };
 
 use crate::{
@@ -42,7 +46,7 @@ impl DmeTypeAccessor {
         let dme = self.dme.bind(py).borrow();
         let objpath = if let Ok(patht) = path.extract::<path::Path>() {
             patht.rel
-        } else if let Ok(pystr) = path.downcast::<PyString>() {
+        } else if let Ok(pystr) = path.cast::<PyString>() {
             pystr.to_string()
         } else {
             return Err(PyValueError::new_err(format!("invalid path {:?}", path)));
@@ -57,7 +61,12 @@ impl DmeTypeAccessor {
             Some(type_ref) => {
                 let type_ref_index = type_ref.index();
                 let osl = Some(OriginalSourceLocation::from_location(&type_ref.location));
-                let source_loc = Some(dme.populate_source_loc(&osl, py).into_pyobject(py).unwrap().unbind());
+                let source_loc = Some(
+                    dme.populate_source_loc(&osl, py)
+                        .into_pyobject(py)
+                        .unwrap()
+                        .unbind(),
+                );
                 let dme = dme
                     .into_pyobject(py)
                     .expect("passing dme")
@@ -201,9 +210,7 @@ impl Dme {
                     }
                 }
             })
-            .map_or(py.None(), |g| {
-                g.into_py_any(py).unwrap()
-            })
+            .map_or(py.None(), |g| g.into_py_any(py).unwrap())
     }
 
     pub fn walk_stmt(
@@ -259,7 +266,7 @@ impl Dme {
         node_index: NodeIndex,
         parents: bool,
         py: Python<'_>,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         let objtree = &self.objtree;
         let type_def = &objtree[node_index];
 
@@ -273,14 +280,24 @@ impl Dme {
                 .constant
                 .as_ref()
                 .map(helpers::constant_to_python_value);
-            let mut source_loc: Option<PyObject> = None;
+            let mut source_loc: Option<Py<PyAny>> = None;
             if !var.value.location.is_builtins() {
                 let osl = Some(OriginalSourceLocation::from_location(&var.value.location));
-                source_loc = Some(self.populate_source_loc(&osl, py).into_pyobject(py).unwrap().unbind());
+                source_loc = Some(
+                    self.populate_source_loc(&osl, py)
+                        .into_pyobject(py)
+                        .unwrap()
+                        .unbind(),
+                );
             } else if let Some(decl) = &var.declaration {
                 if !decl.location.is_builtins() {
                     let osl = Some(OriginalSourceLocation::from_location(&decl.location));
-                    source_loc = Some(self.populate_source_loc(&osl, py).into_pyobject(py).unwrap().unbind());
+                    source_loc = Some(
+                        self.populate_source_loc(&osl, py)
+                            .into_pyobject(py)
+                            .unwrap()
+                            .unbind(),
+                    );
                 }
             }
             return VarDecl {
@@ -313,7 +330,7 @@ impl Dme {
     fn from_file(filename: &Bound<PyAny>, parse_procs: bool, py: Python<'_>) -> PyResult<Dme> {
         let path = if let Ok(path) = filename.extract::<std::path::PathBuf>() {
             path
-        } else if let Ok(pystr) = filename.downcast::<PyString>() {
+        } else if let Ok(pystr) = filename.cast::<PyString>() {
             std::path::Path::new(&pystr.to_string()).to_path_buf()
         } else {
             return Err(PyValueError::new_err(format!(
@@ -377,7 +394,7 @@ impl Dme {
     ) -> PyResult<Py<TypeDecl>> {
         let objpath = if let Ok(patht) = path.extract::<path::Path>() {
             patht.rel
-        } else if let Ok(pystr) = path.downcast::<PyString>() {
+        } else if let Ok(pystr) = path.cast::<PyString>() {
             pystr.to_string()
         } else {
             return Err(PyValueError::new_err(format!("invalid path {:?}", path)));
@@ -424,7 +441,7 @@ impl Dme {
 
         let prefix_path = if let Ok(path) = prefix.extract::<path::Path>() {
             path
-        } else if let Ok(pystr) = prefix.downcast::<PyString>() {
+        } else if let Ok(pystr) = prefix.cast::<PyString>() {
             match Path::make_untrusted(pystr.to_str()?) {
                 Ok(p) => p,
                 Err(e) => {
@@ -444,7 +461,7 @@ impl Dme {
 
         let prefix_path = if let Ok(path) = prefix.extract::<path::Path>() {
             path
-        } else if let Ok(pystr) = prefix.downcast::<PyString>() {
+        } else if let Ok(pystr) = prefix.cast::<PyString>() {
             match Path::make_untrusted(pystr.to_str()?) {
                 Ok(p) => p,
                 Err(e) => {

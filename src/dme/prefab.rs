@@ -48,14 +48,14 @@ impl Prefab {
         }
     }
     pub fn vars_to_string(&self, py: Python<'_>) -> String {
-        if let Ok(vardict) = self.vars.downcast_bound::<PyDict>(py) {
+        if let Ok(vardict) = self.vars.cast_bound::<PyDict>(py) {
             if vardict.is_empty() {
                 return "".to_string();
             }
             let mut out = String::new();
 
             for k in vardict.items() {
-                if let Ok(kl) = k.downcast::<PyList>() {
+                if let Ok(kl) = k.cast::<PyList>() {
                     out.push_str(
                         format!("{} = {}", kl.get_item(0).unwrap(), kl.get_item(1).unwrap())
                             .as_str(),
@@ -93,8 +93,8 @@ impl Prefab {
             return false;
         }
 
-        if let Ok(vardict) = self.vars.downcast_bound::<PyDict>(py) {
-            if let Ok(othervardict) = other.vars.downcast_bound::<PyDict>(py) {
+        if let Ok(vardict) = self.vars.cast_bound::<PyDict>(py) {
+            if let Ok(othervardict) = other.vars.cast_bound::<PyDict>(py) {
                 if !vardict.eq(othervardict).unwrap() {
                     return false;
                 }
@@ -107,7 +107,7 @@ impl Prefab {
     pub fn __hash__(&self, py: Python<'_>) -> PyResult<u64> {
         let mut s = DefaultHasher::new();
         self.path.hash(&mut s);
-        if let Ok(vardict) = self.vars.downcast_bound::<PyDict>(py) {
+        if let Ok(vardict) = self.vars.cast_bound::<PyDict>(py) {
             vardict.hash()?.hash(&mut s);
         }
 

@@ -50,7 +50,7 @@ fn avulto(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
 
     m.add_wrapped(wrap_pymodule!(dme::nodes::ast))?;
     let sys = PyModule::import(_py, "sys")?;
-    let sys_modules: Bound<'_, PyDict> = sys.getattr("modules")?.downcast_into()?;
+    let sys_modules: Bound<'_, PyDict> = sys.getattr("modules")?.cast_into()?;
     sys_modules.set_item("avulto.ast", m.getattr("ast")?)?;
 
     let err_submodule = PyModule::new(_py, "exceptions")?;

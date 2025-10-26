@@ -11,7 +11,7 @@ use itertools::iproduct;
 use pyo3::exceptions::{PyOSError, PyRuntimeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyList, PyString, PyTuple};
 use pyo3::{
-    pyclass, pymethods, Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult, Python
+    pyclass, pymethods, Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyRef, PyRefMut, PyResult, Python
 };
 
 use crate::tile::Tile;
@@ -30,13 +30,13 @@ pub struct Coord3 {
 #[pymethods]
 impl Coord3 {
     fn __eq__(&self, other: &Bound<PyAny>) -> bool {
-        if let Ok(tuple) = other.downcast::<PyTuple>() {
+        if let Ok(tuple) = other.cast::<PyTuple>() {
             if tuple.len().unwrap() != 3 {
                 return false;
             } else if let Ok((x, y, z)) = tuple.extract::<(i32, i32, i32)>() {
                 return self.x == x && self.y == y && self.z == z;
             }
-        } else if let Ok(list) = other.downcast::<PyList>() {
+        } else if let Ok(list) = other.cast::<PyList>() {
             if list.len().unwrap() != 3 {
                 return false;
             } else if let Ok((x, y, z)) = list.extract::<(i32, i32, i32)>() {
@@ -93,7 +93,7 @@ impl KeyIterator {
         slf
     }
 
-    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> Option<PyObject> {
+    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> Option<Py<PyAny>> {
         slf.iter.next().map(|c| {
             Tile {
                 dmm: slf.dmm.bind(py).into_py_any(py).unwrap(),
@@ -110,7 +110,7 @@ impl CoordIterator {
     fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
         slf
     }
-    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> Option<PyObject> {
+    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> Option<Py<PyAny>> {
         slf.iter.next().map(|c| c.into_py_any(py).unwrap())
     }
 }
@@ -177,7 +177,7 @@ impl Dmm {
         let pathlib = py.import(pyo3::intern!(py, "pathlib"))?;
         let path = if let Ok(pathbuf) = filename.extract::<std::path::PathBuf>() {
             pathbuf
-        } else if let Ok(pystr) = filename.downcast::<PyString>() {
+        } else if let Ok(pystr) = filename.cast::<PyString>() {
             PathBuf::from(&pystr.to_string())
         } else {
             return Err(PyRuntimeError::new_err(format!(
@@ -209,7 +209,7 @@ impl Dmm {
             if let Ok(()) = self.write_to_file(&path) {
                 return Ok(());
             }
-        } else if let Ok(pystr) = filename.downcast::<PyString>() {
+        } else if let Ok(pystr) = filename.cast::<PyString>() {
             if let Ok(()) = self.write_to_file(Path::new(&pystr.to_string())) {
                 return Ok(());
             }
@@ -222,7 +222,7 @@ impl Dmm {
     }
 
     fn tiledef(self_: PyRef<'_, Self>, x: i32, y: i32, z: i32) -> Tile {
-        Python::with_gil(|py| Tile {
+        Python::attach(|py| Tile {
             dmm: self_.into_pyobject(py).unwrap().into_any().unbind(),
             addr: Address::Coords(dmm_tools::dmm::Coord3 { x, y, z }),
         })

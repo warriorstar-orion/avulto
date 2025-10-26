@@ -8,7 +8,7 @@ use pyo3::pyclass::CompareOp;
 use pyo3::types::{PyAnyMethods, PyBytes, PyInt, PyString, PyTuple};
 use pyo3::{create_exception, Bound, BoundObject, IntoPyObject, IntoPyObjectExt};
 use pyo3::{
-    pyclass, pymethods, types::PyList, Py, PyAny, PyObject, PyRef, PyRefMut, PyResult,
+    pyclass, pymethods, types::PyList, Py, PyAny, PyRef, PyRefMut, PyResult,
     Python,
 };
 
@@ -86,20 +86,20 @@ impl Rect {
 impl IconState {
     #[getter]
     pub fn name(&self, py: Python<'_>) -> String {
-        let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
+        let dmi: &Bound<Dmi> = self.dmi.cast_bound(py).unwrap();
         dmi.borrow().icon.states[self.idx].name.clone()
     }
 
     #[getter]
     pub fn movement(&self, py: Python<'_>) -> bool {
-        let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
+        let dmi: &Bound<Dmi> = self.dmi.cast_bound(py).unwrap();
         dmi.borrow().icon.states[self.idx].movement
     }
 
     #[getter]
     pub fn delays(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
         let mut out: Vec<f32> = Vec::new();
-        let dmi = self.dmi.downcast_bound::<Dmi>(py).unwrap();
+        let dmi = self.dmi.cast_bound::<Dmi>(py).unwrap();
 
         let binding = dmi.borrow();
         let state = binding.icon.states.get(self.idx).unwrap();
@@ -112,7 +112,7 @@ impl IconState {
 
     #[getter]
     pub fn dirs(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
-        let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
+        let dmi: &Bound<Dmi> = self.dmi.cast_bound(py).unwrap();
         let dirs = dmi.borrow().icon.states.get(self.idx).unwrap().dirs;
         Ok(PyList::new(
             py,
@@ -139,7 +139,7 @@ impl IconState {
 
     #[getter]
     pub fn frames(&self, py: Python<'_>) -> u32 {
-        let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
+        let dmi: &Bound<Dmi> = self.dmi.cast_bound(py).unwrap();
         let binding = dmi.borrow();
         let state = binding.icon.states.get(self.idx).unwrap();
         state.frames
@@ -147,7 +147,7 @@ impl IconState {
 
     #[getter]
     pub fn rewind(&self, py: Python<'_>) -> bool {
-        let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
+        let dmi: &Bound<Dmi> = self.dmi.cast_bound(py).unwrap();
         dmi.borrow().icon.states[self.idx].rewind
     }
 
@@ -157,7 +157,7 @@ impl IconState {
         dir: &Bound<PyAny>,
         py: Python<'_>,
     ) -> PyResult<Py<PyBytes>> {
-        let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
+        let dmi: &Bound<Dmi> = self.dmi.cast_bound(py).unwrap();
         let binding = dmi.borrow();
         let state = binding.icon.states.get(self.idx).unwrap();
         let direction_index: dmi::dirs::Dirs;
@@ -173,7 +173,7 @@ impl IconState {
                 Dir::Southeast => dmi::dirs::Dirs::SOUTHEAST,
                 Dir::Southwest => dmi::dirs::Dirs::SOUTHWEST,
             }
-        } else if let Ok(dirint) = dir.downcast::<PyInt>() {
+        } else if let Ok(dirint) = dir.cast::<PyInt>() {
             direction_index = match dirint.extract::<u8>().unwrap() {
                 1 => dmi::dirs::Dirs::NORTH,
                 2 => dmi::dirs::Dirs::SOUTH,
@@ -201,7 +201,7 @@ impl IconState {
     }
 
     fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
-        let dmi: &Bound<Dmi> = self.dmi.downcast_bound(py).unwrap();
+        let dmi: &Bound<Dmi> = self.dmi.cast_bound(py).unwrap();
         let binding = dmi.borrow();
         let state = binding.icon.states.get(self.idx).unwrap();
 
@@ -220,7 +220,7 @@ impl Dmi {
 
         let path = if let Ok(pathbuf) = filename.extract::<std::path::PathBuf>() {
             pathbuf
-        } else if let Ok(pystr) = filename.downcast::<PyString>() {
+        } else if let Ok(pystr) = filename.cast::<PyString>() {
             PathBuf::from(&pystr.to_string())
         } else {
             return Err(PyRuntimeError::new_err(format!(
@@ -338,7 +338,7 @@ impl Dmi {
 
 #[pyclass(module = "avulto")]
 pub struct StateIter {
-    inner: std::vec::IntoIter<PyObject>,
+    inner: std::vec::IntoIter<Py<PyAny>>,
 }
 
 #[pymethods]
@@ -349,7 +349,7 @@ impl StateIter {
 
     fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<Py<PyAny>> {
         if let Some(n) = slf.inner.next() {
-            let cell = n.downcast_bound::<IconState>(slf.py()).unwrap();
+            let cell = n.cast_bound::<IconState>(slf.py()).unwrap();
             let state = cell.borrow_mut();
             return Some(state.into_py_any(slf.py()).unwrap());
         }

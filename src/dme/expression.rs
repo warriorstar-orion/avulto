@@ -1,5 +1,5 @@
 use dreammaker::Location;
-use pyo3::{pyclass, pymethods, IntoPyObject, Py, PyObject, PyResult, Python};
+use pyo3::{pyclass, pymethods, IntoPyObject, Py, PyAny, PyResult, Python};
 
 use crate::{dmlist::DmList, path::Path};
 
@@ -24,7 +24,7 @@ pub enum Constant {
 #[pymethods]
 impl Constant {
     #[getter]
-    pub fn get_val(&self, py: Python<'_>) -> PyResult<PyObject> {
+    pub fn get_val(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         Ok(match self {
             Constant::Null() => py.None(),
             Constant::Int(i) => i.into_pyobject(py)?.into_any().unbind(),

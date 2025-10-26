@@ -20,7 +20,7 @@ impl Node {
                     walker.call_method1(
                         "visit_Return",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -35,7 +35,7 @@ impl Node {
                     walker.call_method1(
                         "visit_Throw",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -52,7 +52,7 @@ impl Node {
                     walker.call_method1(
                         "visit_While",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -73,7 +73,7 @@ impl Node {
                     walker.call_method1(
                         "visit_DoWhile",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -93,7 +93,7 @@ impl Node {
                     walker.call_method1(
                         "visit_If",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -117,7 +117,7 @@ impl Node {
                     walker.call_method1(
                         "visit_ForInfinite",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -139,7 +139,7 @@ impl Node {
                     walker.call_method1(
                         "visit_ForLoop",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -169,7 +169,7 @@ impl Node {
                     walker.call_method1(
                         "visit_Var",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -186,7 +186,7 @@ impl Node {
                     walker.call_method1(
                         "visit_Crash",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -207,7 +207,7 @@ impl Node {
                     walker.call_method1(
                         "visit_ForList",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -243,7 +243,7 @@ impl Node {
                     walker.call_method1(
                         "visit_ForRange",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -269,7 +269,7 @@ impl Node {
                     walker.call_method1(
                         "visit_Del",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -282,7 +282,7 @@ impl Node {
                     walker.call_method1(
                         "visit_Break",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -300,7 +300,7 @@ impl Node {
                     walker.call_method1(
                         "visit_Setting",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -319,7 +319,7 @@ impl Node {
                     walker.call_method1(
                         "visit_Setting",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -339,7 +339,7 @@ impl Node {
                     walker.call_method1(
                         "visit_Continue",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -352,7 +352,7 @@ impl Node {
                     walker.call_method1(
                         "visit_Goto",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -369,7 +369,7 @@ impl Node {
                     walker.call_method1(
                         "visit_Label",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -390,7 +390,7 @@ impl Node {
                     walker.call_method1(
                         "visit_TryCatch",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;
@@ -418,7 +418,7 @@ impl Node {
                     walker.call_method1(
                         "visit_Switch",
                         (
-                            self_.as_ref(),
+                            self_,
                             dme.borrow().populate_source_loc(source_loc, py),
                         ),
                     )?;

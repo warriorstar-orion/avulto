@@ -5,7 +5,7 @@ use pyo3::{
     exceptions::PyRuntimeError,
     pyclass, pyfunction, pymethods,
     types::{PyAnyMethods, PyBool, PyDict, PyFloat, PyInt, PyList, PyString},
-    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyObject, PyResult, Python,
+    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyResult, Python,
 };
 
 use dmm_tools::dmi::Dir as SDir;
@@ -86,21 +86,21 @@ pub fn as_dir(c: i32) -> PyResult<Dir> {
 }
 
 pub fn python_value_to_constant(val: &Bound<PyAny>) -> Option<Constant> {
-    return Python::with_gil(|py| {
+    return Python::attach(|py| {
         if val.is_instance_of::<PyBool>() {
             let val = val.extract::<bool>().unwrap();
             Some(Constant::Float(if val { 1.0 } else { 0.0 }))
-        } else if let Ok(int) = val.downcast::<PyInt>() {
+        } else if let Ok(int) = val.cast::<PyInt>() {
             Some(Constant::Float(
                 int.extract::<f32>().expect("could not cast float"),
             ))
-        } else if let Ok(float) = val.downcast::<PyFloat>() {
+        } else if let Ok(float) = val.cast::<PyFloat>() {
             Some(Constant::Float(
                 float.extract::<f32>().expect("could not cast float"),
             ))
-        } else if let Ok(pystr) = val.downcast::<PyString>() {
+        } else if let Ok(pystr) = val.cast::<PyString>() {
             Some(Constant::String(pystr.to_string().into()))
-        } else if let Ok(pydmlist) = val.downcast::<DmList>() {
+        } else if let Ok(pydmlist) = val.cast::<DmList>() {
             let mut r: Vec<(Constant, Option<Constant>)> = vec![];
             let borrowed = pydmlist.borrow();
             for (idx, key) in borrowed.keys.iter().enumerate() {
@@ -111,7 +111,7 @@ pub fn python_value_to_constant(val: &Bound<PyAny>) -> Option<Constant> {
             }
             let boxed_slice = r.into_boxed_slice();
             Some(Constant::List(boxed_slice))
-        } else if let Ok(pypth) = val.downcast::<Path>() {
+        } else if let Ok(pypth) = val.cast::<Path>() {
             Some(Constant::Prefab(Box::new(Pop {
                 path: pypth.borrow().to_tree_path(),
                 vars: Default::default(),
@@ -124,8 +124,8 @@ pub fn python_value_to_constant(val: &Bound<PyAny>) -> Option<Constant> {
     });
 }
 
-pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> PyObject {
-    Python::with_gil(|py| match c {
+pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> Py<PyAny> {
+    Python::attach(|py| match c {
         Constant::Null(_) => py.None(),
         Constant::New { .. } => py.None(),
         Constant::List(l) => {

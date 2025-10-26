@@ -224,7 +224,7 @@ impl Path {
     fn child_of(&self, other: &Bound<PyAny>, strict: bool) -> PyResult<bool> {
         if let Ok(rhs) = other.extract::<Self>() {
             return Ok(self.internal_child_of_string(&rhs.abs, strict));
-        } else if let Ok(rhs) = other.downcast::<PyString>() {
+        } else if let Ok(rhs) = other.cast::<PyString>() {
             return Ok(self.internal_child_of_string(&rhs.to_cow().unwrap().to_string(), strict));
         }
 
@@ -235,7 +235,7 @@ impl Path {
     fn parent_of(&self, other: &Bound<PyAny>, strict: bool) -> PyResult<bool> {
         if let Ok(rhs) = other.extract::<Self>() {
             return Ok(self.internal_parent_of_string(&rhs.abs, strict));
-        } else if let Ok(rhs) = other.downcast::<PyString>() {
+        } else if let Ok(rhs) = other.cast::<PyString>() {
             return Ok(self.internal_parent_of_string(&rhs.to_cow().unwrap().to_string(), strict));
         }
 
@@ -308,7 +308,7 @@ impl Path {
                 CompareOp::Le => Ok(self.abs <= rhs.abs),
                 CompareOp::Ge => Ok(self.abs >= rhs.abs),
             };
-        } else if let Ok(rhs) = other.downcast::<PyString>() {
+        } else if let Ok(rhs) = other.cast::<PyString>() {
             return match op {
                 CompareOp::Eq => Ok(self.abs == to_absolute_path(rhs.to_str().unwrap())),
                 CompareOp::Ne => Ok(self.abs != to_absolute_path(rhs.to_str().unwrap())),
@@ -326,7 +326,7 @@ impl Path {
         if let Ok(rhs) = other.extract::<Self>() {
             let new_path = self.abs.clone() + &rhs.rel;
             return Path::new(new_path.as_str());
-        } else if let Ok(rhs) = other.downcast::<PyString>() {
+        } else if let Ok(rhs) = other.cast::<PyString>() {
             let new_path = if self.get_is_root() {
                 String::from("")
             } else {

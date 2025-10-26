@@ -5,7 +5,7 @@ use dreammaker::{FileId, Location};
 use pyo3::{
     pyclass, pymethods, pymodule,
     types::{PyAnyMethods, PyList, PyModule, PyModuleMethods},
-    Bound, IntoPyObject, Py, PyAny, PyObject, PyResult, Python,
+    Bound, IntoPyObject, Py, PyAny, PyResult, Python,
 };
 
 use crate::{
@@ -127,7 +127,7 @@ pub struct OriginalSourceLocation {
 
 impl OriginalSourceLocation {
     pub fn from_location(location: &Location) -> Py<Self> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             OriginalSourceLocation {
                 file: location.file,
                 line: location.line,
@@ -267,7 +267,7 @@ pub fn visit_constant(constant: &Constant, walker: &Bound<PyAny>) -> PyResult<()
 #[pymethods]
 impl Node {
     #[getter]
-    fn get_kind(&self, py: Python<'_>) -> PyResult<PyObject> {
+    fn get_kind(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         match self {
             Node::Unknown() => Ok(Py::new(py, NodeKind::Unknown).unwrap().into_any()),
             Node::Expression { expr, .. } => expr.call_method0(py, "kind"),
@@ -360,14 +360,14 @@ impl SwitchCase {
         py: Python<'_>,
     ) -> PyResult<()> {
         for f in self.exact.bind(py).into_iter() {
-            Expression::walk(&f.downcast_into::<Expression>().unwrap(), dme, walker, py)?;
+            Expression::walk(&f.cast_into::<Expression>().unwrap(), dme, walker, py)?;
         }
         for f in self.range.bind(py).into_iter() {
-            if let Ok(list) = f.downcast::<PyList>() {
+            if let Ok(list) = f.cast::<PyList>() {
                 list.try_iter()?.for_each(|x| {
                     if let Ok(range) = x {
                         let _ = Expression::walk(
-                            &range.into_any().downcast_into::<Expression>().unwrap(),
+                            &range.into_any().cast_into::<Expression>().unwrap(),
                             dme,
                             walker,
                             py,

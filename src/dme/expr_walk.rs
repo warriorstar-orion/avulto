@@ -132,12 +132,12 @@ impl Expression {
                     let dmlist = list.borrow(py);
                     for i in 0..dmlist.keys.len() {
                         if let Some(k) = dmlist.keys.get(i) {
-                            if let Ok(k_expr) = k.downcast_bound::<Expression>(py) {
+                            if let Ok(k_expr) = k.cast_bound::<Expression>(py) {
                                 Expression::walk(k_expr, dme, walker, py)?;
                             }
                         }
                         if let Some(v) = dmlist.vals.get(i) {
-                            if let Ok(v_expr) = v.downcast_bound::<Expression>(py) {
+                            if let Ok(v_expr) = v.cast_bound::<Expression>(py) {
                                 Expression::walk(v_expr, dme, walker, py)?;
                             }
                         }

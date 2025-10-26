@@ -23,9 +23,9 @@ pub struct VarDecl {
     #[pyo3(get)]
     pub declared_type: Option<Path>,
     #[pyo3(get)]
-    pub const_val: Option<PyObject>,
+    pub const_val: Option<Py<PyAny>>,
     #[pyo3(get)]
-    pub source_loc: Option<PyObject>,
+    pub source_loc: Option<Py<PyAny>>,
 }
 
 #[pymethods]
@@ -54,7 +54,7 @@ pub struct TypeDecl {
     #[pyo3(get)]
     pub path: Path,
     #[pyo3(get)]
-    pub source_loc: Option<PyObject>,
+    pub source_loc: Option<Py<PyAny>>,
 }
 
 #[pyclass(module = "avulto")]
@@ -92,7 +92,7 @@ pub struct ProcDecl {
     type_index: NodeIndex,
     proc_index: usize,
     #[pyo3(get)]
-    source_loc: PyObject,
+    source_loc: Py<PyAny>,
 }
 
 #[pymethods]
@@ -106,7 +106,7 @@ impl ProcDecl {
     }
 
     pub fn walk(&self, walker: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
-        let dme = self.dme.downcast_bound::<Dme>(py).unwrap();
+        let dme = self.dme.cast_bound::<Dme>(py).unwrap();
         Dme::walk_proc(
             &dme.borrow(),
             self.type_index,
@@ -134,7 +134,7 @@ impl TypeDecl {
             ));
         }
 
-        let dme = self.dme.downcast_bound::<Dme>(py).unwrap();
+        let dme = self.dme.cast_bound::<Dme>(py).unwrap();
         let objtree = &dme.borrow().objtree;
 
         let search_string = if self.path.rel.eq("/") { "" } else { self.path.rel.as_str()};
@@ -176,8 +176,8 @@ impl TypeDecl {
     }
 
     #[pyo3(signature = (name, parents=true))]
-    pub fn var_decl(&self, name: String, parents: bool, py: Python<'_>) -> PyResult<PyObject> {
-        let bound = self.dme.downcast_bound::<Dme>(py).unwrap();
+    pub fn var_decl(&self, name: String, parents: bool, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let bound = self.dme.cast_bound::<Dme>(py).unwrap();
         let dme = bound.borrow();
         dme.get_var_decl(name, self.node_index, parents, py)
     }
@@ -195,7 +195,7 @@ impl TypeDecl {
                 "at least one of declared, modified, or unmodified must be True",
             ));
         }
-        let dme = self.dme.downcast_bound::<Dme>(py).unwrap();
+        let dme = self.dme.cast_bound::<Dme>(py).unwrap();
         let objtree = &dme.borrow().objtree;
 
         let search_string = if self.path.rel.eq("/") { "" } else { self.path.rel.as_str()};
@@ -237,8 +237,8 @@ impl TypeDecl {
     }
 
     #[pyo3(signature = (name=None))]
-    pub fn proc_decls(&self, name: Option<String>, py: Python<'_>) -> PyResult<PyObject> {
-        let dme = self.dme.downcast_bound::<Dme>(py).unwrap();
+    pub fn proc_decls(&self, name: Option<String>, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let dme = self.dme.cast_bound::<Dme>(py).unwrap();
         let objtree = &dme.borrow().objtree;
         let mut out: Vec<ProcDecl> = Vec::new();
 
