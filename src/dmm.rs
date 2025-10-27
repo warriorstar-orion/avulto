@@ -78,7 +78,7 @@ type Itertools3DCartesianProductIter =
 
 #[pyclass(module = "avulto")]
 pub struct CoordIterator {
-    iter: itertools::ConsTuples<Itertools3DCartesianProductIter, ((i32, i32), i32)>,
+    iter: itertools::ConsTuples<Itertools3DCartesianProductIter>,
 }
 
 #[pyclass(module = "avulto")]

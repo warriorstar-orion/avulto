@@ -516,6 +516,40 @@ impl Node {
             .into_pyobject(py)
             .expect("parsing crash")
             .into(),
+            Statement::ForKeyValue(stmt) => {
+                let mut var_type_path: Option<Path> = None;
+                if let Some(var_type) = &stmt.var_type {
+                    if !var_type.type_path.is_empty() {
+                        var_type_path = Some(Path::from_tree_path(&var_type.type_path));
+                    }
+                }
+                Self::ForKeyValue {
+                    key: Expression::ident(stmt.key.to_string(), None, py),
+                    value: Expression::ident(stmt.value.to_string(), None, py),
+                    in_list: stmt.in_list.as_ref().map(|expr| {
+                        Expression::parse(py, expr)
+                            .into_pyobject(py)
+                            .expect("parsing for list in-list")
+                            .into()
+                    }),
+                    block: stmt
+                        .block
+                        .iter()
+                        .map(|stmt| {
+                            Node::from_statement(py, &stmt.elem, Some(stmt.location))
+                                .into_pyobject(py)
+                                .expect("parsing label block")
+                                .into()
+                        })
+                        .collect(),
+                    var_type: var_type_path,
+                    source_loc: loc
+                        .map(|l| Py::new(py, OriginalSourceLocation::from_location(&l)).unwrap()),
+                }
+                .into_pyobject(py)
+                .expect("parsing forkeyvalue")
+                .into()
+            }
         }
     }
 }

@@ -433,6 +433,34 @@ impl Node {
                         }
                     }
                 }
+            },
+            Node::ForKeyValue { var_type, key, value, in_list, block, source_loc } => {
+                if walker.hasattr("visit_ForKeyValue").unwrap() {
+                    walker.call_method1("visit_ForKeyValue", (self_, dme.borrow().populate_source_loc(source_loc, py)))?;
+                } else {
+                    let keydecl = Node::Var {
+                        name: key.clone_ref(py),
+                        value: None,
+                        declared_type: var_type.clone(),
+                        source_loc: None,
+                    };
+                    let valuedecl = Node::Var {
+                        name: value.clone_ref(py),
+                        value: None,
+                        declared_type: None,
+                        source_loc: None,
+                    };
+                    // I guess we pretend that a variable declaration in a for loop is a var statement of sorts
+                    Node::walk(&keydecl.into_pyobject(py)?, dme, walker, py)?;
+                    Node::walk(&valuedecl.into_pyobject(py)?, dme, walker, py)?;
+
+                    if let Some(in_list_expr) = in_list {
+                        Expression::walk(in_list_expr.bind(py), dme, walker, py)?;
+                        for stmt in block.iter() {
+                            Node::walk(stmt.bind(py), dme, walker, py)?;
+                        }
+                    }
+                }
             }
         }
 

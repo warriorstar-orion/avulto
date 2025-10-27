@@ -69,6 +69,7 @@ pub enum NodeKind {
     ForList,
     ForLoop,
     ForRange,
+    ForKeyValue,
     Goto,
     Identifier,
     If,
@@ -254,6 +255,14 @@ pub enum Node {
         default: Option<PyCodeBlock>,
         source_loc: Option<Py<OriginalSourceLocation>>,
     },
+    ForKeyValue {
+        var_type: Option<Path>,
+        key: PyExpr,
+        value: PyExpr,
+        in_list: Option<PyExpr>,
+        block: PyCodeBlock,
+        source_loc: Option<Py<OriginalSourceLocation>>,
+    }
 }
 
 pub fn visit_constant(constant: &Constant, walker: &Bound<PyAny>) -> PyResult<()> {
@@ -292,6 +301,7 @@ impl Node {
             Node::Label { .. } => Ok(Py::new(py, NodeKind::Label).unwrap().into_any()),
             Node::TryCatch { .. } => Ok(Py::new(py, NodeKind::TryCatch).unwrap().into_any()),
             Node::Switch { .. } => Ok(Py::new(py, NodeKind::Switch).unwrap().into_any()),
+            Node::ForKeyValue { .. } => Ok(Py::new(py, NodeKind::ForKeyValue).unwrap().into_any()),
         }
     }
 
@@ -338,6 +348,7 @@ impl Node {
             Node::Label { name, .. } => Ok(format!("<Label {} ...>", name)),
             Node::TryCatch { .. } => Ok("<TryCatch ...>".to_string()),
             Node::Switch { input, .. } => Ok(format!("<Switch {} ...>", input)),
+            Node::ForKeyValue { .. } => Ok("<ForKeyValue ...>".to_string()),
         }
     }
 }

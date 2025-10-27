@@ -138,7 +138,7 @@ impl Tile {
 
         bound.borrow_mut().map.dictionary.get_mut(&key).unwrap()[index as usize]
             .vars
-            .remove(&name);
+            .shift_remove(&name);
     }
 
     #[pyo3(signature = (prefix, exact=false))]

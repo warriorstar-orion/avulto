@@ -318,15 +318,15 @@ impl Expression {
                         source_loc: Some(OriginalSourceLocation::from_location(&term.location)),
                     },
                     dreammaker::ast::Term::ExternalCall {
-                        library_name,
-                        function_name,
+                        library,
+                        function,
                         args,
                     } => Self::ExternalCall {
-                        library_name: Expression::parse(py, library_name)
+                        library_name: Expression::parse(py, library.as_ref().unwrap().as_ref())
                             .into_pyobject(py)
                             .expect("parsing external call lib name")
                             .into(),
-                        function_name: Expression::parse(py, function_name)
+                        function_name: Expression::parse(py, function)
                             .into_pyobject(py)
                             .expect("parsing external call func name")
                             .into(),
@@ -476,6 +476,7 @@ impl Expression {
                     dreammaker::ast::BinaryOp::Or => BinaryOperator::Or,
                     dreammaker::ast::BinaryOp::In => BinaryOperator::In,
                     dreammaker::ast::BinaryOp::To => BinaryOperator::To,
+                    dreammaker::ast::BinaryOp::LessOrGreater => BinaryOperator::LessOrGreater,
                 },
                 lhs: Self::parse(py, lhs)
                     .into_pyobject(py)

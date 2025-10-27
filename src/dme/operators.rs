@@ -92,4 +92,5 @@ pub enum BinaryOperator {
     Or,
     In,
     To,
+    LessOrGreater,
 }
