@@ -84,6 +84,7 @@
       - ``visit_ExternalCall``
       - ``visit_Field``
       - ``visit_ForInfinite``
+      - ``visit_ForKeyValue``
       - ``visit_ForList``
       - ``visit_ForLoop``
       - ``visit_ForRange``
