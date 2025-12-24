@@ -35,8 +35,7 @@ fn avulto(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<tile::Tile>()?;
 
     m.add_class::<dmi::Dmi>()?;
-    m.add_class::<dmi::Rect>()?;
-    m.add_class::<dmi::IconState>()?;
+    m.add_class::<dmi::iconstate::IconState>()?;
     m.add_class::<dmi::StateIter>()?;
 
     m.add_class::<dme::Dme>()?;

@@ -56,11 +56,11 @@ impl DmListKeyIter {
     }
 
     fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<Py<PyAny>> {
-        return Python::attach(|py| {
+        Python::attach(|py| {
             let index = slf.index;
             slf.index += 1;
             slf.list.get(index).map(|user| user.clone_ref(py))
-        });
+        })
     }
 }
 

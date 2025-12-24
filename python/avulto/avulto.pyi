@@ -241,12 +241,6 @@ class Dir:
     SOUTHEAST: "Dir"
     SOUTHWEST: "Dir"
 
-class Rect:
-    left: int
-    top: int
-    width: int
-    height: int
-
 class IconState:
     """
     A single icon state in a DMI file.
@@ -299,7 +293,7 @@ class DMI:
         Iterates over all icon states.
         """
 
-    def data_rgba8(self, rect: Rect) -> bytes:
+    def data_rgba8(frame: int, dir: Dir) -> bytes
         """Return the byte data of the spritesheet in 8-bit RGBA."""
 
 class Dmlist:
