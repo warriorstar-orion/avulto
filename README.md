@@ -2,13 +2,13 @@
 
 [Avulto][] is a Python library for working in the BYOND environment. Its goal is
 to provide a straightforward Python API which leverages the [SpacemanDMM][] and
-potentially other community libraries.
+other community libraries.
 
 Its primary use cases are to easily
 
-- read and modify map files
-- parse and read icon files
-- read the source tree and provide reflection data.
+- read and modify map (`.dmm`) files 
+- read, modify, and create icon (`.dmi`) files
+- inspect and walk BYOND reflection data and ASTs
 
 [Avulto]: https://github.com/warriorstar-orion/avulto
 [SpacemanDMM]: https://github.com/SpaceManiac/SpacemanDMM

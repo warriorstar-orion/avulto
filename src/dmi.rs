@@ -109,8 +109,7 @@ impl Dmi {
                 )))
             },
             |icon| {
-                let list: Vec<IconState> =
-                    icon.states.iter().map(IconState::from_dmi).collect();
+                let list: Vec<IconState> = icon.states.iter().map(IconState::from_dmi).collect();
                 let states = PyList::new(py, list).unwrap().as_unbound().clone_ref(py);
                 Ok(Dmi {
                     states,
@@ -144,7 +143,7 @@ impl Dmi {
         for state in self.states.bind(py).iter() {
             let cast_state = state.cast_exact::<IconState>().unwrap().borrow();
             if cast_state.name == value {
-                return Ok(cast_state.into_py_any(py).unwrap())
+                return Ok(cast_state.into_py_any(py).unwrap());
             }
         }
         Err(PyRuntimeError::new_err(format!(

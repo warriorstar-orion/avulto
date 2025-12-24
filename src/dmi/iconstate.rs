@@ -12,7 +12,7 @@ use pyo3::{
     Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyAnyMethods, PyBytes, PyBytesMethods, PyDict, PyDictMethods, PyInt, PyList},
+    types::{PyAnyMethods, PyBytes, PyBytesMethods, PyInt, PyList},
 };
 
 use crate::helpers::Dir;
@@ -165,7 +165,9 @@ impl IconState {
                 let dir_data = data.get(&d).unwrap();
                 for image_data in dir_data {
                     let image_bytes = image_data.bind(py);
-                    if let Some(image) = image::ImageBuffer::from_vec(width, height, image_bytes.as_bytes().to_vec()) {
+                    if let Some(image) =
+                        image::ImageBuffer::from_vec(width, height, image_bytes.as_bytes().to_vec())
+                    {
                         state.images.push(image::DynamicImage::ImageRgba8(image));
                     } else {
                         return Err(PyRuntimeError::new_err(format!(

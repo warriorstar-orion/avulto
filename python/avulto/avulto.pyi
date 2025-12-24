@@ -250,14 +250,24 @@ class IconState:
     """The state name."""
     dirs: list[Dir]
     """The directions available in the icon state."""
+    dir_count: int
+    """The number of directions in the icon state, either 1, 4, or 8."""
     frames: int
     """The number of frames in the icon state."""
     movement: bool
-    """Returns whether or not the state is a movement state."""
+    """Whether or not the state is a movement state."""
     delays: list[float]
-    """Returns an array of frame delays."""
+    """The icon's frame delays."""
     rewind: bool
-    """Returns whether the icon is a rewind icon."""
+    """Whether the icon animates both backwards and forwards."""
+    loop_flag: int
+    """The number of times the icon animation loops, or 0 for indefinitely."""
+
+    @staticmethod
+    def from_data(data: dict[Dir, list[bytes]], width: int = 32, height: int = 32, name: str = "", delays: list[float] | None = None, loops: int = 0, rewind: bool = False, movement: bool = False):
+        """
+        Creates an IconState with the given frame `data`, which must be a dict of Dirs to arrays of RGBA8 image byte data.
+        """
 
 class DMI:
     """
@@ -265,11 +275,21 @@ class DMI:
     """
 
     filepath: pathlib.Path
-    """The original filename of the DMM."""
+    """The original filename of the DMI."""
     icon_width: int
-    """The width of icons in the file."""
+    """The width of icons in the DMI."""
     icon_height: int
-    """The height of icons in the file."""
+    """The height of icons in the DMI."""
+    icon_dims: tuple[int, int]
+    """The width and height of icons in the DMI."""
+    states: list[IconState]
+    """The states in the DMI."""
+
+    @staticmethod
+    def new(dims: tuple[int, int]) -> "DMI":
+        """
+        Creates an empty DMI file with the given icon width-height tuple `dims`.
+        """
 
     @staticmethod
     def from_file(filename: os.PathLike | str) -> "DMI":
@@ -293,7 +313,7 @@ class DMI:
         Iterates over all icon states.
         """
 
-    def data_rgba8(frame: int, dir: Dir) -> bytes
+    def data_rgba8(frame: int, dir: Dir) -> bytes:
         """Return the byte data of the spritesheet in 8-bit RGBA."""
 
 class Dmlist:
