@@ -9,7 +9,7 @@
 project = 'avulto'
 copyright = '2025 Warriorstar Orion'
 author = 'Warriorstar Orion'
-release = 'v0.2.0'
+release = 'v0.2.1'
 version = release
 
 extensions = [
