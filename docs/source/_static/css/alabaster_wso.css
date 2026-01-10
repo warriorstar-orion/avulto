@@ -46,7 +46,8 @@ div.sphinxsidebar a {
     color: var(--primary-text-color);
 }
 
-.highlight {
+dt:target, .highlight {
+    background: var(--accent-bg-color);
     background-color: var(--accent-bg-color);
 }
 
