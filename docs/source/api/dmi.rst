@@ -3,8 +3,8 @@
 
 .. class:: DMI
 
-   The :class:`DMI` class provides the ability to parse and manipulate `.dmi`
-   files.
+   The :class:`DMI` class provides the ability to create, parse and manipulate
+   `.dmi` files.
 
    :class:`DMI` instances are created with the following methods:
 
@@ -38,22 +38,35 @@
 
       The width and height of icons in the file.
 
+   .. property:: states
+      :type: list[IconState]
+
+      The :class:`IconState`\s in the DMI, in declaration order.
+
+   .. method:: save_to(filename: str | os.PathLike[str], compress: int = 0)
+
+      Save the DMI to a file. `compress` is an value from 0 to 6, corresponding
+      to `oxipng`_ optimization values.
+
+      .. _oxipng: https://github.com/oxipng/oxipng
+
    .. method:: state_names() -> list[str]
 
       Return a list of all state names in the icon file.
 
    .. method:: state(name: str) -> IconState
 
-      Returns the :class:`IconState` with the given *name*.
+      Returns the :class:`IconState` with the given *name* in the DMI. If
+      there are multiple icon states with the same *name*, only the first is
+      returned.
 
-Individual icon states are represented by :class:`IconState` and can be accessed
-directly via `IconState.states`.
+Individual icon states are represented by :class:`IconState`.
 
 .. class:: IconState
 
    .. staticmethod:: from_data(data: dict[Dir, list[bytes]], width: int = 32, height: int = 32, name: str = "", delays: list[float] | None = None, loops: int = 0, rewind: bool = False, movement: bool = False)
 
-      Construct an icon state with the given *data* and other arguments.
+      Construct an :class:`IconState` with the given *data* and other arguments.
 
       *data* must be a dict mapping :class:`Dir`\s to lists of `bytes`
       containing RGBA image data. The number of images in each list must be the
