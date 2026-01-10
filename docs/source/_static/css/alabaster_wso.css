@@ -1,0 +1,60 @@
+:root {
+    --primary-bg-color: rgb(0, 0, 0);
+    --accent-bg-color: rgb(26, 38, 61);
+    --primary-text-color: rgb(204, 204, 204);
+    --primary-link-color: rgb(12, 145, 202);
+    --accent-link-color: rgb(158, 43, 204);
+}
+body {
+    background-color: var(--primary-bg-color);
+    color: var(--primary-text-color);
+}
+
+div.body {
+    background-color: var(--primary-bg-color);
+    color: var(--primary-text-color);
+}
+
+div.sphinxsidebar {
+    color: var(--primary-text-color);
+}
+
+a {
+    color: var(--primary-link-color);
+}
+
+tt.xref, code.xref, a tt {
+    background-color: var(--primary-bg-color);
+    color: var(--primary-text-color);
+    border-bottom-style: dotted;
+}
+
+a code {
+    color: var(--primary-link-color);
+}
+
+a:hover, a.reference:hover {
+    color: var(--primary-text-color);
+    border-bottom-color: var(--primary-text-color);
+}
+
+a:visited {
+    color: var(--accent-link-color);
+}
+
+div.sphinxsidebar a {
+    color: var(--primary-text-color);
+}
+
+.highlight {
+    background-color: var(--accent-bg-color);
+}
+
+tt, code {
+    color: var(--primary-text-color);
+    background-color: var(--accent-bg-color);
+}
+
+a:hover tt, a:hover code {
+    background-color: var(--accent-bg-color);
+}

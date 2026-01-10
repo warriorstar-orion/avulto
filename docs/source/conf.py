@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'avulto'
-copyright = '2025 Warriorstar Orion'
+copyright = '2026 Warriorstar Orion'
 author = 'Warriorstar Orion'
 release = 'v0.2.5'
 version = release
@@ -30,7 +30,13 @@ intersphinx_mapping = {
 templates_path = ['_templates']
 exclude_patterns = []
 
+pygments_style = 'lightbulb'
+
 html_theme = 'alabaster'
+html_static_path = ['_static']
+html_css_files = [
+    'css/alabaster_wso.css',
+]
 html_sidebars = {
    '**': ['globaltoc.html', 'sourcelink.html', 'searchbox.html'],
 }
