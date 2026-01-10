@@ -31,33 +31,35 @@ def test_dme_typesof(dme: DME):
 
 
 def test_missing_type(dme: DME):
-    with pytest.raises(RuntimeError) as ex:
-        dme.type_decl("/missing_type")
+    assert "/missing_type" not in dme.types
 
-    assert str(ex.value) == "cannot find path /missing_type"
+    with pytest.raises(KeyError) as ex:
+        dme.types["/missing_type"]
+
+    assert ex.value.args[0] == "unrecognized path /missing_type"
 
 
 def test_dme_vars(dme: DME):
-    foo = dme.type_decl("/obj/foo")
+    foo = dme.types["/obj/foo"]
     var_names = foo.var_names(declared=True, unmodified=True)
     assert all([x in var_names for x in ["a", "icon", "icon_state"]])
     assert foo.var_decl("a").const_val == 3
 
-    bar = dme.type_decl("/obj/foo/bar")
+    bar = dme.types["/obj/foo/bar"]
     assert bar.var_names(modified=True) == ["a"]
     assert bar.var_decl("a").const_val == 4
 
-    baz = dme.type_decl("/obj/foo/baz")
+    baz = dme.types["/obj/foo/baz"]
     assert baz.var_decl("a").const_val == 3
 
 
 def test_dme_procs(dme: DME):
-    foo = dme.type_decl("/obj/foo")
+    foo = dme.types["/obj/foo"]
     assert sorted(foo.proc_names(declared=True)) == ["proc1", "proc2"]
 
 
 def test_proc_decls(dme: DME):
-    foo = dme.type_decl("/obj/foo")
+    foo = dme.types["/obj/foo"]
     assert [x.name for x in foo.proc_decls("proc1")] == ["proc1"]
 
 

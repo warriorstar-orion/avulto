@@ -67,3 +67,5 @@ tests/fixtures/*.rsc
 *.log
 wheelhouse/
 .cargo/
+
+output.dmi

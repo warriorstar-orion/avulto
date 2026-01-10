@@ -3,17 +3,16 @@ extern crate dreammaker;
 use std::collections::HashMap;
 
 use dreammaker::{
+    FileId, FileList, Location,
     ast::{Spanned, Statement},
     objtree::NodeIndex,
-    FileId, FileList, Location,
 };
 use nodes::{Node, OriginalSourceLocation};
 use pyo3::{
-    create_exception,
-    exceptions::{PyException, PyOSError, PyRuntimeError, PyValueError},
+    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyRef, PyResult, Python, create_exception,
+    exceptions::{PyException, PyKeyError, PyOSError, PyRuntimeError, PyValueError},
     pyclass, pymethods,
     types::{PyAnyMethods, PyList, PyString, PyStringMethods},
-    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyRef, PyResult, Python,
 };
 
 use crate::{
@@ -40,54 +39,76 @@ pub struct DmeTypeAccessor {
     pub dme: Py<Dme>,
 }
 
-#[pymethods]
 impl DmeTypeAccessor {
-    fn __getitem__(&self, path: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<TypeDecl>> {
-        let dme = self.dme.bind(py).borrow();
+    fn convert_path(&self, path: &Bound<PyAny>) -> Result<(String, String), String> {
         let objpath = if let Ok(patht) = path.extract::<path::Path>() {
             patht.rel
         } else if let Ok(pystr) = path.cast::<PyString>() {
             pystr.to_string()
         } else {
-            return Err(PyValueError::new_err(format!("invalid path {:?}", path)));
+            return Err(format!("invalid path {:?}", path));
         };
 
-        let search_string = if objpath.as_str().eq("/") {
-            ""
+        // TODO(wso): horrid
+        if objpath.as_str().eq("/") {
+            Ok((objpath, "".into()))
         } else {
-            objpath.as_str()
-        };
-        match dme.objtree.find(search_string) {
-            Some(type_ref) => {
-                let type_ref_index = type_ref.index();
-                let osl = Some(OriginalSourceLocation::from_location(&type_ref.location));
-                let source_loc = Some(
-                    dme.populate_source_loc(&osl, py)
+            Ok((objpath.clone(), objpath.clone()))
+        }
+    }
+}
+
+#[pymethods]
+impl DmeTypeAccessor {
+    fn __getitem__(&self, path: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<TypeDecl>> {
+        let dme = self.dme.bind(py).borrow();
+        if let Ok((obj_path, search_string)) = self.convert_path(path) {
+            match dme.objtree.find(&search_string) {
+                Some(type_ref) => {
+                    let type_ref_index = type_ref.index();
+                    let osl = Some(OriginalSourceLocation::from_location(&type_ref.location));
+                    let source_loc = Some(
+                        dme.populate_source_loc(&osl, py)
+                            .into_pyobject(py)
+                            .unwrap()
+                            .unbind(),
+                    );
+                    let dme = dme
                         .into_pyobject(py)
-                        .unwrap()
-                        .unbind(),
-                );
-                let dme = dme
+                        .expect("passing dme")
+                        .clone()
+                        .as_unbound()
+                        .clone_ref(py)
+                        .into_any();
+                    Ok(TypeDecl {
+                        dme,
+                        path: Path::make_trusted(obj_path.as_str()),
+                        node_index: type_ref_index,
+                        source_loc,
+                    }
                     .into_pyobject(py)
-                    .expect("passing dme")
-                    .clone()
-                    .as_unbound()
-                    .clone_ref(py)
-                    .into_any();
-                Ok(TypeDecl {
-                    dme,
-                    path: Path::make_trusted(objpath.as_str()),
-                    node_index: type_ref_index,
-                    source_loc,
+                    .expect("building typedecl")
+                    .into())
                 }
-                .into_pyobject(py)
-                .expect("building typedecl")
-                .into())
+                None => Err(PyKeyError::new_err(format!(
+                    "unrecognized path {}",
+                    obj_path
+                ))),
             }
-            None => Err(PyRuntimeError::new_err(format!(
-                "cannot find path {}",
-                objpath
-            ))),
+        } else {
+            Err(PyRuntimeError::new_err("error looking up type".to_string()))
+        }
+    }
+
+    fn __contains__(&self, path: &Bound<PyAny>, py: Python<'_>) -> PyResult<bool> {
+        let dme = self.dme.bind(py).borrow();
+        if let Ok((_, search_string)) = self.convert_path(path) {
+            match dme.objtree.find(&search_string) {
+                Some(_) => Ok(true),
+                None => Ok(false),
+            }
+        } else {
+            Err(PyRuntimeError::new_err("error looking up type".to_string()))
         }
     }
 }
@@ -385,55 +406,6 @@ impl Dme {
                 dme: self_.into_pyobject(py)?.unbind(),
             },
         )
-    }
-
-    fn type_decl(
-        self_: PyRef<'_, Self>,
-        path: &Bound<PyAny>,
-        py: Python<'_>,
-    ) -> PyResult<Py<TypeDecl>> {
-        let objpath = if let Ok(patht) = path.extract::<path::Path>() {
-            patht.rel
-        } else if let Ok(pystr) = path.cast::<PyString>() {
-            pystr.to_string()
-        } else {
-            return Err(PyValueError::new_err(format!("invalid path {:?}", path)));
-        };
-
-        let search_string = if objpath.as_str().eq("/") {
-            ""
-        } else {
-            objpath.as_str()
-        };
-        match self_.objtree.find(search_string) {
-            Some(type_ref) => {
-                let type_ref_index = type_ref.index();
-                let osl = Some(OriginalSourceLocation::from_location(&type_ref.location));
-                let source_loc = Some(self_.populate_source_loc(&osl, py).into_py_any(py).unwrap());
-
-                let dme = self_
-                    .into_pyobject(py)
-                    .expect("passing dme")
-                    .clone()
-                    .as_unbound()
-                    .clone_ref(py)
-                    .into_any();
-
-                Ok(TypeDecl {
-                    dme,
-                    path: Path::make_trusted(objpath.as_str()),
-                    node_index: type_ref_index,
-                    source_loc,
-                }
-                .into_pyobject(py)
-                .expect("building typedecl")
-                .into())
-            }
-            None => Err(PyRuntimeError::new_err(format!(
-                "cannot find path {}",
-                objpath
-            ))),
-        }
     }
 
     fn typesof(&self, prefix: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<PyList>> {

@@ -23,14 +23,7 @@
    .. property:: types
       :type: dict[Path, TypeDecl]
 
-      A mapping of type paths to their :class:`TypeDecl`\s. This is a shortcut to
-      :attr:`typedecl`. In other words,
-
-      .. code-block:: python
-
-          td = dme.typedecl("/obj/machinery")
-          # is equivalent to
-          td = dme.types["/obj/machinery"]
+      A mapping of type paths to their :class:`TypeDecl`\s.
 
    .. method:: typesof(prefix: Path | str) -> list[Path]
 
@@ -41,11 +34,6 @@
 
       Return a list of :class:`Path`\s of any subtypes of *prefix*, excluding
       itself.
-
-   .. method:: typedecl(path: Path | str) -> TypeDecl
-
-      Returns the :class:`TypeDecl` of the type given by *path* if it exists.
-      Note that the dictionary :attr:`types` is analogous to using this method.
 
 .. class:: ProcDecl
 

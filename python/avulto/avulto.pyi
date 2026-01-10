@@ -226,9 +226,6 @@ class DME:
     def subtypesof(self, prefix: Path | str) -> list[Path]:
         """Returns a list of type paths with the given `prefix`, excluding `prefix` itself."""
 
-    def type_decl(self, path: Path | str) -> TypeDecl:
-        """Return the type declaration of the given `path`."""
-
 class Dir:
     """An enumeration of directions used in icons."""
 
