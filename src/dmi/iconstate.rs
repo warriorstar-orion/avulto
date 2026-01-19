@@ -116,16 +116,18 @@ impl IconState {
             ));
         }
 
+        let data_count = data[&Dir::South].len();
+
         match delays {
             Some(ref d) => {
-                if data_counts.len() != d.len() {
+                if data_count != d.len() {
                     return Err(PyRuntimeError::new_err(
                         "number of frames and delays do not match".to_string(),
                     ));
                 }
             }
             None => {
-                if data_counts.len() != 1 {
+                if data_count != 1 {
                     return Err(PyRuntimeError::new_err(
                         "number of frames and delays do not match".to_string(),
                     ));
