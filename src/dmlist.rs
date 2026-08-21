@@ -27,6 +27,28 @@ impl DmList {
     }
 }
 
+#[pyclass(module = "avulto", name = "NewCall")]
+pub struct NewCall {
+    #[pyo3(get)]
+    pub path: Option<path::Path>,
+    #[pyo3(get)]
+    pub args: Option<Py<DmList>>,
+}
+
+#[pymethods]
+impl NewCall {
+    fn __str__(&self) -> PyResult<String> {
+        self.__repr__()
+    }
+
+    fn __repr__(&self) -> PyResult<String> {
+        match &self.path {
+            Some(p) => Ok(format!("<NewCall {}>", p.rel)),
+            None => Ok("<NewCall>".to_string()),
+        }
+    }
+}
+
 #[pyclass]
 struct DmListIter {
     inner: std::iter::Zip<std::vec::IntoIter<PyExpr>, std::vec::IntoIter<PyExpr>>,

@@ -3,7 +3,7 @@ extern crate lazy_static;
 
 use dme::{EmptyProcError, MissingProcError, MissingTypeError};
 use dmi::IconError;
-use dmlist::DmList;
+use dmlist::{DmList, NewCall};
 use path::PathError;
 use pyo3::{prelude::*, types::PyDict, wrap_pymodule};
 use typedecl::{ProcDecl, TypeDecl};
@@ -43,6 +43,7 @@ fn avulto(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<TypeDecl>()?;
     m.add_class::<VarDecl>()?;
     m.add_class::<DmList>()?;
+    m.add_class::<NewCall>()?;
 
     m.add_class::<helpers::Dir>()?;
     m.add_function(wrap_pyfunction!(helpers::as_dir, m)?)?;

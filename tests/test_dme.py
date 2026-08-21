@@ -77,3 +77,16 @@ def test_var_decl_type_path(dme: DME):
     foo = dme.types["/obj/foo"]
     var_decl = foo.var_decl("a")
     assert p("/obj/foo") == var_decl.type_path
+
+
+def test_var_decl_new_call_in_list(dme: DME):
+    var_decl = dme.types["/obj/init_list_vardecls"].var_decl("my_news")
+    news = list(var_decl.const_val.keys())
+    assert len(news) == 2
+
+    bar, baz = news
+    assert bar.path == p("/datum/foo/bar")
+    assert list(bar.args.keys()) == [3, 4]
+
+    assert baz.path == p("/datum/foo/baz")
+    assert list(baz.args.keys()) == [10, 12]

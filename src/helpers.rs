@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-
 use dreammaker::constants::{Constant, Pop};
 use pyo3::{
     exceptions::PyRuntimeError,
@@ -10,7 +8,7 @@ use pyo3::{
 
 use dmm_tools::dmi::Dir as SDir;
 
-use crate::{dme::prefab::Prefab, dmlist::DmList, path::Path};
+use crate::{dme::prefab::Prefab, dmlist::{DmList, NewCall}, path::Path};
 
 #[pyclass(eq, eq_int, ord)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]
@@ -124,32 +122,37 @@ pub fn python_value_to_constant(val: &Bound<PyAny>) -> Option<Constant> {
     })
 }
 
+fn arguments_to_dmlist(args: &dreammaker::constants::Arguments, py: Python<'_>) -> Py<DmList> {
+    let mut keys: Vec<Py<PyAny>> = vec![];
+    let mut vals: Vec<Py<PyAny>> = vec![];
+
+    for arg in args.iter() {
+        keys.push(constant_to_python_value(&arg.0));
+        vals.push(constant_to_python_value(
+            &arg.1
+                .clone()
+                .unwrap_or(dreammaker::constants::Constant::Null(Option::None)),
+        ));
+    }
+
+    Py::new(py, DmList { keys, vals }).expect("constant args to dmlist")
+}
+
 pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> Py<PyAny> {
     Python::attach(|py| match c {
         Constant::Null(_) => py.None(),
-        Constant::New { .. } => py.None(),
-        Constant::List(l) => {
-            let mut keys: Vec<Py<PyAny>> = vec![];
-            let mut vals: Vec<Py<PyAny>> = vec![];
-
-            for args in l.iter() {
-                keys.push(constant_to_python_value(&args.0).clone_ref(py));
-                vals.push(
-                    constant_to_python_value(
-                        &args
-                            .1
-                            .borrow()
-                            .clone()
-                            .unwrap_or(dreammaker::constants::Constant::Null(Option::None)),
-                    )
-                    .clone_ref(py),
-                );
-            }
-
-            Py::new(py, DmList { keys, vals })
-                .expect("constant to dmlist")
+        Constant::New { type_, args } => {
+            let path = type_
+                .as_ref()
+                .map(|pop| Path::from_tree_path(&pop.path));
+            let args = args.as_ref().map(|a| arguments_to_dmlist(a, py));
+            NewCall { path, args }
+                .into_pyobject(py)
+                .expect("new call to pyobject")
                 .into_any()
+                .unbind()
         }
+        Constant::List(l) => arguments_to_dmlist(l, py).into_any(),
         // TODO: How the fuck do I represent these in plain old Python
         Constant::Call(_, _) => py.None(),
         Constant::Prefab(p) => {

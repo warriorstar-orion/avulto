@@ -328,3 +328,13 @@ class Dmlist:
         """
 
     def __getitem__(self, k) -> Any: ...
+
+class NewCall:
+    """
+    A `new` call appearing in a constant-value position.
+    """
+
+    path: Path | None
+    """The type being instantiated, or `None` for an implicit `new()`."""
+    args: Dmlist | None
+    """The constructor arguments."""

@@ -42,3 +42,21 @@
 
 /proc/hell_yeah(foo)
 	return foo
+
+/datum/foo
+
+/datum/foo/bar
+	var/a = 1
+	var/b = 2
+
+/datum/foo/bar/New(a, b)
+	src.a = a
+	src.b = b
+
+/datum/foo/baz
+
+/obj/init_list_vardecls
+	var/list/my_news = list(
+		new /datum/foo/bar(3, 4),
+		new /datum/foo/baz(10, 12),
+	)
