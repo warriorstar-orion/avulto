@@ -16,7 +16,7 @@ requires = ["maturin>=1.8,<2.0"]
 build-backend = "maturin"
 
 [tool.cibuildwheel]
-build = ["cp312-*", "cp313-*"]
+build = ["cp312-*", "cp313-*", "cp314-*"]
 archs = "AMD64"
 
 [tool.maturin]
