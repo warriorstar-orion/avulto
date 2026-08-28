@@ -36,3 +36,7 @@ def test_dmm_get_objvar(dmm: DMM):
 def test_dmm_tile_eq(dmm: DMM):
     assert dmm.tiledef(7, 7, 1) == dmm.tiledef(7, 7, 1)
     assert dmm.tiledef(1, 1, 1) == dmm.tiledef(1, 2, 1)
+
+
+def test_dmm_tile_only(dmm: DMM):
+    assert dmm.tiledef(8, 8, 1).only("/obj/foo") == 0

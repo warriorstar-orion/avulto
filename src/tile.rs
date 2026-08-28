@@ -161,8 +161,10 @@ impl Tile {
 
         if let Some(p) = map.dictionary.get(&key) {
             for (idx, prefab) in p.iter().enumerate() {
-                let matches = (!exact && prefab.path.starts_with(&prefix_str))
-                    || (exact && prefab.path.eq(&prefix_str));
+                let matches = prefab.path.eq(&prefix_str)
+                    || (!exact
+                        && prefab.path.starts_with(&prefix_str)
+                        && prefab.path.as_bytes().get(prefix_str.len()) == Some(&b'/'));
                 if matches {
                     vec.push(idx as i32);
                 }

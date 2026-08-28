@@ -16,6 +16,8 @@
 
 /obj/foo/baz
 
+/obj/foo_2
+
 /obj/test_object
 
 /obj/test_object/proc/var_and_return()

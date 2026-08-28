@@ -4,12 +4,17 @@
 /area)
 "b" = (
 /obj/foo,
+/obj/foo_2,
 /turf,
 /area)
 "u" = (
 /obj/foo{
 	a = 4
 	},
+/turf,
+/area)
+"I" = (
+/obj/foo,
 /turf,
 /area)
 
@@ -111,7 +116,7 @@ a
 "}
 (9,1,1) = {"
 a
-b
+I
 a
 a
 a
@@ -122,7 +127,7 @@ a
 a
 "}
 (10,1,1) = {"
-b
+I
 a
 a
 a
