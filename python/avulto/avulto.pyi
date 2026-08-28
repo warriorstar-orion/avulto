@@ -94,6 +94,15 @@ class Tile:
     def find(self, prefix: Path | str, exact=False) -> list[int]:
         """
         Return the indexes of the prefabs prefixed with the given path `prefix`.
+        If exact is True, then the prefab path must match exactly.
+        """
+
+    def only(self, prefix: Path | str, exact=False) -> list[int]:
+        """
+        Returns the index of the only prefab with the given `prefix`, or None if
+        no such prefab exists. Raises an error if there is more than one prefab
+        with the given prefix. If exact is True, then the prefab path must match
+        exactly.
         """
 
     def prefab_path(self, index: int) -> Path:
