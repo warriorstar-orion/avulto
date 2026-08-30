@@ -21,7 +21,7 @@ use crate::helpers::Dir;
 pub struct IconState {
     pub images: Vec<image::DynamicImage>,
 
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub(crate) name: String,
     #[pyo3(get)]
     pub dir_count: u8,
