@@ -6,7 +6,7 @@ use pyo3::{
     Bound, IntoPyObject, Py, PyAny, PyResult, Python,
 };
 
-use crate::path::Path;
+use crate::{dme::FileData, path::Path};
 
 use super::expression::Expression;
 
@@ -19,7 +19,7 @@ pub struct Prefab {
 }
 
 impl Prefab {
-    pub fn make(py: Python<'_>, prefab: &dreammaker::ast::Prefab) -> Self {
+    pub fn make(py: Python<'_>, prefab: &dreammaker::ast::Prefab, file_data: &FileData) -> Self {
         let mut path: String = "".to_owned();
         for (op, val) in prefab.path.iter() {
             path.push_str(format!("{}{}", op, val).as_str());
@@ -31,7 +31,7 @@ impl Prefab {
             let var = PyDict::new(py);
             var.set_item(
                 k.as_str(),
-                Expression::parse(py, v)
+                Expression::parse(py, v, file_data)
                     .into_pyobject(py)
                     .expect("setting prefab vars")
                     .into_any(),

@@ -1,4 +1,4 @@
-use pyo3::{types::PyAnyMethods, Bound, PyAny, PyResult, Python};
+use pyo3::{Bound, IntoPyObjectExt, PyAny, PyResult, Python, types::PyAnyMethods};
 
 use super::{expression::Expression, nodes::visit_constant, prefab::Prefab, Dme};
 
@@ -41,7 +41,7 @@ impl Expression {
             };
             walker.call_method1(
                 "visit_Expr",
-                (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                (self_, source_loc.clone()),
             )?;
 
             return Ok(());
@@ -60,7 +60,7 @@ impl Expression {
                 if walker.hasattr("visit_Identifier").unwrap() {
                     walker.call_method1(
                         "visit_Identifier",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 }
                 Ok(())
@@ -75,7 +75,7 @@ impl Expression {
                     walker
                         .call_method1(
                             "visit_BinaryOp",
-                            (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                            (self_, source_loc.clone()),
                         )
                         .expect("failed to walk binary op");
                 } else {
@@ -94,7 +94,7 @@ impl Expression {
                 if walker.hasattr("visit_AssignOp").unwrap() {
                     walker.call_method1(
                         "visit_AssignOp",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     Expression::walk(lhs.bind(py), dme, walker, py)?;
@@ -112,7 +112,7 @@ impl Expression {
                 if walker.hasattr("visit_TernaryOp").unwrap() {
                     walker.call_method1(
                         "visit_TernaryOp",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     Expression::walk(cond.bind(py), dme, walker, py)?;
@@ -126,7 +126,7 @@ impl Expression {
                 if walker.hasattr("visit_List").unwrap() {
                     walker.call_method1(
                         "visit_List",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     let dmlist = list.borrow(py);
@@ -154,7 +154,7 @@ impl Expression {
                 if walker.hasattr("visit_InterpString").unwrap() {
                     walker.call_method1(
                         "visit_InterpString",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     visit_constant(first, walker)?;
@@ -180,7 +180,7 @@ impl Expression {
                 if walker.hasattr("visit_Index").unwrap() {
                     walker.call_method1(
                         "visit_Index",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     Expression::walk(expr.bind(py), dme, walker, py)?;
@@ -197,7 +197,7 @@ impl Expression {
                 if walker.hasattr("visit_Field").unwrap() {
                     walker.call_method1(
                         "visit_Field",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     expr.as_ref()
@@ -215,7 +215,7 @@ impl Expression {
                 if walker.hasattr("visit_StaticField").unwrap() {
                     walker.call_method1(
                         "visit_StaticField",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     Expression::walk(expr.bind(py), dme, walker, py)?;
@@ -233,7 +233,7 @@ impl Expression {
                 if walker.hasattr("visit_Call").unwrap() {
                     walker.call_method1(
                         "visit_Call",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     Expression::walk(expr.bind(py), dme, walker, py)?;
@@ -249,7 +249,7 @@ impl Expression {
                 if walker.hasattr("visit_SelfCall").unwrap() {
                     walker.call_method1(
                         "visit_SelfCall",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     for arg in args.iter() {
@@ -263,7 +263,7 @@ impl Expression {
                 if walker.hasattr("visit_ParentCall").unwrap() {
                     walker.call_method1(
                         "visit_ParentCall",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     for arg in args.iter() {
@@ -281,7 +281,7 @@ impl Expression {
                 if walker.hasattr("visit_UnaryOp").unwrap() {
                     walker.call_method1(
                         "visit_UnaryOp",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     Expression::walk(expr.bind(py), dme, walker, py)?;
@@ -297,7 +297,7 @@ impl Expression {
                 if walker.hasattr("visit_ProcReference").unwrap() {
                     walker.call_method1(
                         "visit_ProcReference",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     Expression::walk(expr.bind(py), dme, walker, py)?;
@@ -314,7 +314,7 @@ impl Expression {
                 if walker.hasattr("visit_Locate").unwrap() {
                     walker.call_method1(
                         "visit_Locate",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     for arg in args.iter() {
@@ -336,7 +336,7 @@ impl Expression {
                 if walker.hasattr("visit_ExternalCall").unwrap() {
                     walker.call_method1(
                         "visit_ExternalCall",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     Expression::walk(library_name.bind(py), dme, walker, py)?;
@@ -355,7 +355,7 @@ impl Expression {
                 if walker.hasattr("visit_NewMiniExpr").unwrap() {
                     walker.call_method1(
                         "visit_NewMiniExpr",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     Expression::walk(name.bind(py), dme, walker, py)?;
@@ -370,7 +370,7 @@ impl Expression {
                 if walker.hasattr("visit_NewImplicit").unwrap() {
                     walker.call_method1(
                         "visit_NewImplicit",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else if let Some(arg_list) = args {
                     for arg in arg_list.iter() {
@@ -388,7 +388,7 @@ impl Expression {
                 if walker.hasattr("visit_NewPrefab").unwrap() {
                     walker.call_method1(
                         "visit_NewPrefab",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     Prefab::walk(prefab.bind(py), walker, py)?;
@@ -408,7 +408,7 @@ impl Expression {
                 if walker.hasattr("visit_DynamicCall").unwrap() {
                     walker.call_method1(
                         "visit_DynamicCall",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     for lib_name in lib_name.iter() {
@@ -429,7 +429,7 @@ impl Expression {
                 if walker.hasattr("visit_Input").unwrap() {
                     walker.call_method1(
                         "visit_Input",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     for arg in args.iter() {
@@ -446,7 +446,7 @@ impl Expression {
                 if walker.hasattr("visit_Pick").unwrap() {
                     walker.call_method1(
                         "visit_Pick",
-                        (self_, dme.borrow().populate_source_loc(source_loc, py)),
+                        (self_, source_loc.clone()),
                     )?;
                 } else {
                     for (a, b) in args.iter() {

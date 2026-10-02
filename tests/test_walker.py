@@ -17,20 +17,18 @@ def dme() -> DME:
 def test_walker_base(dme: DME):
     class VarAndReturnWalker:
         def visit_Return(self, node, source_loc):
-            pass
-            # print(node, source_loc)
+            assert str(source_loc.file_path) == "testenv.dm"
+            assert source_loc.line == 27
+            assert source_loc.column == 2
 
         def visit_Expr(self, node, source_loc):
             pass
-            # print(node, source_loc)
 
         def visit_Call(self, node, source_loc):
             pass
-            # print(node, source_loc)
 
         def visit_Identifier(self, node, source_loc):
             pass
-            # print(node, source_loc)
 
     varw = VarAndReturnWalker()
     dme.types["/obj/test_object"].proc_decls("var_and_return")[0].walk(varw)
