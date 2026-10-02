@@ -24,7 +24,7 @@ def pickweight(l: dict):
     """
     Returns a weighted pick from the items in l.
     """
-    total = 0
+    total = 0.0
     item = None
     for item, val in l.items():
         total += val

@@ -6,6 +6,7 @@ use pyo3::{
     types::{PyAnyMethods, PyList, PyModule, PyModuleMethods},
     Bound, Py, PyAny, PyResult, Python,
 };
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum};
 
 use crate::{
     dme::{
@@ -41,6 +42,7 @@ pub fn ast(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     Ok(())
 }
 
+#[gen_stub_pyclass_enum]
 #[pyclass(
     module = "avulto.ast",
     name = "NodeKind",
@@ -112,7 +114,8 @@ impl fmt::Display for NodeKind {
     }
 }
 
-#[pyclass(frozen)]
+#[gen_stub_pyclass_complex_enum]
+#[pyclass(frozen, module="avulto.ast")]
 pub enum Node {
     Unknown(),
     Expression {
@@ -324,6 +327,7 @@ impl Node {
     }
 }
 
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto.ast")]
 pub struct SwitchCase {
     #[pyo3(get)]

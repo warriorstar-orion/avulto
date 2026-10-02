@@ -1,3 +1,4 @@
+from . import avulto
 from .avulto import *
 
 __doc__ = avulto.__doc__

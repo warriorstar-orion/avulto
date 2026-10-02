@@ -9,11 +9,12 @@ use dreammaker::{
 };
 use nodes::Node;
 use pyo3::{
-    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyRef, PyResult, Python, create_exception,
+    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyRef, PyResult, Python,
     exceptions::{PyException, PyKeyError, PyOSError, PyRuntimeError, PyValueError},
     pyclass, pymethods,
     types::{PyAnyMethods, PyList, PyString, PyStringMethods},
 };
+use pyo3_stub_gen::{create_exception, derive::*};
 
 use crate::{
     helpers,
@@ -111,11 +112,14 @@ impl DmeTypeAccessor {
     }
 }
 
+/// A representation of a single Dreammaker environment.
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto", name = "DME")]
 pub struct Dme {
     pub objtree: dreammaker::objtree::ObjectTree,
+    /// The original filename of the DME.
     #[pyo3(get)]
-    filepath: Py<PyAny>,
+    filepath: PathBuf,
     procs_parsed: bool,
     pub(crate) file_data: FileData,
 }
@@ -137,9 +141,12 @@ impl FileData {
     }
 }
 
-#[pyclass(frozen, module = "avulto")]
+/// Information about the location of a source token in the tree.
+#[gen_stub_pyclass]
 #[derive(Clone)]
+#[pyclass(frozen, module = "avulto")]
 pub struct SourceLoc {
+    /// The file path of the source location.
     #[pyo3(get)]
     pub file_path: Option<PathBuf>,
     /// The line number, starting at 1.
@@ -314,11 +321,21 @@ impl Dme {
     }
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl Dme {
+    /// Creates a DME from the given `filename`.
+    ///
+    /// If parse_procs is True, the entire AST of the codebase is traversed.
+    /// This is slower than the default but provides more reflection
+    /// information.
     #[staticmethod]
     #[pyo3(signature = (filename, parse_procs=false))]
-    fn from_file(filename: &Bound<PyAny>, parse_procs: bool, py: Python<'_>) -> PyResult<Dme> {
+    fn from_file(
+        #[gen_stub(override_type(type_repr = "os.PathLike | builtins.str", imports=("builtins", "os")))]
+        filename: &Bound<PyAny>,
+        parse_procs: bool
+    ) -> PyResult<Dme> {
         let path = if let Ok(path) = filename.extract::<std::path::PathBuf>() {
             path
         } else if let Ok(pystr) = filename.cast::<PyString>() {
@@ -329,7 +346,7 @@ impl Dme {
                 filename
             )));
         };
-        let pathlib = py.import(pyo3::intern!(py, "pathlib"))?;
+
         if !path.is_file() {
             return Err(PyOSError::new_err(format!("file not found: {:?}", path)));
         }
@@ -357,16 +374,17 @@ impl Dme {
             )));
         }
 
-        let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path,))?;
         let dme = Dme {
             objtree: tree,
-            filepath: pathlib_path.into(),
+            filepath: path,
             procs_parsed: parse_procs,
             file_data: FileData::from_file_list(ctx.file_list()),
         };
         Ok(dme)
     }
 
+    /// A mapping of paths in the DME to their TypeDecls.
+    #[gen_stub(override_return_type(type_repr="builtins.dict[Path, TypeDecl]", imports=("builtins")))]
     #[getter]
     fn get_types(self_: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<DmeTypeAccessor>> {
         Py::new(
@@ -377,7 +395,14 @@ impl Dme {
         )
     }
 
-    fn typesof(&self, prefix: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<PyList>> {
+    /// Returns a list of type paths with the given `prefix`.
+    #[gen_stub(override_return_type(type_repr="builtins.list[Path]", imports=("builtins")))]
+    fn typesof(
+        &self,
+        #[gen_stub(override_type(type_repr = "Path | builtins.str", imports=("builtins")))]
+        prefix: &Bound<PyAny>,
+        py: Python<'_>,
+    ) -> PyResult<Py<PyList>> {
         let mut out: Vec<Path> = Vec::new();
 
         let prefix_path = if let Ok(path) = prefix.extract::<path::Path>() {
@@ -397,7 +422,14 @@ impl Dme {
         Ok(PyList::new(py, out)?.unbind().clone_ref(py))
     }
 
-    fn subtypesof(&self, prefix: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<PyList>> {
+    /// Returns a list of type paths with the given `prefix`, excluding `prefix` itself.
+    #[gen_stub(override_return_type(type_repr="builtins.list[Path]", imports=("builtins")))]
+    fn subtypesof(
+        &self,
+        #[gen_stub(override_type(type_repr = "Path | builtins.str", imports=("builtins")))]
+        prefix: &Bound<PyAny>,
+        py: Python<'_>,
+    ) -> PyResult<Py<PyList>> {
         let mut out: Vec<Path> = Vec::new();
 
         let prefix_path = if let Ok(path) = prefix.extract::<path::Path>() {
@@ -417,10 +449,7 @@ impl Dme {
         Ok(PyList::new(py, out)?.unbind().clone_ref(py))
     }
 
-    fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
-        Ok(format!(
-            "<DME {}>",
-            self.filepath.getattr(py, "name").unwrap()
-        ))
+    fn __repr__(&self) -> PyResult<String> {
+        Ok(format!("<DME {:?}>", self.filepath))
     }
 }

@@ -69,3 +69,4 @@ wheelhouse/
 .cargo/
 
 output.dmi
+!src/bin/

@@ -8,22 +8,30 @@ use pyo3::{
     prelude::*,
     types::PyList,
 };
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::{
     dme::{Dme, SourceLoc},
     path::Path,
 };
 
+/// A single variable declaration.
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
 pub struct VarDecl {
+    /// The name of the variable.
     #[pyo3(get)]
     pub name: String,
+    /// The type path the proc is declared on.
     #[pyo3(get)]
     pub type_path: Py<PyAny>,
+    /// The declared type of the variable, if specified.
     #[pyo3(get)]
     pub declared_type: Option<Path>,
+    /// The variable's value, if it can be evaluated as a constant expression.
     #[pyo3(get)]
     pub const_val: Option<Py<PyAny>>,
+    /// The location of the variable declaration in the source tree.
     #[pyo3(get)]
     pub source_loc: SourceLoc,
 }
@@ -47,20 +55,28 @@ impl VarDecl {
     }
 }
 
+/// A single type declaration.
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
 pub struct TypeDecl {
     pub dme: Py<PyAny>,
     pub node_index: NodeIndex,
+    /// The typepath of the TypeDecl.
     #[pyo3(get)]
     pub path: Path,
+    /// The location of the TypeDecl's first declaration in source.
     #[pyo3(get)]
     pub source_loc: SourceLoc,
 }
 
+/// A representation of a proc declaration argument.
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
 pub struct ProcArg {
+    /// The argument name.
     #[pyo3(get)]
     pub arg_name: Py<PyAny>,
+    /// The argument type, if available.
     #[pyo3(get)]
     pub arg_type: Py<PyAny>,
 }
@@ -79,11 +95,15 @@ impl ProcArg {
     }
 }
 
+/// A single proc declaration.
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
 pub struct ProcDecl {
     pub dme: Py<PyAny>,
+    /// The type path the proc is declared on.
     #[pyo3(get)]
     pub type_path: Py<PyAny>,
+    /// The name of the proc.
     #[pyo3(get)]
     pub name: String,
     #[pyo3(get)]
@@ -91,10 +111,12 @@ pub struct ProcDecl {
 
     type_index: NodeIndex,
     proc_index: usize,
+    /// The source location of the proc declaration.
     #[pyo3(get)]
     source_loc: SourceLoc,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl ProcDecl {
     fn __str__(&self) -> PyResult<String> {
@@ -105,6 +127,8 @@ impl ProcDecl {
         Ok(format!("<Proc {}/proc/{}>", self.type_path, self.name))
     }
 
+    /// Walks the proc AST with *walker*, calling any `visit_*` method names on
+    /// *walker* if they exist for AST node types.
     pub fn walk(&self, walker: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
         let dme = self.dme.cast_bound::<Dme>(py).unwrap();
         Dme::walk_proc(
@@ -118,8 +142,10 @@ impl ProcDecl {
     }
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl TypeDecl {
+    /// Return a list of variable names for the type declaration.
     #[pyo3(signature = (declared=false, modified=false, unmodified=false))]
     pub fn var_names(
         &self,
@@ -175,6 +201,8 @@ impl TypeDecl {
             .unbind())
     }
 
+    /// Return the proc declaration for variable *name*. If *parents* is True,
+    /// check up type path if this type does not have this variable set.
     #[pyo3(signature = (name, parents=true))]
     pub fn var_decl(&self, name: String, parents: bool, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let bound = self.dme.cast_bound::<Dme>(py).unwrap();
@@ -182,6 +210,7 @@ impl TypeDecl {
         dme.get_var_decl(name, self.node_index, parents, py)
     }
 
+    /// Return a list of proc names for the type declaration.
     #[pyo3(signature = (declared=false, modified=false, unmodified=false))]
     pub fn proc_names(
         &self,
@@ -236,6 +265,8 @@ impl TypeDecl {
             .unbind())
     }
 
+    /// Return proc declarations for the type. If *name* is set, only return
+    /// proc declarations with this name.
     #[pyo3(signature = (name=None))]
     pub fn proc_decls(&self, name: Option<String>, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let dme = self.dme.cast_bound::<Dme>(py).unwrap();

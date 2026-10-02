@@ -7,9 +7,12 @@ use pyo3::{
 };
 
 use dmm_tools::dmi::Dir as SDir;
+use pyo3_stub_gen::derive::gen_stub_pyclass_enum;
 
 use crate::{dme::prefab::Prefab, dmlist::{DmList, NewCall}, path::Path};
 
+/// An enumeration of directions used in icons.
+#[gen_stub_pyclass_enum]
 #[pyclass(eq, eq_int, ord)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub enum Dir {

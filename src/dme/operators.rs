@@ -1,5 +1,7 @@
 use pyo3::pyclass;
+use pyo3_stub_gen::derive::gen_stub_pyclass_enum;
 
+#[gen_stub_pyclass_enum]
 #[pyclass(
     module = "avulto.ast",
     name = "UnaryOperator",
@@ -20,6 +22,7 @@ pub enum UnaryOperator {
     Deref,
 }
 
+#[gen_stub_pyclass_enum]
 #[pyclass(
     module = "avulto.ast",
     name = "Operator",
@@ -46,6 +49,7 @@ pub enum AssignOperator {
     AssignRShift,
 }
 
+#[gen_stub_pyclass_enum]
 #[pyclass(
     module = "avulto.ast",
     name = "SettingMode",
@@ -59,6 +63,7 @@ pub enum SettingMode {
     In,
 }
 
+#[gen_stub_pyclass_enum]
 #[pyclass(
     module = "avulto.ast",
     name = "BinaryOperator",
