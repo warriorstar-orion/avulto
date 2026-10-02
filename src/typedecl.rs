@@ -10,7 +10,7 @@ use pyo3::{
 };
 
 use crate::{
-    dme::{Dme, FilledSourceLocation},
+    dme::{Dme, SourceLoc},
     path::Path,
 };
 
@@ -25,7 +25,7 @@ pub struct VarDecl {
     #[pyo3(get)]
     pub const_val: Option<Py<PyAny>>,
     #[pyo3(get)]
-    pub source_loc: FilledSourceLocation,
+    pub source_loc: SourceLoc,
 }
 
 #[pymethods]
@@ -54,7 +54,7 @@ pub struct TypeDecl {
     #[pyo3(get)]
     pub path: Path,
     #[pyo3(get)]
-    pub source_loc: FilledSourceLocation,
+    pub source_loc: SourceLoc,
 }
 
 #[pyclass(module = "avulto")]
@@ -92,7 +92,7 @@ pub struct ProcDecl {
     type_index: NodeIndex,
     proc_index: usize,
     #[pyo3(get)]
-    source_loc: FilledSourceLocation,
+    source_loc: SourceLoc,
 }
 
 #[pymethods]

@@ -1,8 +1,8 @@
-use dreammaker::{Location, ast::Statement};
+use dreammaker::ast::Statement;
 use pyo3::{IntoPyObject, Py, Python, types::PyList};
 
 use crate::{
-    dme::{FileData, FilledSourceLocation},
+    dme::{FileData, SourceLoc},
     path::Path,
 };
 
@@ -16,12 +16,12 @@ impl Node {
     pub fn from_statement(
         py: Python<'_>,
         root: &Statement,
-        source_loc: FilledSourceLocation,
+        source_loc: SourceLoc,
         file_data: &FileData,
     ) -> Py<Self> {
         match &root {
             Statement::Var(v) => Self::Var {
-                name: Expression::ident(v.name.to_string(), FilledSourceLocation::builtin(), py),
+                name: Expression::ident(v.name.to_string(), SourceLoc::builtin(), py),
                 value: v.value.as_ref().map(|expr| {
                     Expression::parse(py, expr, file_data)
                         .into_pyobject(py)
@@ -78,10 +78,15 @@ impl Node {
                 block: block
                     .iter()
                     .map(|stmt| {
-                        Node::from_statement(py, &stmt.elem, source_loc.clone(), file_data)
-                            .into_pyobject(py)
-                            .expect("parsing while block")
-                            .into()
+                        Node::from_statement(
+                            py,
+                            &stmt.elem,
+                            file_data.fill_source_loc(&stmt.location),
+                            file_data,
+                        )
+                        .into_pyobject(py)
+                        .expect("parsing while block")
+                        .into()
                     })
                     .collect(),
                 source_loc,
@@ -145,10 +150,15 @@ impl Node {
                 if let Some(else_arm_block) = else_arm {
                     for stmt in else_arm_block.iter() {
                         else_arm_nodes.push(
-                            Node::from_statement(py, &stmt.elem, file_data.fill_source_loc(&stmt.location), file_data)
-                                .into_pyobject(py)
-                                .expect("parsing if else block")
-                                .into(),
+                            Node::from_statement(
+                                py,
+                                &stmt.elem,
+                                file_data.fill_source_loc(&stmt.location),
+                                file_data,
+                            )
+                            .into_pyobject(py)
+                            .expect("parsing if else block")
+                            .into(),
                         );
                     }
                 }
@@ -170,10 +180,15 @@ impl Node {
                 block: block
                     .iter()
                     .map(|stmt| {
-                        Node::from_statement(py, &stmt.elem, file_data.fill_source_loc(&stmt.location), file_data)
-                            .into_pyobject(py)
-                            .expect("parsing for infinite block")
-                            .into()
+                        Node::from_statement(
+                            py,
+                            &stmt.elem,
+                            file_data.fill_source_loc(&stmt.location),
+                            file_data,
+                        )
+                        .into_pyobject(py)
+                        .expect("parsing for infinite block")
+                        .into()
                     })
                     .collect(),
                 source_loc,
@@ -188,7 +203,7 @@ impl Node {
                 block,
             } => Self::ForLoop {
                 init: init.as_ref().map(|stmt| {
-                    Node::from_statement(py, stmt, FilledSourceLocation::builtin(), file_data)
+                    Node::from_statement(py, stmt, SourceLoc::builtin(), file_data)
                         .into_pyobject(py)
                         .expect("parsing for loop init")
                         .into()
@@ -200,7 +215,7 @@ impl Node {
                         .into()
                 }),
                 inc: inc.as_ref().map(|stmt| {
-                    Node::from_statement(py, stmt, FilledSourceLocation::builtin(), file_data)
+                    Node::from_statement(py, stmt, SourceLoc::builtin(), file_data)
                         .into_pyobject(py)
                         .expect("parsing for loop inc")
                         .into()
@@ -208,10 +223,15 @@ impl Node {
                 block: block
                     .iter()
                     .map(|stmt| {
-                        Node::from_statement(py, &stmt.elem, FilledSourceLocation::builtin(), file_data)
-                            .into_pyobject(py)
-                            .expect("parsing for loop block")
-                            .into()
+                        Node::from_statement(
+                            py,
+                            &stmt.elem,
+                            file_data.fill_source_loc(&stmt.location),
+                            file_data,
+                        )
+                        .into_pyobject(py)
+                        .expect("parsing for loop block")
+                        .into()
                     })
                     .collect(),
                 source_loc,
@@ -229,7 +249,7 @@ impl Node {
                 Self::ForList {
                     name: Expression::ident(
                         for_list_statement.name.to_string(),
-                        FilledSourceLocation::builtin(),
+                        SourceLoc::builtin(),
                         py,
                     ),
                     in_list: for_list_statement.in_list.as_ref().map(|expr| {
@@ -242,10 +262,15 @@ impl Node {
                         .block
                         .iter()
                         .map(|stmt| {
-                            Node::from_statement(py, &stmt.elem, file_data.fill_source_loc(&stmt.location), file_data)
-                                .into_pyobject(py)
-                                .expect("parsing for list block")
-                                .into()
+                            Node::from_statement(
+                                py,
+                                &stmt.elem,
+                                file_data.fill_source_loc(&stmt.location),
+                                file_data,
+                            )
+                            .into_pyobject(py)
+                            .expect("parsing for list block")
+                            .into()
                         })
                         .collect(),
                     source_loc,
@@ -256,7 +281,11 @@ impl Node {
                 .into()
             }
             Statement::ForRange(for_range_statement) => Self::ForRange {
-                name: Expression::ident(for_range_statement.name.to_string(), FilledSourceLocation::builtin(), py),
+                name: Expression::ident(
+                    for_range_statement.name.to_string(),
+                    SourceLoc::builtin(),
+                    py,
+                ),
                 start: Expression::parse(py, &for_range_statement.start, file_data)
                     .into_pyobject(py)
                     .expect("parsing for range start")
@@ -269,10 +298,15 @@ impl Node {
                     .block
                     .iter()
                     .map(|stmt| {
-                        Node::from_statement(py, &stmt.elem, file_data.fill_source_loc(&stmt.location), file_data)
-                            .into_pyobject(py)
-                            .expect("parsing for range block")
-                            .into()
+                        Node::from_statement(
+                            py,
+                            &stmt.elem,
+                            file_data.fill_source_loc(&stmt.location),
+                            file_data,
+                        )
+                        .into_pyobject(py)
+                        .expect("parsing for range block")
+                        .into()
                     })
                     .collect(),
                 step: for_range_statement.step.as_ref().map(|expr| {
@@ -291,7 +325,7 @@ impl Node {
                     .iter()
                     .map(|vs| {
                         Self::Var {
-                            name: Expression::ident(vs.name.to_string(), FilledSourceLocation::builtin(), py),
+                            name: Expression::ident(vs.name.to_string(), SourceLoc::builtin(), py),
                             value: vs.value.as_ref().map(|expr| {
                                 Expression::parse(py, expr, file_data)
                                     .into_pyobject(py)
@@ -316,7 +350,7 @@ impl Node {
             .expect("parsing vars")
             .into(),
             Statement::Setting { name, mode, value } => Self::Setting {
-                name: Expression::ident(name.to_string(), FilledSourceLocation::builtin(), py),
+                name: Expression::ident(name.to_string(), SourceLoc::builtin(), py),
                 mode: match mode {
                     dreammaker::ast::SettingMode::Assign => SettingMode::Assign,
                     dreammaker::ast::SettingMode::In => SettingMode::In,
@@ -340,10 +374,15 @@ impl Node {
                 block: block
                     .iter()
                     .map(|stmt| {
-                        Node::from_statement(py, &stmt.elem, file_data.fill_source_loc(&stmt.location), file_data)
-                            .into_pyobject(py)
-                            .expect("parsing spawn block")
-                            .into()
+                        Node::from_statement(
+                            py,
+                            &stmt.elem,
+                            file_data.fill_source_loc(&stmt.location),
+                            file_data,
+                        )
+                        .into_pyobject(py)
+                        .expect("parsing spawn block")
+                        .into()
                     })
                     .collect::<PyCodeBlock>(),
                 source_loc,
@@ -403,10 +442,15 @@ impl Node {
                             block: block
                                 .iter()
                                 .map(|stmt| {
-                                    Node::from_statement(py, &stmt.elem, file_data.fill_source_loc(&stmt.location), file_data)
-                                        .into_pyobject(py)
-                                        .expect("parsing switch-case block")
-                                        .into()
+                                    Node::from_statement(
+                                        py,
+                                        &stmt.elem,
+                                        file_data.fill_source_loc(&stmt.location),
+                                        file_data,
+                                    )
+                                    .into_pyobject(py)
+                                    .expect("parsing switch-case block")
+                                    .into()
                                 })
                                 .collect(),
                         }
@@ -423,10 +467,15 @@ impl Node {
                         stmts
                             .iter()
                             .map(|stmt| {
-                                Node::from_statement(py, &stmt.elem, file_data.fill_source_loc(&stmt.location), file_data)
-                                    .into_pyobject(py)
-                                    .expect("parsing switch default")
-                                    .into()
+                                Node::from_statement(
+                                    py,
+                                    &stmt.elem,
+                                    file_data.fill_source_loc(&stmt.location),
+                                    file_data,
+                                )
+                                .into_pyobject(py)
+                                .expect("parsing switch default")
+                                .into()
                             })
                             .collect()
                     }),
@@ -444,26 +493,36 @@ impl Node {
                 try_block: try_block
                     .iter()
                     .map(|stmt| {
-                        Node::from_statement(py, &stmt.elem, file_data.fill_source_loc(&stmt.location), file_data)
-                            .into_pyobject(py)
-                            .expect("parsing trycatch try block")
-                            .into()
+                        Node::from_statement(
+                            py,
+                            &stmt.elem,
+                            file_data.fill_source_loc(&stmt.location),
+                            file_data,
+                        )
+                        .into_pyobject(py)
+                        .expect("parsing trycatch try block")
+                        .into()
                     })
                     .collect(),
                 catch_block: catch_block
                     .iter()
                     .map(|stmt| {
-                        Node::from_statement(py, &stmt.elem, file_data.fill_source_loc(&stmt.location), file_data)
-                            .into_pyobject(py)
-                            .expect("parsing trycatch catch block")
-                            .into()
+                        Node::from_statement(
+                            py,
+                            &stmt.elem,
+                            file_data.fill_source_loc(&stmt.location),
+                            file_data,
+                        )
+                        .into_pyobject(py)
+                        .expect("parsing trycatch catch block")
+                        .into()
                     })
                     .collect(),
                 catch_params: catch_params
                     .iter()
                     .map(|tc| {
                         tc.iter()
-                            .map(|tcs| Expression::ident(tcs.to_string(), FilledSourceLocation::builtin(), py))
+                            .map(|tcs| Expression::ident(tcs.to_string(), SourceLoc::builtin(), py))
                             .collect()
                     })
                     .collect(),
@@ -475,7 +534,7 @@ impl Node {
             Statement::Continue(name) => Self::Continue {
                 name: name
                     .as_ref()
-                    .map(|s| Expression::ident(s.clone(), FilledSourceLocation::builtin(), py)),
+                    .map(|s| Expression::ident(s.clone(), SourceLoc::builtin(), py)),
                 source_loc,
             }
             .into_pyobject(py)
@@ -484,28 +543,33 @@ impl Node {
             Statement::Break(label) => Self::Break {
                 label: label
                     .as_ref()
-                    .map(|l| Expression::ident(l.clone(), FilledSourceLocation::builtin(), py)),
+                    .map(|l| Expression::ident(l.clone(), SourceLoc::builtin(), py)),
                 source_loc,
             }
             .into_pyobject(py)
             .expect("parsing break")
             .into(),
             Statement::Goto(label) => Self::Goto {
-                label: Expression::ident(label.to_string(), FilledSourceLocation::builtin(), py),
+                label: Expression::ident(label.to_string(), SourceLoc::builtin(), py),
                 source_loc,
             }
             .into_pyobject(py)
             .expect("parsing goto")
             .into(),
             Statement::Label { name, block } => Self::Label {
-                name: Expression::ident(name.to_string(), FilledSourceLocation::builtin(), py),
+                name: Expression::ident(name.to_string(), SourceLoc::builtin(), py),
                 block: block
                     .iter()
                     .map(|stmt| {
-                        Node::from_statement(py, &stmt.elem, file_data.fill_source_loc(&stmt.location), file_data)
-                            .into_pyobject(py)
-                            .expect("parsing label block")
-                            .into()
+                        Node::from_statement(
+                            py,
+                            &stmt.elem,
+                            file_data.fill_source_loc(&stmt.location),
+                            file_data,
+                        )
+                        .into_pyobject(py)
+                        .expect("parsing label block")
+                        .into()
                     })
                     .collect(),
                 source_loc,
@@ -543,8 +607,8 @@ impl Node {
                     }
                 }
                 Self::ForKeyValue {
-                    key: Expression::ident(stmt.key.to_string(), FilledSourceLocation::builtin(), py),
-                    value: Expression::ident(stmt.value.to_string(), FilledSourceLocation::builtin(), py),
+                    key: Expression::ident(stmt.key.to_string(), SourceLoc::builtin(), py),
+                    value: Expression::ident(stmt.value.to_string(), SourceLoc::builtin(), py),
                     in_list: stmt.in_list.as_ref().map(|expr| {
                         Expression::parse(py, expr, file_data)
                             .into_pyobject(py)
@@ -555,10 +619,15 @@ impl Node {
                         .block
                         .iter()
                         .map(|stmt| {
-                            Node::from_statement(py, &stmt.elem, file_data.fill_source_loc(&stmt.location), file_data)
-                                .into_pyobject(py)
-                                .expect("parsing label block")
-                                .into()
+                            Node::from_statement(
+                                py,
+                                &stmt.elem,
+                                file_data.fill_source_loc(&stmt.location),
+                                file_data,
+                            )
+                            .into_pyobject(py)
+                            .expect("parsing label block")
+                            .into()
                         })
                         .collect(),
                     var_type: var_type_path,

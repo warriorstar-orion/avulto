@@ -1,6 +1,6 @@
 use pyo3::{types::PyAnyMethods, Bound, IntoPyObject, PyAny, PyResult, Python};
 
-use crate::dme::FilledSourceLocation;
+use crate::dme::SourceLoc;
 
 use super::{expression::Expression, nodes::Node, Dme};
 
@@ -217,7 +217,7 @@ impl Node {
                         name: name.clone_ref(py),
                         value: None,
                         declared_type: var_type.clone(),
-                        source_loc: FilledSourceLocation::builtin(),
+                        source_loc: SourceLoc::builtin(),
                     };
                     // I guess we pretend that a variable declaration in a for loop is a var statement of sorts
                     Node::walk(&loop_decl.into_pyobject(py)?, dme, walker, py)?;
@@ -443,13 +443,13 @@ impl Node {
                         name: key.clone_ref(py),
                         value: None,
                         declared_type: var_type.clone(),
-                        source_loc: FilledSourceLocation::builtin(),
+                        source_loc: SourceLoc::builtin(),
                     };
                     let valuedecl = Node::Var {
                         name: value.clone_ref(py),
                         value: None,
                         declared_type: None,
-                        source_loc: FilledSourceLocation::builtin(),
+                        source_loc: SourceLoc::builtin(),
                     };
                     // I guess we pretend that a variable declaration in a for loop is a var statement of sorts
                     Node::walk(&keydecl.into_pyobject(py)?, dme, walker, py)?;

@@ -2,7 +2,7 @@ use dreammaker::ast::AssignOp;
 use pyo3::{IntoPyObject, Py, Python};
 
 use crate::{
-    dme::{FileData, FilledSourceLocation},
+    dme::{FileData, SourceLoc},
     dmlist::DmList,
 };
 
@@ -82,10 +82,10 @@ impl Expression {
                     }
                     dreammaker::ast::Term::Call(ident2, args) => Self::Call {
                         // TODO: Not sure these should be marked as builtins
-                        expr: Expression::null(FilledSourceLocation::builtin(), py),
+                        expr: Expression::null(file_data.fill_source_loc(&term.location), py),
                         name: Expression::ident(
                             ident2.to_string(),
-                            FilledSourceLocation::builtin(),
+                            file_data.fill_source_loc(&term.location),
                             py,
                         ),
                         args: args
@@ -156,7 +156,7 @@ impl Expression {
                     dreammaker::ast::Term::NewMiniExpr { expr, args: _ } => Self::NewMiniExpr {
                         name: Expression::ident(
                             expr.ident.to_string(),
-                            FilledSourceLocation::builtin(),
+                            SourceLoc::builtin(),
                             py,
                         ),
                         fields: expr
@@ -167,10 +167,10 @@ impl Expression {
                                     expr: None,
                                     field: Expression::ident(
                                         f.ident.to_string(),
-                                        FilledSourceLocation::builtin(),
+                                        SourceLoc::builtin(),
                                         py,
                                     ),
-                                    source_loc: FilledSourceLocation::builtin(),
+                                    source_loc: SourceLoc::builtin(),
                                 }
                                 .into_pyobject(py)
                                 .expect("parsing newminiexpr fields")
@@ -193,7 +193,7 @@ impl Expression {
                                             .into(),
                                     );
                                     vals.push(Expression::null(
-                                        FilledSourceLocation::builtin(),
+                                        SourceLoc::builtin(),
                                         py,
                                     ));
                                 }
@@ -219,7 +219,7 @@ impl Expression {
                                             .into(),
                                     );
                                     vals.push(Expression::null(
-                                        FilledSourceLocation::builtin(),
+                                        SourceLoc::builtin(),
                                         py,
                                     ));
                                 }
@@ -238,14 +238,14 @@ impl Expression {
                                                 .into_pyobject(py)
                                                 .expect("bad ternary op else_expr")
                                                 .into(),
-                                            source_loc: FilledSourceLocation::builtin(),
+                                            source_loc: SourceLoc::builtin(),
                                         }
                                         .into_pyobject(py)
                                         .expect("bad ternary op")
                                         .into(),
                                     );
                                     vals.push(Expression::null(
-                                        FilledSourceLocation::builtin(),
+                                        SourceLoc::builtin(),
                                         py,
                                     ));
                                 }
@@ -400,7 +400,7 @@ impl Expression {
                                 ),
                                 field: Expression::ident(
                                     ident2.to_string(),
-                                    FilledSourceLocation::builtin(),
+                                    file_data.fill_source_loc(&f.location),
                                     py,
                                 ),
                                 source_loc: file_data.fill_source_loc(&f.location),
@@ -414,7 +414,7 @@ impl Expression {
                                     .into(),
                                 name: Expression::ident(
                                     ident2.to_string(),
-                                    FilledSourceLocation::builtin(),
+                                    file_data.fill_source_loc(&f.location),
                                     py,
                                 ),
                                 args: args
@@ -457,7 +457,7 @@ impl Expression {
                                     .into(),
                                 field: Expression::ident(
                                     ident2.to_string(),
-                                    FilledSourceLocation::builtin(),
+                                    SourceLoc::builtin(),
                                     py,
                                 ),
                                 source_loc: file_data.fill_source_loc(&f.location),
@@ -471,7 +471,7 @@ impl Expression {
                                     .into(),
                                 name: Expression::ident(
                                     ident2.to_string(),
-                                    FilledSourceLocation::builtin(),
+                                    SourceLoc::builtin(),
                                     py,
                                 )
                                 .into_pyobject(py)
@@ -521,7 +521,7 @@ impl Expression {
                     .into_pyobject(py)
                     .expect("parsing binary op rhs")
                     .into(),
-                source_loc: FilledSourceLocation::builtin(),
+                source_loc: SourceLoc::builtin(),
             },
             dreammaker::ast::Expression::AssignOp { op, lhs, rhs } => Self::AssignOp {
                 op: match op {
@@ -549,7 +549,7 @@ impl Expression {
                     .into_pyobject(py)
                     .expect("parsing assign op rhs")
                     .into(),
-                source_loc: FilledSourceLocation::builtin(),
+                source_loc: SourceLoc::builtin(),
             },
             dreammaker::ast::Expression::TernaryOp { cond, if_, else_ } => Self::TernaryOp {
                 cond: Self::parse(py, cond, file_data)
@@ -564,7 +564,7 @@ impl Expression {
                     .into_pyobject(py)
                     .expect("parsing ternary op else")
                     .into(),
-                source_loc: FilledSourceLocation::builtin(),
+                source_loc: SourceLoc::builtin(),
             },
         }
     }

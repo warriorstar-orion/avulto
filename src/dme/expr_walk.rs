@@ -1,4 +1,4 @@
-use pyo3::{Bound, IntoPyObjectExt, PyAny, PyResult, Python, types::PyAnyMethods};
+use pyo3::{Bound, PyAny, PyResult, Python, types::PyAnyMethods};
 
 use super::{expression::Expression, nodes::visit_constant, prefab::Prefab, Dme};
 

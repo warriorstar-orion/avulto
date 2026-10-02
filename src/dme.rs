@@ -120,31 +120,26 @@ pub struct Dme {
     pub(crate) file_data: FileData,
 }
 
-#[pyclass]
 pub struct FileData {
     pub(crate) file_ids: HashMap<FileId, PathBuf>,
 }
 
 impl FileData {
-    pub fn fill_source_loc(&self, source_loc: &Location) -> FilledSourceLocation {
+    pub fn fill_source_loc(&self, source_loc: &Location) -> SourceLoc {
         if self.file_ids.contains_key(&source_loc.file) {
-            return FilledSourceLocation {
+            return SourceLoc {
                 file_path: Some(self.file_ids[&source_loc.file].clone()),
                 line: source_loc.line,
                 column: source_loc.column,
             };
         }
-        FilledSourceLocation {
-            file_path: None,
-            line: 0,
-            column: 0,
-        }
+        SourceLoc::builtin()
     }
 }
 
-#[pyclass(frozen, module = "avulto", name = "SourceLoc")]
+#[pyclass(frozen, module = "avulto")]
 #[derive(Clone)]
-pub struct FilledSourceLocation {
+pub struct SourceLoc {
     #[pyo3(get)]
     pub file_path: Option<PathBuf>,
     /// The line number, starting at 1.
@@ -155,18 +150,18 @@ pub struct FilledSourceLocation {
     pub column: u16,
 }
 
-impl FilledSourceLocation {
-    pub(crate) fn builtin() -> FilledSourceLocation {
-        FilledSourceLocation {
+impl SourceLoc {
+    pub(crate) fn builtin() -> SourceLoc {
+        SourceLoc {
             file_path: None,
-            line: 0,
-            column: 0,
+            line: 1,
+            column: 1,
         }
     }
 }
 
 #[pymethods]
-impl FilledSourceLocation {
+impl SourceLoc {
     fn __str__(&self) -> PyResult<String> {
         self.__repr__()
     }
@@ -288,7 +283,7 @@ impl Dme {
                 .constant
                 .as_ref()
                 .map(helpers::constant_to_python_value);
-            let mut source_loc: FilledSourceLocation = FilledSourceLocation::builtin();
+            let mut source_loc: SourceLoc = SourceLoc::builtin();
             if !var.value.location.is_builtins() {
                 source_loc = self.file_data.fill_source_loc(&var.value.location);
             } else if let Some(decl) = &var.declaration {
