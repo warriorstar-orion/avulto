@@ -1,13 +1,13 @@
 extern crate dreammaker;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 use dreammaker::{
     FileId, FileList, Location,
     ast::{Spanned, Statement},
     objtree::NodeIndex,
 };
-use nodes::{Node, OriginalSourceLocation};
+use nodes::Node;
 use pyo3::{
     Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyRef, PyResult, Python, create_exception,
     exceptions::{PyException, PyKeyError, PyOSError, PyRuntimeError, PyValueError},
@@ -66,13 +66,11 @@ impl DmeTypeAccessor {
             match dme.objtree.find(&search_string) {
                 Some(type_ref) => {
                     let type_ref_index = type_ref.index();
-                    let osl = Some(OriginalSourceLocation::from_location(&type_ref.location));
-                    let source_loc = Some(
-                        dme.populate_source_loc(&osl, py)
-                            .into_pyobject(py)
-                            .unwrap()
-                            .unbind(),
-                    );
+                    let source_loc = self
+                        .dme
+                        .borrow(py)
+                        .file_data
+                        .fill_source_loc(&type_ref.location);
                     let dme = dme
                         .into_pyobject(py)
                         .expect("passing dme")
@@ -119,18 +117,31 @@ pub struct Dme {
     #[pyo3(get)]
     filepath: Py<PyAny>,
     procs_parsed: bool,
-    pub(crate) file_data: Py<FileData>,
+    pub(crate) file_data: FileData,
 }
 
-#[pyclass]
 pub struct FileData {
-    pub(crate) file_ids: HashMap<FileId, Py<PyAny>>,
+    pub(crate) file_ids: HashMap<FileId, PathBuf>,
 }
 
-#[pyclass(module = "avulto", name = "SourceLoc")]
-pub struct FilledSourceLocation {
+impl FileData {
+    pub fn fill_source_loc(&self, source_loc: &Location) -> SourceLoc {
+        if self.file_ids.contains_key(&source_loc.file) {
+            return SourceLoc {
+                file_path: Some(self.file_ids[&source_loc.file].clone()),
+                line: source_loc.line,
+                column: source_loc.column,
+            };
+        }
+        SourceLoc::builtin()
+    }
+}
+
+#[pyclass(frozen, module = "avulto")]
+#[derive(Clone)]
+pub struct SourceLoc {
     #[pyo3(get)]
-    pub file_path: Py<PyAny>,
+    pub file_path: Option<PathBuf>,
     /// The line number, starting at 1.
     #[pyo3(get)]
     pub line: u32,
@@ -139,39 +150,44 @@ pub struct FilledSourceLocation {
     pub column: u16,
 }
 
+impl SourceLoc {
+    pub(crate) fn builtin() -> SourceLoc {
+        SourceLoc {
+            file_path: None,
+            line: 1,
+            column: 1,
+        }
+    }
+}
+
 #[pymethods]
-impl FilledSourceLocation {
-    fn __str__(&self, py: Python<'_>) -> PyResult<String> {
-        self.__repr__(py)
+impl SourceLoc {
+    fn __str__(&self) -> PyResult<String> {
+        self.__repr__()
     }
 
-    fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
-        Ok(format!(
-            "{}:{}:{}",
-            self.file_path.bind(py).call_method("__str__", (), None)?,
-            self.line,
-            self.column
-        ))
+    fn __repr__(&self) -> PyResult<String> {
+        let file_path = match &self.file_path {
+            Some(pth) => pth.to_str().unwrap_or("(unknown)"),
+            None => "(builtins)",
+        };
+        Ok(format!("{}:{}:{}", file_path, self.line, self.column))
     }
 
-    fn is_builtin(&self, py: Python<'_>) -> PyResult<bool> {
-        self.file_path.bind(py).eq("(builtins)")
+    fn is_builtin(&self) -> PyResult<bool> {
+        Ok(self.file_path.is_none())
     }
 }
 
 impl FileData {
-    fn from_file_list(file_list: &FileList, py: Python<'_>) -> Self {
-        let pathlib = py.import(pyo3::intern!(py, "pathlib")).unwrap();
+    fn from_file_list(file_list: &FileList) -> Self {
         let mut result = FileData {
             file_ids: HashMap::default(),
         };
         file_list.for_each(|path| {
             result.file_ids.insert(
                 file_list.get_id(path).unwrap(),
-                pathlib
-                    .call_method1(pyo3::intern!(py, "Path"), (path,))
-                    .unwrap()
-                    .unbind(),
+                std::path::Path::new(path).to_path_buf(),
             );
         });
 
@@ -199,48 +215,14 @@ impl Dme {
         out.dedup();
     }
 
-    pub fn populate_source_loc(
-        &self,
-        loc: &Option<Py<OriginalSourceLocation>>,
-        py: Python<'_>,
-    ) -> Py<PyAny> {
-        // TODO: what the fuck
-        loc.as_ref()
-            .map(|f| {
-                let g = f.borrow(py);
-                if g.file == Location::builtins().file {
-                    FilledSourceLocation {
-                        file_path: "(builtins)".into_py_any(py).unwrap(),
-                        line: 1,
-                        column: 1,
-                    }
-                } else {
-                    let ids = &self.file_data.borrow(py).file_ids;
-                    if ids.contains_key(&g.file) {
-                        return FilledSourceLocation {
-                            file_path: self.file_data.borrow(py).file_ids[&g.file].clone_ref(py),
-                            line: g.line,
-                            column: g.column,
-                        };
-                    } else {
-                        FilledSourceLocation {
-                            file_path: "(builtins)".into_py_any(py).unwrap(),
-                            line: 1,
-                            column: 1,
-                        }
-                    }
-                }
-            })
-            .map_or(py.None(), |g| g.into_py_any(py).unwrap())
-    }
-
     pub fn walk_stmt(
         self_: PyRef<'_, Self>,
         stmt: &Spanned<Statement>,
         walker: &Bound<PyAny>,
         py: Python<'_>,
     ) -> PyResult<()> {
-        let node = Node::from_statement(py, &stmt.elem, Some(stmt.location));
+        let source_loc = self_.file_data.fill_source_loc(&stmt.location);
+        let node = Node::from_statement(py, &stmt.elem, source_loc, &self_.file_data);
         Node::walk(node.bind(py), &self_.into_pyobject(py).unwrap(), walker, py)?;
         Ok(())
     }
@@ -301,24 +283,12 @@ impl Dme {
                 .constant
                 .as_ref()
                 .map(helpers::constant_to_python_value);
-            let mut source_loc: Option<Py<PyAny>> = None;
+            let mut source_loc: SourceLoc = SourceLoc::builtin();
             if !var.value.location.is_builtins() {
-                let osl = Some(OriginalSourceLocation::from_location(&var.value.location));
-                source_loc = Some(
-                    self.populate_source_loc(&osl, py)
-                        .into_pyobject(py)
-                        .unwrap()
-                        .unbind(),
-                );
+                source_loc = self.file_data.fill_source_loc(&var.value.location);
             } else if let Some(decl) = &var.declaration {
                 if !decl.location.is_builtins() {
-                    let osl = Some(OriginalSourceLocation::from_location(&decl.location));
-                    source_loc = Some(
-                        self.populate_source_loc(&osl, py)
-                            .into_pyobject(py)
-                            .unwrap()
-                            .unbind(),
-                    );
+                    source_loc = self.file_data.fill_source_loc(&decl.location);
                 }
             }
             return VarDecl {
@@ -392,8 +362,7 @@ impl Dme {
             objtree: tree,
             filepath: pathlib_path.into(),
             procs_parsed: parse_procs,
-            file_data: Py::new(py, FileData::from_file_list(ctx.file_list(), py))
-                .expect("passing file list"),
+            file_data: FileData::from_file_list(ctx.file_list()),
         };
         Ok(dme)
     }

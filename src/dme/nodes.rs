@@ -1,17 +1,16 @@
 use core::fmt;
 use std::hash::Hash;
 
-use dreammaker::{FileId, Location};
 use pyo3::{
     pyclass, pymethods, pymodule,
     types::{PyAnyMethods, PyList, PyModule, PyModuleMethods},
-    Bound, IntoPyObject, Py, PyAny, PyResult, Python,
+    Bound, Py, PyAny, PyResult, Python,
 };
 
 use crate::{
     dme::{
         operators::{AssignOperator, BinaryOperator, UnaryOperator},
-        prefab::Prefab, FilledSourceLocation,
+        prefab::Prefab, SourceLoc,
     },
     path::Path,
 };
@@ -29,7 +28,7 @@ pub type PyExpr = Py<Expression>;
 
 #[pymodule]
 pub fn ast(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
-    m.add_class::<FilledSourceLocation>()?;
+    m.add_class::<SourceLoc>()?;
     m.add_class::<UnaryOperator>()?;
     m.add_class::<AssignOperator>()?;
     m.add_class::<SettingMode>()?;
@@ -114,92 +113,64 @@ impl fmt::Display for NodeKind {
 }
 
 #[pyclass(frozen)]
-#[derive(Clone)]
-pub struct OriginalSourceLocation {
-    /// The index into the file table.
-    pub file: FileId,
-    /// The line number, starting at 1.
-    #[pyo3(get)]
-    pub line: u32,
-    /// The column number, starting at 1.
-    #[pyo3(get)]
-    pub column: u16,
-}
-
-impl OriginalSourceLocation {
-    pub fn from_location(location: &Location) -> Py<Self> {
-        Python::attach(|py| {
-            OriginalSourceLocation {
-                file: location.file,
-                line: location.line,
-                column: location.column,
-            }
-            .into_pyobject(py)
-            .unwrap()
-            .unbind()
-        })
-    }
-}
-
-#[pyclass(frozen)]
 pub enum Node {
     Unknown(),
     Expression {
         expr: PyExpr,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Crash {
         expr: Option<PyExpr>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Return {
         retval: Option<PyExpr>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Throw {
         expr: PyExpr,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Del {
         expr: PyExpr,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Break {
         label: Option<PyExpr>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     While {
         condition: PyExpr,
         block: PyCodeBlock,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     DoWhile {
         condition: PyExpr,
         block: PyCodeBlock,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     If {
         if_arms: Vec<(PyExpr, PyCodeBlock)>,
         else_arm: Option<PyCodeBlock>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     ForInfinite {
         block: PyCodeBlock,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     ForList {
         var_type: Option<Path>,
         name: PyExpr,
         in_list: Option<PyExpr>,
         block: PyCodeBlock,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     ForLoop {
         init: Option<Py<Node>>,
         test: Option<PyExpr>,
         inc: Option<Py<Node>>,
         block: PyCodeBlock,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     ForRange {
         name: PyExpr,
@@ -207,53 +178,53 @@ pub enum Node {
         end: PyExpr,
         step: Option<PyExpr>,
         block: PyCodeBlock,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Var {
         name: PyExpr,
         value: Option<PyExpr>,
         declared_type: Option<Path>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Vars {
         vars: Vec<Py<Node>>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Setting {
         name: PyExpr,
         mode: SettingMode,
         value: PyExpr,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Spawn {
         delay: Option<PyExpr>,
         block: PyCodeBlock,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Continue {
         name: Option<PyExpr>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Goto {
         label: PyExpr,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Label {
         name: PyExpr,
         block: PyCodeBlock,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     TryCatch {
         try_block: PyCodeBlock,
         catch_params: Vec<Vec<PyExpr>>,
         catch_block: PyCodeBlock,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Switch {
         input: PyExpr,
         cases: Vec<Py<SwitchCase>>,
         default: Option<PyCodeBlock>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     ForKeyValue {
         var_type: Option<Path>,
@@ -261,7 +232,7 @@ pub enum Node {
         value: PyExpr,
         in_list: Option<PyExpr>,
         block: PyCodeBlock,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     }
 }
 

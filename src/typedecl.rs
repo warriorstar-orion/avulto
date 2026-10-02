@@ -10,7 +10,7 @@ use pyo3::{
 };
 
 use crate::{
-    dme::{Dme, FilledSourceLocation},
+    dme::{Dme, SourceLoc},
     path::Path,
 };
 
@@ -25,7 +25,7 @@ pub struct VarDecl {
     #[pyo3(get)]
     pub const_val: Option<Py<PyAny>>,
     #[pyo3(get)]
-    pub source_loc: Option<Py<PyAny>>,
+    pub source_loc: SourceLoc,
 }
 
 #[pymethods]
@@ -54,7 +54,7 @@ pub struct TypeDecl {
     #[pyo3(get)]
     pub path: Path,
     #[pyo3(get)]
-    pub source_loc: Option<Py<PyAny>>,
+    pub source_loc: SourceLoc,
 }
 
 #[pyclass(module = "avulto")]
@@ -92,7 +92,7 @@ pub struct ProcDecl {
     type_index: NodeIndex,
     proc_index: usize,
     #[pyo3(get)]
-    source_loc: Py<PyAny>,
+    source_loc: SourceLoc,
 }
 
 #[pymethods]
@@ -283,17 +283,7 @@ impl TypeDecl {
 
                         proc_index,
                         type_index: self.node_index,
-                        source_loc: FilledSourceLocation {
-                            file_path: dme.borrow().file_data.borrow(py).file_ids
-                                [&proc_value.location.file]
-                                .clone_ref(py),
-                            column: proc_value.location.column,
-                            line: proc_value.location.line,
-                        }
-                        .into_pyobject(py)
-                        .expect("passing proc decl source info")
-                        .into_any()
-                        .unbind(),
+                        source_loc: dme.borrow().file_data.fill_source_loc(&proc_value.location)
                     });
                 }
             }

@@ -1,5 +1,7 @@
 use pyo3::{types::PyAnyMethods, Bound, IntoPyObject, PyAny, PyResult, Python};
 
+use crate::dme::SourceLoc;
+
 use super::{expression::Expression, nodes::Node, Dme};
 
 impl Node {
@@ -20,8 +22,7 @@ impl Node {
                     walker.call_method1(
                         "visit_Return",
                         (
-                            self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            self_, source_loc.clone()
                         ),
                     )?;
                 } else if let Some(some_expr) = retval {
@@ -36,7 +37,7 @@ impl Node {
                         "visit_Throw",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone()
                         ),
                     )?;
                 } else {
@@ -53,7 +54,7 @@ impl Node {
                         "visit_While",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -74,7 +75,7 @@ impl Node {
                         "visit_DoWhile",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -94,7 +95,7 @@ impl Node {
                         "visit_If",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -118,7 +119,7 @@ impl Node {
                         "visit_ForInfinite",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -140,7 +141,7 @@ impl Node {
                         "visit_ForLoop",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -170,7 +171,7 @@ impl Node {
                         "visit_Var",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -187,7 +188,7 @@ impl Node {
                         "visit_Crash",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else if let Some(some_expr) = expr {
@@ -208,7 +209,7 @@ impl Node {
                         "visit_ForList",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -216,7 +217,7 @@ impl Node {
                         name: name.clone_ref(py),
                         value: None,
                         declared_type: var_type.clone(),
-                        source_loc: None,
+                        source_loc: SourceLoc::builtin(),
                     };
                     // I guess we pretend that a variable declaration in a for loop is a var statement of sorts
                     Node::walk(&loop_decl.into_pyobject(py)?, dme, walker, py)?;
@@ -244,7 +245,7 @@ impl Node {
                         "visit_ForRange",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -270,7 +271,7 @@ impl Node {
                         "visit_Del",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -283,7 +284,7 @@ impl Node {
                         "visit_Break",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else if let Some(l) = label {
@@ -301,7 +302,7 @@ impl Node {
                         "visit_Setting",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -320,7 +321,7 @@ impl Node {
                         "visit_Setting",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -340,7 +341,7 @@ impl Node {
                         "visit_Continue",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else if let Some(name) = name {
@@ -353,7 +354,7 @@ impl Node {
                         "visit_Goto",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -370,7 +371,7 @@ impl Node {
                         "visit_Label",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -391,7 +392,7 @@ impl Node {
                         "visit_TryCatch",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -419,7 +420,7 @@ impl Node {
                         "visit_Switch",
                         (
                             self_,
-                            dme.borrow().populate_source_loc(source_loc, py),
+                            source_loc.clone(),
                         ),
                     )?;
                 } else {
@@ -436,19 +437,19 @@ impl Node {
             },
             Node::ForKeyValue { var_type, key, value, in_list, block, source_loc } => {
                 if walker.hasattr("visit_ForKeyValue").unwrap() {
-                    walker.call_method1("visit_ForKeyValue", (self_, dme.borrow().populate_source_loc(source_loc, py)))?;
+                    walker.call_method1("visit_ForKeyValue", (self_, source_loc.clone()))?;
                 } else {
                     let keydecl = Node::Var {
                         name: key.clone_ref(py),
                         value: None,
                         declared_type: var_type.clone(),
-                        source_loc: None,
+                        source_loc: SourceLoc::builtin(),
                     };
                     let valuedecl = Node::Var {
                         name: value.clone_ref(py),
                         value: None,
                         declared_type: None,
-                        source_loc: None,
+                        source_loc: SourceLoc::builtin(),
                     };
                     // I guess we pretend that a variable declaration in a for loop is a var statement of sorts
                     Node::walk(&keydecl.into_pyobject(py)?, dme, walker, py)?;

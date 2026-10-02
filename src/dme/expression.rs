@@ -1,10 +1,9 @@
-use dreammaker::Location;
-use pyo3::{pyclass, pymethods, IntoPyObject, Py, PyAny, PyResult, Python};
+use pyo3::{IntoPyObject, Py, PyAny, PyResult, Python, pyclass, pymethods};
 
-use crate::{dmlist::DmList, path::Path};
+use crate::{dme::SourceLoc, dmlist::DmList, path::Path};
 
 use super::{
-    nodes::{NodeKind, OriginalSourceLocation, PyExpr},
+    nodes::{NodeKind, PyExpr},
     operators::{AssignOperator, BinaryOperator, UnaryOperator},
     prefab::Prefab,
 };
@@ -38,153 +37,152 @@ impl Constant {
 }
 
 #[pyclass]
-// #[derive(Clone)]
 pub enum Expression {
     Constant {
         constant: Constant,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Identifier {
         name: String,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     List {
         list: Py<DmList>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     BinaryOp {
         op: BinaryOperator,
         lhs: PyExpr,
         rhs: PyExpr,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     AssignOp {
         op: AssignOperator,
         lhs: PyExpr,
         rhs: PyExpr,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     TernaryOp {
         cond: PyExpr,
         if_expr: PyExpr,
         else_expr: PyExpr,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     InterpString {
         first: Constant,
         token_pairs: Vec<(Option<PyExpr>, Py<Constant>)>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Locate {
         args: Vec<PyExpr>,
         in_list: Option<PyExpr>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Prefab {
         prefab: Py<Prefab>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Index {
         expr: PyExpr,
         index: PyExpr,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Field {
         expr: Option<PyExpr>,
         field: PyExpr,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     StaticField {
         expr: PyExpr,
         field: PyExpr,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Call {
         expr: PyExpr,
         name: PyExpr,
         args: Vec<PyExpr>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     SelfCall {
         args: Vec<PyExpr>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     ParentCall {
         args: Vec<PyExpr>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     UnaryOp {
         expr: PyExpr,
         unary_op: UnaryOperator,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     ProcReference {
         expr: PyExpr,
         name: PyExpr,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     ExternalCall {
         library_name: PyExpr,
         function_name: PyExpr,
         args: Vec<PyExpr>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     NewMiniExpr {
         name: PyExpr,
         fields: Vec<PyExpr>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     NewImplicit {
         args: Option<Vec<PyExpr>>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     NewPrefab {
         prefab: Py<Prefab>,
         args: Option<Vec<PyExpr>>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     DynamicCall {
         lib_name: Vec<PyExpr>,
         proc_name: Vec<PyExpr>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Input {
         args: Vec<PyExpr>,
         input_type: Option<u32>,
         in_list: Option<PyExpr>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
     Pick {
         args: Vec<(Option<PyExpr>, PyExpr)>,
-        source_loc: Option<Py<OriginalSourceLocation>>,
+        source_loc: SourceLoc,
     },
 }
 
 impl Expression {
-    pub fn null(loc: Option<Location>, py: Python<'_>) -> Py<Self> {
+    pub fn null(source_loc: SourceLoc, py: Python<'_>) -> Py<Self> {
         Expression::Constant {
             constant: Constant::Null(),
-            source_loc: loc.map(|l| OriginalSourceLocation::from_location(&l)),
+            source_loc,
         }
         .into_pyobject(py)
         .expect("bad null")
         .into()
     }
 
-    pub fn ident(ident: String, loc: Option<Location>, py: Python<'_>) -> Py<Self> {
+    pub fn ident(ident: String, source_loc: SourceLoc, py: Python<'_>) -> Py<Self> {
         Expression::Identifier {
             name: ident,
-            source_loc: loc.map(|l| OriginalSourceLocation::from_location(&l)),
+            source_loc,
         }
         .into_pyobject(py)
         .expect("bad identifier")
         .into()
     }
 
-    pub fn string(string: String, loc: Option<Location>, py: Python<'_>) -> Py<Self> {
+    pub fn string(string: String, source_loc: SourceLoc, py: Python<'_>) -> Py<Self> {
         Expression::Constant {
             constant: Constant::String(string),
-            source_loc: loc.map(|l| OriginalSourceLocation::from_location(&l)),
+            source_loc,
         }
         .into_pyobject(py)
         .expect("bad string constant")
