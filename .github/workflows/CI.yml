@@ -54,7 +54,7 @@ jobs:
           set -e
           python3 -m venv .venv
           source .venv/bin/activate
-          pip install avulto --find-links dist --force-reinstall
+          pip install avulto --no-index --find-links dist --force-reinstall
           pip install pytest Pillow
           pytest
       - name: pytest
@@ -70,7 +70,7 @@ jobs:
             apt-get install -y --no-install-recommends python3 python3-pip python3-venv
             python3 -m venv .venv
             source .venv/bin/activate
-            pip install avulto --find-links dist --force-reinstall
+            pip install avulto --no-index --find-links dist --force-reinstall
             pip install pytest Pillow
             pytest
 
@@ -130,7 +130,7 @@ jobs:
             python3 -m virtualenv .venv
             source .venv/bin/activate
             pip install pytest Pillow
-            pip install avulto --find-links dist --force-reinstall
+            pip install avulto --no-index --find-links dist --force-reinstall
             pytest
 
   windows:
@@ -166,7 +166,7 @@ jobs:
           set -e
           python3 -m venv .venv
           source .venv/Scripts/activate
-          pip install avulto --find-links dist --force-reinstall
+          pip install avulto --no-index --find-links dist --force-reinstall
           pip install pytest Pillow
           pytest
 
@@ -198,7 +198,7 @@ jobs:
           set -e
           python3 -m venv .venv
           source .venv/bin/activate
-          pip install avulto --find-links dist --force-reinstall
+          pip install avulto --no-index --find-links dist --force-reinstall
           pip install pytest Pillow
           pytest
 
