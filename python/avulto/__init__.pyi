@@ -331,12 +331,12 @@ class ProcArg:
     A representation of a proc declaration argument.
     """
     @property
-    def arg_name(self) -> typing.Any:
+    def arg_name(self) -> builtins.str:
         r"""
         The argument name.
         """
     @property
-    def arg_type(self) -> typing.Any:
+    def arg_type(self) -> typing.Optional[Path]:
         r"""
         The argument type, if available.
         """
@@ -357,7 +357,7 @@ class ProcDecl:
         The name of the proc.
         """
     @property
-    def args(self) -> typing.Any: ...
+    def args(self) -> builtins.list[ProcArg]: ...
     @property
     def source_loc(self) -> SourceLoc:
         r"""

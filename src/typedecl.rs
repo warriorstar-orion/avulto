@@ -72,26 +72,27 @@ pub struct TypeDecl {
 /// A representation of a proc declaration argument.
 #[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
+#[derive(Clone)]
 pub struct ProcArg {
     /// The argument name.
     #[pyo3(get)]
-    pub arg_name: Py<PyAny>,
+    pub arg_name: String,
     /// The argument type, if available.
     #[pyo3(get)]
-    pub arg_type: Py<PyAny>,
+    pub arg_type: Option<Path>,
 }
 
 #[pymethods]
 impl ProcArg {
-    fn __str__(&self, py: Python<'_>) -> PyResult<String> {
-        self.__repr__(py)
+    fn __str__(&self) -> PyResult<String> {
+        self.__repr__()
     }
 
-    fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
-        if self.arg_type.is_none(py) {
-            return Ok(format!("{}", self.arg_name));
+    fn __repr__(&self) -> PyResult<String> {
+        match &self.arg_type {
+            Some(p) => Ok(format!("{}/{}", p, self.arg_name)),
+            None => Ok(self.arg_name.to_string()),
         }
-        Ok(format!("{}/{}", self.arg_type, self.arg_name))
     }
 }
 
@@ -107,7 +108,7 @@ pub struct ProcDecl {
     #[pyo3(get)]
     pub name: String,
     #[pyo3(get)]
-    pub args: Py<PyAny>,
+    pub args: Vec<ProcArg>,
 
     type_index: NodeIndex,
     proc_index: usize,
@@ -286,17 +287,14 @@ impl TypeDecl {
                 if !proc_value.location.is_builtins() {
                     let mut args_out: Vec<ProcArg> = Vec::new();
                     for arg in proc_value.parameters.iter() {
-                        let arg_typepath = if arg.var_type.type_path.is_empty() {
-                            py.None()
+                        let arg_typepath: Option<Path> = if arg.var_type.type_path.is_empty() {
+                            None
                         } else {
-                            Path::from_tree_path(&arg.var_type.type_path)
-                                .into_pyobject(py)?
-                                .into_any()
-                                .unbind()
+                            Some(Path::from_tree_path(&arg.var_type.type_path))
                         };
                         args_out.push(ProcArg {
-                            arg_name: arg.name.clone().into_pyobject(py)?.into(),
-                            arg_type: arg_typepath.into_pyobject(py)?.into(),
+                            arg_name: arg.name.clone(),
+                            arg_type: arg_typepath,
                         });
                     }
 
@@ -304,18 +302,7 @@ impl TypeDecl {
                         dme: self.dme.clone_ref(py),
                         name: proc_name.clone(),
                         type_path: self.path.clone().into_pyobject(py)?.into_any().unbind(),
-
-                        args: PyList::new(
-                            py,
-                            args_out
-                                .into_iter()
-                                .map(|f| f.into_pyobject(py).unwrap().into_any().unbind())
-                                .collect::<Vec<Py<PyAny>>>(),
-                        )?
-                        .into_pyobject(py)?
-                        .into_any()
-                        .unbind(),
-
+                        args: args_out,
                         proc_index,
                         type_index: self.node_index,
                         source_loc: dme.borrow().file_data.fill_source_loc(&proc_value.location)
