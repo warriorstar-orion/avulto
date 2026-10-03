@@ -14,25 +14,35 @@ use pyo3::{
     pyclass, pymethods,
     types::{PyAnyMethods, PyBytes, PyBytesMethods, PyInt, PyList},
 };
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::helpers::Dir;
 
+/// A single icon state in a DMI file.
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
 pub struct IconState {
     pub images: Vec<image::DynamicImage>,
 
+    /// The state name.
     #[pyo3(get, set)]
     pub(crate) name: String,
+    /// The number of directions in the icon state, either 1, 4, or 8.
     #[pyo3(get)]
     pub dir_count: u8,
+    /// The number of frames in the icon state.
     #[pyo3(get)]
     pub frames: u32,
+    /// The icon's frame delays.
     #[pyo3(get)]
     pub delay: Vec<f32>,
+    /// The number of times the icon animation loops, or 0 for indefinitely.
     #[pyo3(get)]
     pub loop_flag: u32,
+    /// Whether the icon animates both backwards and forwards.
     #[pyo3(get)]
     rewind: bool,
+    /// Whether or not the state is a movement state.
     #[pyo3(get)]
     movement: bool,
 }
@@ -73,8 +83,11 @@ impl IconState {
     }
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl IconState {
+    /// Creates an IconState with the given frame `data`, which must be a dict
+    /// of Dirs to arrays of RGBA8 image byte data.
     #[staticmethod]
     #[pyo3(signature=(data, width=32, height=32, name="", delays=None, loops=0, rewind=false, movement=false))]
     pub fn from_data(
@@ -183,6 +196,7 @@ impl IconState {
         Ok(state)
     }
 
+    /// The directions available in the icon state.
     #[getter]
     pub fn dirs(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
         Ok(PyList::new(
@@ -208,6 +222,7 @@ impl IconState {
         .into())
     }
 
+    /// Return the byte data of the spritesheet in 8-bit RGBA.
     pub fn data_rgba8(
         &self,
         frame: u32,

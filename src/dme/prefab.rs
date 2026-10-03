@@ -5,11 +5,13 @@ use pyo3::{
     types::{PyAnyMethods, PyDict, PyDictMethods, PyList},
     Bound, IntoPyObject, Py, PyAny, PyResult, Python,
 };
+use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 use crate::{dme::FileData, path::Path};
 
 use super::expression::Expression;
 
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto.ast")]
 pub struct Prefab {
     #[pyo3(get)]

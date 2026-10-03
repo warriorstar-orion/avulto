@@ -8,8 +8,10 @@ use dmi::icon::{DmiVersion, Icon};
 use oxipng::{InFile, OutFile};
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyRuntimeError};
 use pyo3::types::{PyAnyMethods, PyInt, PyListMethods, PyString, PyTuple};
-use pyo3::{Bound, IntoPyObject, IntoPyObjectExt, PyErr, create_exception};
+use pyo3::{Bound, IntoPyObjectExt, PyErr};
 use pyo3::{Py, PyAny, PyRef, PyRefMut, PyResult, Python, pyclass, pymethods, types::PyList};
+use pyo3_stub_gen::create_exception;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::dmi::iconstate::IconState;
 use crate::helpers::Dir;
@@ -18,14 +20,18 @@ pub mod iconstate;
 
 create_exception!(avulto.exceptions, IconError, PyException);
 
+/// A DMI file.
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto", name = "DMI")]
 pub struct Dmi {
-    #[pyo3(get)]
     states: Py<PyList>,
+    /// The original filename of the DMI.
     #[pyo3(get)]
-    filepath: Py<PyAny>,
+    filepath: Option<PathBuf>,
+    /// The width of icons in the DMI.
     #[pyo3(get)]
     icon_width: u32,
+    /// The height of icons in the DMI.
     #[pyo3(get)]
     icon_height: u32,
 }
@@ -59,22 +65,26 @@ fn _get_dir_from(arg: &Bound<PyAny>) -> Result<Dirs, PyErr> {
     }
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl Dmi {
+    /// Creates an empty DMI file with the given icon width-height tuple `dims`.
     #[staticmethod]
     pub fn new(dims: (u32, u32), py: Python<'_>) -> Self {
         Dmi {
             states: PyList::empty(py).unbind(),
-            filepath: py.None(),
+            filepath: None,
             icon_width: dims.0,
             icon_height: dims.1,
         }
     }
 
+    /// Creates a DMI from the given `filename`.
     #[staticmethod]
-    pub fn from_file(filename: &Bound<PyAny>, py: Python<'_>) -> PyResult<Dmi> {
-        let pathlib = py.import(pyo3::intern!(py, "pathlib"))?;
-
+    pub fn from_file(
+        #[gen_stub(override_type(type_repr = "os.PathLike | builtins.str", imports=("builtins", "os")))]
+        filename: &Bound<PyAny>,
+        py: Python<'_>) -> PyResult<Dmi> {
         let path = if let Ok(pathbuf) = filename.extract::<std::path::PathBuf>() {
             pathbuf
         } else if let Ok(pystr) = filename.cast::<PyString>() {
@@ -86,7 +96,6 @@ impl Dmi {
             )));
         };
 
-        let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path.clone(),))?;
         // TODO: Why am I doing this like this instead of just checking for path.exists?
         let file = match File::open(&path) {
             Ok(f) => f,
@@ -113,10 +122,7 @@ impl Dmi {
                 let states = PyList::new(py, list).unwrap().as_unbound().clone_ref(py);
                 Ok(Dmi {
                     states,
-                    filepath: pathlib_path
-                        .into_pyobject(py)
-                        .expect("setting icon filepath")
-                        .unbind(),
+                    filepath: Some(path),
                     icon_width: icon.width,
                     icon_height: icon.height,
                 })
@@ -124,6 +130,14 @@ impl Dmi {
         )
     }
 
+    /// The states in the DMI.
+    #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[IconState]", imports=("collections.abc")))]
+    #[getter]
+    pub fn get_states(&self, py: Python<'_>) -> Py<PyList> {
+        self.states.clone_ref(py)
+    }
+
+    /// Return a list of strings containing all state names in the file.
     pub fn state_names(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let mut out = vec![];
         for boundstate in self.states.bind(py).iter() {
@@ -139,6 +153,9 @@ impl Dmi {
         PyList::new(py, out).unwrap().into_py_any(py)
     }
 
+    /// Return the icon state with the given `name`. If there are duplicates,
+    /// only the first one is returned. Use `states` to retrieve duplicates.
+    #[gen_stub(override_return_type(type_repr="IconState"))]
     pub fn state(&self, value: String, py: Python<'_>) -> PyResult<Py<PyAny>> {
         for state in self.states.bind(py).iter() {
             let cast_state = state.cast_exact::<IconState>().unwrap().borrow();
@@ -152,6 +169,8 @@ impl Dmi {
         )))
     }
 
+    /// The width and height of icons in the DMI.
+    #[gen_stub(override_return_type(type_repr="tuple[builtins.int, builtins.int]", imports=("builtins")))]
     #[getter]
     pub fn icon_dims(&self, py: Python<'_>) -> Py<PyTuple> {
         PyTuple::new(py, [self.icon_width, self.icon_height])
@@ -159,19 +178,18 @@ impl Dmi {
             .unbind()
     }
 
-    fn __str__(&self, py: Python<'_>) -> PyResult<String> {
-        self.__repr__(py)
+    fn __str__(&self) -> PyResult<String> {
+        self.__repr__()
     }
 
-    fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
+    fn __repr__(&self) -> PyResult<String> {
         Ok(format!(
-            "<DMI {} {}x{}>",
-            &self.filepath.getattr(py, "name").unwrap(),
-            &self.icon_width,
-            &self.icon_height
+            "<DMI {:?} {}x{}>",
+            self.filepath, self.icon_width, self.icon_height
         ))
     }
 
+    /// Saves the DMI to the given `filename`.
     #[pyo3(signature = (filename, compress=0))]
     fn save_to(&self, filename: &Bound<PyAny>, compress: u8, py: Python<'_>) -> PyResult<()> {
         let path = if let Ok(path) = filename.extract::<std::path::PathBuf>() {

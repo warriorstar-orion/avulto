@@ -6,19 +6,24 @@ use pyo3::types::{PyAnyMethods, PyDict, PyList, PyString};
 use pyo3::{
     pyclass, pymethods, Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python
 };
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::dmm::{Address, Dmm};
 use crate::helpers::{constant_to_python_value, python_value_to_constant};
 use crate::path;
 
+/// An individual map tile definition.
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
 pub struct Tile {
     pub(crate) dmm: Py<PyAny>,
     pub(crate) addr: Address,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl Tile {
+    /// Add a prefab with the given `path` at `index`.
     pub fn add_path(&mut self, index: i32, entry: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
         let bound: &Bound<Dmm> = self.dmm.cast_bound(py).unwrap();
         let key = match self.addr {
@@ -57,6 +62,8 @@ impl Tile {
         Err(PyRuntimeError::new_err("invalid insertion type"))
     }
 
+    /// Returns the path of the tile's area. Returns only the first area if
+    /// multiple exist.
     #[getter]
     pub fn area_path(&self, py: Python<'_>) -> PyResult<path::Path> {
         let bound = self.dmm.cast_bound::<Dmm>(py).unwrap();
@@ -82,6 +89,10 @@ impl Tile {
         )))
     }
 
+    /// Convert the tile definition to a Python data structure.
+    ///
+    /// The result of `convert` is completely disassociated from the map tile
+    /// definition, and modifying it will have no effect on the original tile.
     pub fn convert(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let mut out: Vec<Bound<PyDict>> = Vec::new();
 
@@ -113,6 +124,7 @@ impl Tile {
         Ok(PyList::new(py, out).unwrap().into_any().unbind())
     }
 
+    /// Deletes the prefab at `index`.
     pub fn del_prefab(&self, index: i32, py: Python<'_>) {
         let bound = self.dmm.cast_bound::<Dmm>(py).unwrap();
         let key = match self.addr {
@@ -141,6 +153,8 @@ impl Tile {
             .shift_remove(&name);
     }
 
+    /// Return the indexes of the prefabs prefixed with the given path `prefix`.
+    /// If exact is True, then the prefab path must match exactly.
     #[pyo3(signature = (prefix, exact=false))]
     pub fn find(&self, prefix: &Bound<PyAny>, exact: bool, py: Python<'_>) -> PyResult<Vec<i32>> {
         let mut vec = Vec::new();
@@ -174,6 +188,10 @@ impl Tile {
         Ok(vec)
     }
 
+    /// Returns the index of the only prefab with the given `prefix`, or None if
+    /// no such prefab exists. Raises an error if there is more than one prefab
+    /// with the given prefix. If exact is True, then the prefab path must match
+    /// exactly.
     #[pyo3(signature = (prefix, exact=false))]
     pub fn only(&self, prefix: &Bound<PyAny>, exact: bool, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let result = self.find(prefix, exact, py)?;
@@ -187,6 +205,7 @@ impl Tile {
         }
     }
 
+    /// Return the path of the prefab at `index`.
     pub fn prefab_path(&self, index: i32, py: Python<'_>) -> PyResult<path::Path> {
         let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
         let key = match self.addr {
@@ -203,6 +222,10 @@ impl Tile {
         path::Path::new(s)
     }
 
+    /// Return the value of the property `name` on the prefab at `index`.
+    /// 
+    /// Raises an error if the property does not exist. For a method that
+    /// returns a default if the property does not exist, see get_prefab_var.
     pub fn prefab_var(&self, index: i32, name: String, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
         let key = match self.addr {
@@ -221,6 +244,8 @@ impl Tile {
         Ok(constant_to_python_value(prefab.vars.get(&name).unwrap()))
     }
 
+    /// Returns the value of the property `name` on the prefab at `index`. If
+    /// the property does not exist, return `default`.
     #[pyo3(signature = (index, name, default=None))]
     pub fn get_prefab_var(
         &self,
@@ -251,6 +276,7 @@ impl Tile {
         Ok(py.None())
     }
 
+    /// Return the list of variable names on the prefab at `index`.
     pub fn prefab_vars(&self, index: i32, py: Python<'_>) -> PyResult<Vec<String>> {
         let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
         let mut vec = Vec::new();
@@ -270,6 +296,7 @@ impl Tile {
         Ok(vec)
     }
 
+    /// Set the value of the variable `name` to `val` at `index`.
     pub fn set_prefab_var(
         &self,
         atom_index: i32,
@@ -295,6 +322,7 @@ impl Tile {
             .insert(name, python_value_to_constant(val).unwrap());
     }
 
+    /// Set the path of the prefab at `index` to `path`.
     pub fn set_path(&self, index: i32, path: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
         let bound = self.dmm.cast_bound::<Dmm>(py).unwrap();
         let key = match self.addr {
@@ -314,6 +342,8 @@ impl Tile {
         Err(PyErr::new::<PyValueError, &str>("not a valid path"))
     }
 
+    /// Returns the path of the tile's turf. Returns only the first area if
+    /// multiple exist.
     #[getter]
     pub fn turf_path(&self, py: Python<'_>) -> PyResult<path::Path> {
         let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;

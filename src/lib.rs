@@ -19,6 +19,9 @@ pub mod path;
 pub mod tile;
 pub mod typedecl;
 
+use pyo3_stub_gen::{derive::gen_stub_pyfunction, define_stub_info_gatherer};
+
+#[gen_stub_pyfunction]
 #[pyfunction]
 fn version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
@@ -62,6 +65,9 @@ fn avulto(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     err_submodule.add("PathError", _py.get_type::<PathError>())?;
 
     m.add_submodule(&err_submodule)?;
+    sys_modules.set_item("avulto.exceptions", m.getattr("exceptions")?)?;
 
     Ok(())
 }
+
+define_stub_info_gatherer!(stub_info);

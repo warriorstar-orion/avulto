@@ -3,7 +3,6 @@ use std::fmt;
 use dreammaker::ast::TreePath;
 use itertools::Itertools;
 use pyo3::{
-    create_exception,
     exceptions::{PyException, PyTypeError},
     pyclass, IntoPyObject, Python,
 };
@@ -13,6 +12,7 @@ use pyo3::{
     types::{PyAnyMethods, PyString, PyStringMethods},
     Bound, PyAny, PyResult,
 };
+use pyo3_stub_gen::{create_exception, derive::{gen_stub_pyclass, gen_stub_pymethods}};
 use regex::Regex;
 
 create_exception!(avulto.exceptions, PathError, PyException);
@@ -38,14 +38,19 @@ const CORE_TYPES: &[&str] = &[
     "particles",
 ];
 
+/// A DM typepath.
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
 #[derive(Clone, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub struct Path {
     // We can either do a bunch of munging when displaying paths, which happens a lot,
     // or do a bunch of munging when operating on paths, which happens a lot,
     // or we can just keep both around, because memory is cheap.
+
+    /// Returns the *absolute* representation of the path, rooted at `/datum`.
     #[pyo3(get)]
     pub abs: String,
+    /// Returns the *relative* or *declared* representation of the path.
     #[pyo3(get)]
     pub rel: String,
 }
@@ -210,8 +215,10 @@ fn to_absolute_path(value: &str) -> String {
     }
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl Path {
+    /// Returns a new path.
     #[new]
     pub fn new(value: &str) -> PyResult<Self> {
         match Path::make_untrusted(value) {
@@ -220,6 +227,10 @@ impl Path {
         }
     }
 
+    /// Returns whether the path is a child of `other`.
+    /// 
+    /// If `strict` is true, the current path will not be considered a child of
+    /// itself.
     #[pyo3(signature = (other, strict=false))]
     fn child_of(&self, other: &Bound<PyAny>, strict: bool) -> PyResult<bool> {
         if let Ok(rhs) = other.extract::<Self>() {
@@ -231,6 +242,10 @@ impl Path {
         Err(PyTypeError::new_err("invalid argument type"))
     }
 
+    /// Returns whether the path is a parent of `other`.
+    ///
+    /// If `strict` is true, the current path will not be considered a parent of
+    /// itself.
     #[pyo3(signature = (other, strict=false))]
     fn parent_of(&self, other: &Bound<PyAny>, strict: bool) -> PyResult<bool> {
         if let Ok(rhs) = other.extract::<Self>() {
@@ -242,8 +257,9 @@ impl Path {
         Err(PyTypeError::new_err("invalid argument type"))
     }
 
+    /// The parent path.
     #[getter]
-    pub fn get_parent(&self) -> PyResult<Self> {
+    pub fn get_parent(&self) -> PyResult<Path> {
         if self.abs == "/" {
             return Ok(self.clone());
         }
@@ -261,6 +277,7 @@ impl Path {
         }
     }
 
+    /// The final part of the path.
     #[getter]
     fn get_stem(&self) -> PyResult<String> {
         let parts: Vec<&str> = self.abs.split('/').collect();
@@ -272,6 +289,7 @@ impl Path {
         Ok("".to_string())
     }
 
+    /// Whether or not the path is `/`.
     #[getter]
     fn get_is_root(&self) -> bool {
         self.abs == "/"
@@ -322,6 +340,7 @@ impl Path {
         Ok(false)
     }
 
+    /// Return the path with the specified suffix.
     fn __truediv__(&self, other: &Bound<PyAny>) -> PyResult<Self> {
         if let Ok(rhs) = other.extract::<Self>() {
             let new_path = self.abs.clone() + &rhs.rel;

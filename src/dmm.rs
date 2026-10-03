@@ -1,9 +1,9 @@
 extern crate dmm_tools;
 
-use std::io;
 use std::borrow::BorrowMut;
-use std::collections::{btree_map, HashMap, HashSet};
 use std::collections::btree_map::Keys as BTreeMapKeysIter;
+use std::collections::{HashMap, HashSet, btree_map};
+use std::io;
 use std::path::{Path, PathBuf};
 
 use dmm_tools::dmm::{Key, Prefab};
@@ -11,11 +11,16 @@ use itertools::iproduct;
 use pyo3::exceptions::{PyOSError, PyRuntimeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyList, PyString, PyTuple};
 use pyo3::{
-    pyclass, pymethods, Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyRef, PyRefMut, PyResult, Python
+    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyRef, PyRefMut, PyResult, Python, pyclass,
+    pymethods,
 };
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::tile::Tile;
 
+/// A three-dimensional integer coordinate. These are currently only returned by
+/// certain DMM properties, and are not constructable.
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
 #[derive(Clone, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub struct Coord3 {
@@ -47,13 +52,17 @@ impl Coord3 {
     }
 }
 
+/// A DMM file.
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto", name = "DMM")]
 pub struct Dmm {
     pub(crate) map: dmm_tools::dmm::Map,
+    /// The number of tiles in each of the map's three dimensions.
     #[pyo3(get)]
     size: Coord3,
+    /// The original filename of the DMM.
     #[pyo3(get)]
-    filepath: Py<PyAny>,
+    filepath: PathBuf,
 }
 
 impl Dmm {
@@ -99,7 +108,8 @@ impl KeyIterator {
                 dmm: slf.dmm.bind(py).into_py_any(py).unwrap(),
                 addr: Address::Key(*c),
             }
-            .into_py_any(py).unwrap()
+            .into_py_any(py)
+            .unwrap()
         })
     }
 }
@@ -148,7 +158,11 @@ impl Dmm {
                 if let Some(coords) = coords_using_keys.get(key) {
                     for coord in coords {
                         let dim = map.grid.dim();
-                        let raw = (coord.z as usize - 1, dim.1 - coord.y as usize, coord.x as usize - 1);
+                        let raw = (
+                            coord.z as usize - 1,
+                            dim.1 - coord.y as usize,
+                            coord.x as usize - 1,
+                        );
                         map.grid[raw] = *prefab_collisions[prefabs];
                     }
                 }
@@ -159,7 +173,7 @@ impl Dmm {
 
         for key in unused_keys {
             map.dictionary.borrow_mut().remove_entry(&key);
-        }    
+        }
 
         map.adjust_key_length();
     }
@@ -170,11 +184,15 @@ impl Dmm {
     }
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl Dmm {
+    /// Creates a DMM from the given `filename`.
     #[staticmethod]
-    fn from_file(filename: &Bound<PyAny>, py: Python<'_>) -> PyResult<Dmm> {
-        let pathlib = py.import(pyo3::intern!(py, "pathlib"))?;
+    fn from_file(
+        #[gen_stub(override_type(type_repr = "os.PathLike | builtins.str", imports=("builtins", "os")))]
+        filename: &Bound<PyAny>,
+    ) -> PyResult<Dmm> {
         let path = if let Ok(pathbuf) = filename.extract::<std::path::PathBuf>() {
             pathbuf
         } else if let Ok(pystr) = filename.cast::<PyString>() {
@@ -192,7 +210,6 @@ impl Dmm {
 
         let map = dmm_tools::dmm::Map::from_file(&path).unwrap();
         let dim = map.dim_xyz();
-        let pathlib_path = pathlib.call_method1(pyo3::intern!(py, "Path"), (path,))?;
         Ok(Dmm {
             map,
             size: Coord3 {
@@ -200,10 +217,11 @@ impl Dmm {
                 y: dim.1 as i32,
                 z: dim.2 as i32,
             },
-            filepath: pathlib_path.unbind(),
+            filepath: path,
         })
     }
 
+    /// Saves the DMM to the given `filename`.
     fn save_to(&mut self, filename: &Bound<PyAny>) -> PyResult<()> {
         if let Ok(path) = filename.extract::<std::path::PathBuf>() {
             if let Ok(()) = self.write_to_file(&path) {
@@ -221,6 +239,7 @@ impl Dmm {
         )))
     }
 
+    /// Return the tile definition at coords (`x`, `y`, `z`).
     fn tiledef(self_: PyRef<'_, Self>, x: i32, y: i32, z: i32) -> Tile {
         Python::attach(|py| Tile {
             dmm: self_.into_pyobject(py).unwrap().into_any().unbind(),
@@ -228,6 +247,8 @@ impl Dmm {
         })
     }
 
+    /// Return an iterator over all possible 3D coordinates in the map.
+    #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[tuple[int, int, int]]", imports=("collections.abc")))]
     fn coords(&self) -> CoordIterator {
         let coords = self.map.dim_xyz();
         CoordIterator {
@@ -239,6 +260,8 @@ impl Dmm {
         }
     }
 
+    /// Return an iterator over all unique tiles in the map.
+    #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[Tile]", imports=("collections.abc")))]
     fn tiles(self_: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<KeyIterator>> {
         let self_ = &self_;
         let owner = self_.into_py_any(self_.py()).unwrap();
@@ -259,13 +282,10 @@ impl Dmm {
         Py::new(py, it)
     }
 
-    fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
+    fn __repr__(&self) -> PyResult<String> {
         Ok(format!(
-            "<DMM {} {}x{}x{}>",
-            self.filepath.getattr(py, "name").unwrap(),
-            self.size.x,
-            self.size.y,
-            self.size.z
+            "<DMM {:?} {}x{}x{}>",
+            self.filepath, self.size.x, self.size.y, self.size.z
         ))
     }
 }

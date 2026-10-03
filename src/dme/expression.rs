@@ -1,4 +1,5 @@
 use pyo3::{IntoPyObject, Py, PyAny, PyResult, Python, pyclass, pymethods};
+use pyo3_stub_gen::derive::{gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
 use crate::{dme::SourceLoc, dmlist::DmList, path::Path};
 
@@ -8,7 +9,8 @@ use super::{
     prefab::Prefab,
 };
 
-#[pyclass(frozen)]
+#[gen_stub_pyclass_complex_enum]
+#[pyclass(frozen, module="avulto.ast")]
 #[derive(Clone)]
 pub enum Constant {
     Null(),
@@ -36,7 +38,8 @@ impl Constant {
     }
 }
 
-#[pyclass]
+#[gen_stub_pyclass_complex_enum]
+#[pyclass(module="avulto.ast")]
 pub enum Expression {
     Constant {
         constant: Constant,
@@ -190,6 +193,7 @@ impl Expression {
     }
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl Expression {
     #[getter]

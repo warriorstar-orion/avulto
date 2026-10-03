@@ -5,12 +5,19 @@ use pyo3::{
     types::{PyAnyMethods, PyInt, PyString, PyStringMethods},
     Bound, Py, PyAny, PyRef, PyRefMut, PyResult, Python,
 };
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::{
     dme::{expression::Expression, nodes::PyExpr, prefab::Prefab},
     path,
 };
 
+/// A primitive, read-only representation of a DM list. This is used when
+/// returning constant values of lists from the AST walker, and prefab values
+/// from the DMM reader. They are not constructable.
+/// 
+/// Dmlists only support iterating over keys, and indexing with keys.
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto", name = "Dmlist")]
 pub struct DmList {
     // Not PyExprs because we also want to use these for DMM constants
@@ -27,14 +34,19 @@ impl DmList {
     }
 }
 
+/// A `new` call appearing in a constant-value position.
+#[gen_stub_pyclass]
 #[pyclass(module = "avulto", name = "NewCall")]
 pub struct NewCall {
+    /// The type being instantiated, or `None` for an implicit `new()`.
     #[pyo3(get)]
     pub path: Option<path::Path>,
+    /// The constructor arguments.
     #[pyo3(get)]
     pub args: Option<Py<DmList>>,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl NewCall {
     fn __str__(&self) -> PyResult<String> {
@@ -86,8 +98,11 @@ impl DmListKeyIter {
     }
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl DmList {
+    /// Iterates over the keys in the list.
+    #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[typing.Any]", imports=("collections.abc", "typing")))]
     fn keys(slf: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<DmListKeyIter>> {
         let iter = DmListKeyIter {
             list: slf.keys.iter().map(|x| x.clone_ref(py)).collect_vec(),
