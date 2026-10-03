@@ -103,7 +103,7 @@ class DMI:
         The states in the DMI.
         """
     @property
-    def icon_dims(self) -> tuple:
+    def icon_dims(self) -> tuple[builtins.int, builtins.int]:
         r"""
         The width and height of icons in the DMI.
         """
@@ -121,7 +121,7 @@ class DMI:
         r"""
         Return a list of strings containing all state names in the file.
         """
-    def state(self, value: builtins.str) -> typing.Any:
+    def state(self, value: builtins.str) -> IconState:
         r"""
         Return the icon state with the given `name`. If there are duplicates,
         only the first one is returned. Use `states` to retrieve duplicates.
@@ -485,20 +485,20 @@ class TypeDecl:
         r"""
         The location of the TypeDecl's first declaration in source.
         """
-    def var_names(self, declared: builtins.bool = False, modified: builtins.bool = False, unmodified: builtins.bool = False) -> list:
+    def var_names(self, declared: builtins.bool = False, modified: builtins.bool = False, unmodified: builtins.bool = False) -> builtins.list[builtins.str]:
         r"""
         Return a list of variable names for the type declaration.
         """
-    def var_decl(self, name: builtins.str, parents: builtins.bool = True) -> typing.Any:
+    def var_decl(self, name: builtins.str, parents: builtins.bool = True) -> VarDecl:
         r"""
-        Return the proc declaration for variable *name*. If *parents* is True,
+        Return the var declaration for variable *name*. If *parents* is True,
         check up type path if this type does not have this variable set.
         """
-    def proc_names(self, declared: builtins.bool = False, modified: builtins.bool = False, unmodified: builtins.bool = False) -> list:
+    def proc_names(self, declared: builtins.bool = False, modified: builtins.bool = False, unmodified: builtins.bool = False) -> builtins.list[builtins.str]:
         r"""
         Return a list of proc names for the type declaration.
         """
-    def proc_decls(self, name: typing.Optional[builtins.str] = None) -> typing.Any:
+    def proc_decls(self, name: typing.Optional[builtins.str] = None) -> builtins.list[ProcDecl]:
         r"""
         Return proc declarations for the type. If *name* is set, only return
         proc declarations with this name.

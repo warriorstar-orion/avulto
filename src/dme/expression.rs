@@ -1,5 +1,5 @@
 use pyo3::{IntoPyObject, Py, PyAny, PyResult, Python, pyclass, pymethods};
-use pyo3_stub_gen::derive::gen_stub_pyclass_complex_enum;
+use pyo3_stub_gen::derive::{gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
 use crate::{dme::SourceLoc, dmlist::DmList, path::Path};
 
@@ -193,6 +193,7 @@ impl Expression {
     }
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl Expression {
     #[getter]

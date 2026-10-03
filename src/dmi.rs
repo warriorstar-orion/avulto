@@ -155,6 +155,7 @@ impl Dmi {
 
     /// Return the icon state with the given `name`. If there are duplicates,
     /// only the first one is returned. Use `states` to retrieve duplicates.
+    #[gen_stub(override_return_type(type_repr="IconState"))]
     pub fn state(&self, value: String, py: Python<'_>) -> PyResult<Py<PyAny>> {
         for state in self.states.bind(py).iter() {
             let cast_state = state.cast_exact::<IconState>().unwrap().borrow();
@@ -169,6 +170,7 @@ impl Dmi {
     }
 
     /// The width and height of icons in the DMI.
+    #[gen_stub(override_return_type(type_repr="tuple[builtins.int, builtins.int]", imports=("builtins")))]
     #[getter]
     pub fn icon_dims(&self, py: Python<'_>) -> Py<PyTuple> {
         PyTuple::new(py, [self.icon_width, self.icon_height])

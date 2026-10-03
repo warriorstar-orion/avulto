@@ -146,6 +146,7 @@ impl ProcDecl {
 #[pymethods]
 impl TypeDecl {
     /// Return a list of variable names for the type declaration.
+    #[gen_stub(override_return_type(type_repr="builtins.list[builtins.str]", imports=("builtins")))]
     #[pyo3(signature = (declared=false, modified=false, unmodified=false))]
     pub fn var_names(
         &self,
@@ -201,8 +202,9 @@ impl TypeDecl {
             .unbind())
     }
 
-    /// Return the proc declaration for variable *name*. If *parents* is True,
+    /// Return the var declaration for variable *name*. If *parents* is True,
     /// check up type path if this type does not have this variable set.
+    #[gen_stub(override_return_type(type_repr="VarDecl"))]
     #[pyo3(signature = (name, parents=true))]
     pub fn var_decl(&self, name: String, parents: bool, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let bound = self.dme.cast_bound::<Dme>(py).unwrap();
@@ -211,6 +213,7 @@ impl TypeDecl {
     }
 
     /// Return a list of proc names for the type declaration.
+    #[gen_stub(override_return_type(type_repr="builtins.list[builtins.str]", imports=("builtins")))]
     #[pyo3(signature = (declared=false, modified=false, unmodified=false))]
     pub fn proc_names(
         &self,
@@ -267,6 +270,7 @@ impl TypeDecl {
 
     /// Return proc declarations for the type. If *name* is set, only return
     /// proc declarations with this name.
+    #[gen_stub(override_return_type(type_repr="builtins.list[ProcDecl]", imports=("builtins")))]
     #[pyo3(signature = (name=None))]
     pub fn proc_decls(&self, name: Option<String>, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let dme = self.dme.cast_bound::<Dme>(py).unwrap();
