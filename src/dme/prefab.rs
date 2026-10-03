@@ -1,9 +1,8 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 use pyo3::{
-    pyclass, pymethods,
+    Bound, IntoPyObject, Py, PyAny, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyDictMethods, PyList},
-    Bound, IntoPyObject, Py, PyAny, PyResult, Python,
 };
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 

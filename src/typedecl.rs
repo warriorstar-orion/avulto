@@ -165,7 +165,11 @@ impl TypeDecl {
         let dme = self.dme.cast_bound::<Dme>(py).unwrap();
         let objtree = &dme.borrow().objtree;
 
-        let search_string = if self.path.rel.eq("/") { "" } else { self.path.rel.as_str()};
+        let search_string = if self.path.rel.eq("/") {
+            ""
+        } else {
+            self.path.rel.as_str()
+        };
         let mut type_ref = objtree.find(search_string);
 
         let mut leaf_declared_names: HashSet<String> = HashSet::new();
@@ -231,7 +235,11 @@ impl TypeDecl {
         let dme = self.dme.cast_bound::<Dme>(py).unwrap();
         let objtree = &dme.borrow().objtree;
 
-        let search_string = if self.path.rel.eq("/") { "" } else { self.path.rel.as_str()};
+        let search_string = if self.path.rel.eq("/") {
+            ""
+        } else {
+            self.path.rel.as_str()
+        };
         let mut type_ref = objtree.find(search_string);
 
         let mut leaf_declared_names: HashSet<String> = HashSet::new();
@@ -305,7 +313,7 @@ impl TypeDecl {
                         args: args_out,
                         proc_index,
                         type_index: self.node_index,
-                        source_loc: dme.borrow().file_data.fill_source_loc(&proc_value.location)
+                        source_loc: dme.borrow().file_data.fill_source_loc(&proc_value.location),
                     });
                 }
             }

@@ -1,9 +1,9 @@
 use itertools::Itertools;
 use pyo3::{
+    Bound, Py, PyAny, PyRef, PyRefMut, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyInt, PyString, PyStringMethods},
-    Bound, Py, PyAny, PyRef, PyRefMut, PyResult, Python,
 };
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 

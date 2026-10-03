@@ -233,7 +233,7 @@ impl Tile {
             Address::Coords(c) => map[c],
         };
         let prefabs = &map.dictionary[&key];
-        if index as usize >= prefabs.len()  {
+        if index as usize >= prefabs.len() {
             return Err(PyIndexError::new_err("list index out of range"));
         }
         let prefab = &prefabs[index as usize];
@@ -372,15 +372,17 @@ impl Tile {
 
         match self.addr {
             Address::Key(_) => {
-                return Err(PyErr::new::<PyRuntimeError, &str>("can only make Tiles from DMM#tiledef(x, y, z) unique"));
-            },
+                return Err(PyErr::new::<PyRuntimeError, &str>(
+                    "can only make Tiles from DMM#tiledef(x, y, z) unique",
+                ));
+            }
             Address::Coords(c) => {
                 let new_key = dmm.generate_new_key();
                 let dim = dmm.map.grid.dim();
                 let current_dict = dmm.map.dictionary[&dmm.map[c]].clone();
                 dmm.map.dictionary.insert(new_key, current_dict);
                 dmm.map.grid[(c.z as usize - 1, dim.1 - c.y as usize, c.x as usize - 1)] = new_key;
-            },
+            }
         }
         Ok(())
     }
