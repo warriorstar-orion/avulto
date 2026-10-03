@@ -11,7 +11,10 @@ use pyo3::{
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::{
-    dme::{Dme, SourceLoc},
+    dme::{
+        Dme, SourceLoc,
+        proc_decl::{ProcArg, ProcDecl},
+    },
     path::Path,
 };
 

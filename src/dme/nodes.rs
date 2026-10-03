@@ -346,7 +346,7 @@ impl SwitchCase {
         py: Python<'_>,
     ) -> PyResult<()> {
         for f in self.exact.bind(py).into_iter() {
-            Expression::walk(&f.cast_into::<Expression>().unwrap(), dme, walker, py)?;
+            Expression::walk(&f.cast_into::<Expression>().unwrap(), walker, py)?;
         }
         for f in self.range.bind(py).into_iter() {
             if let Ok(list) = f.cast::<PyList>() {
@@ -354,7 +354,6 @@ impl SwitchCase {
                     if let Ok(range) = x {
                         let _ = Expression::walk(
                             &range.into_any().cast_into::<Expression>().unwrap(),
-                            dme,
                             walker,
                             py,
                         );

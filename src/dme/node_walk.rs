@@ -15,13 +15,13 @@ impl Node {
         match node {
             Node::Unknown() => todo!(),
             Node::Expression { expr, .. } => {
-                Expression::walk(expr.bind(py), dme, walker, py)?;
+                Expression::walk(expr.bind(py), walker, py)?;
             }
             Node::Return { retval, source_loc } => {
                 if walker.hasattr("visit_Return").unwrap() {
                     walker.call_method1("visit_Return", (self_, source_loc.clone()))?;
                 } else if let Some(some_expr) = retval {
-                    Expression::walk(some_expr.bind(py), dme, walker, py)?;
+                    Expression::walk(some_expr.bind(py), walker, py)?;
                 }
 
                 return Ok(());
@@ -30,7 +30,7 @@ impl Node {
                 if walker.hasattr("visit_Throw").unwrap() {
                     walker.call_method1("visit_Throw", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(expr.bind(py), dme, walker, py)?;
+                    Expression::walk(expr.bind(py), walker, py)?;
                 }
             }
             Node::While {
@@ -41,7 +41,7 @@ impl Node {
                 if walker.hasattr("visit_While").unwrap() {
                     walker.call_method1("visit_While", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(condition.bind(py), dme, walker, py)?;
+                    Expression::walk(condition.bind(py), walker, py)?;
                     for stmt in block.iter() {
                         Node::walk(stmt.bind(py), dme, walker, py)?;
                     }
@@ -56,7 +56,7 @@ impl Node {
                 if walker.hasattr("visit_DoWhile").unwrap() {
                     walker.call_method1("visit_DoWhile", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(condition.bind(py), dme, walker, py)?;
+                    Expression::walk(condition.bind(py), walker, py)?;
                     for stmt in block.iter() {
                         Node::walk(stmt.bind(py), dme, walker, py)?;
                     }
@@ -71,7 +71,7 @@ impl Node {
                     walker.call_method1("visit_If", (self_, source_loc.clone()))?;
                 } else {
                     for (cond, block) in if_arms.iter() {
-                        Expression::walk(cond.bind(py), dme, walker, py)?;
+                        Expression::walk(cond.bind(py), walker, py)?;
                         for stmt in block.iter() {
                             Node::walk(stmt.bind(py), dme, walker, py)?;
                         }
@@ -108,7 +108,7 @@ impl Node {
                         Node::walk(init_node.bind(py), dme, walker, py)?;
                     }
                     if let Some(test_expr) = test {
-                        Expression::walk(test_expr.bind(py), dme, walker, py)?;
+                        Expression::walk(test_expr.bind(py), walker, py)?;
                     }
                     if let Some(inc_node) = inc {
                         Node::walk(inc_node.bind(py), dme, walker, py)?;
@@ -128,9 +128,9 @@ impl Node {
                 if walker.hasattr("visit_Var").unwrap() {
                     walker.call_method1("visit_Var", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(name.bind(py), dme, walker, py)?;
+                    Expression::walk(name.bind(py), walker, py)?;
                     if let Some(expr) = value {
-                        Expression::walk(expr.bind(py), dme, walker, py)?;
+                        Expression::walk(expr.bind(py), walker, py)?;
                     }
                 }
                 return Ok(());
@@ -139,7 +139,7 @@ impl Node {
                 if walker.hasattr("visit_Crash").unwrap() {
                     walker.call_method1("visit_Crash", (self_, source_loc.clone()))?;
                 } else if let Some(some_expr) = expr {
-                    Expression::walk(some_expr.bind(py), dme, walker, py)?;
+                    Expression::walk(some_expr.bind(py), walker, py)?;
                 }
 
                 return Ok(());
@@ -164,7 +164,7 @@ impl Node {
                     Node::walk(&loop_decl.into_pyobject(py)?, dme, walker, py)?;
                     // Expression::walk(name.bind(py), dme, walker, py)?;
                     if let Some(in_list_expr) = in_list {
-                        Expression::walk(in_list_expr.bind(py), dme, walker, py)?;
+                        Expression::walk(in_list_expr.bind(py), walker, py)?;
                         for stmt in block.iter() {
                             Node::walk(stmt.bind(py), dme, walker, py)?;
                         }
@@ -184,11 +184,11 @@ impl Node {
                 if walker.hasattr("visit_ForRange").unwrap() {
                     walker.call_method1("visit_ForRange", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(name.bind(py), dme, walker, py)?;
-                    Expression::walk(start.bind(py), dme, walker, py)?;
-                    Expression::walk(end.bind(py), dme, walker, py)?;
+                    Expression::walk(name.bind(py), walker, py)?;
+                    Expression::walk(start.bind(py), walker, py)?;
+                    Expression::walk(end.bind(py), walker, py)?;
                     if let Some(step) = step {
-                        Expression::walk(step.bind(py), dme, walker, py)?;
+                        Expression::walk(step.bind(py), walker, py)?;
                     }
                     for stmt in block.iter() {
                         Node::walk(stmt.bind(py), dme, walker, py)?;
@@ -204,14 +204,14 @@ impl Node {
                 if walker.hasattr("visit_Del").unwrap() {
                     walker.call_method1("visit_Del", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(expr.bind(py), dme, walker, py)?;
+                    Expression::walk(expr.bind(py), walker, py)?;
                 }
             }
             Node::Break { label, source_loc } => {
                 if walker.hasattr("visit_Break").unwrap() {
                     walker.call_method1("visit_Break", (self_, source_loc.clone()))?;
                 } else if let Some(l) = label {
-                    Expression::walk(l.bind(py), dme, walker, py)?;
+                    Expression::walk(l.bind(py), walker, py)?;
                 }
             }
             Node::Setting {
@@ -223,8 +223,8 @@ impl Node {
                 if walker.hasattr("visit_Setting").unwrap() {
                     walker.call_method1("visit_Setting", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(name.bind(py), dme, walker, py)?;
-                    Expression::walk(value.bind(py), dme, walker, py)?;
+                    Expression::walk(name.bind(py), walker, py)?;
+                    Expression::walk(value.bind(py), walker, py)?;
                 }
                 return Ok(());
             }
@@ -237,7 +237,7 @@ impl Node {
                     walker.call_method1("visit_Setting", (self_, source_loc.clone()))?;
                 } else {
                     if let Some(delay) = delay {
-                        Expression::walk(delay.bind(py), dme, walker, py)?;
+                        Expression::walk(delay.bind(py), walker, py)?;
                     }
                     for stmt in block.iter() {
                         Node::walk(stmt.bind(py), dme, walker, py)?;
@@ -250,14 +250,14 @@ impl Node {
                 if walker.hasattr("visit_Continue").unwrap() {
                     walker.call_method1("visit_Continue", (self_, source_loc.clone()))?;
                 } else if let Some(name) = name {
-                    Expression::walk(name.bind(py), dme, walker, py)?;
+                    Expression::walk(name.bind(py), walker, py)?;
                 }
             }
             Node::Goto { label, source_loc } => {
                 if walker.hasattr("visit_Goto").unwrap() {
                     walker.call_method1("visit_Goto", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(label.bind(py), dme, walker, py)?;
+                    Expression::walk(label.bind(py), walker, py)?;
                 }
             }
             Node::Label {
@@ -268,7 +268,7 @@ impl Node {
                 if walker.hasattr("visit_Label").unwrap() {
                     walker.call_method1("visit_Label", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(name.bind(py), dme, walker, py)?;
+                    Expression::walk(name.bind(py), walker, py)?;
                     for stmt in block.iter() {
                         Node::walk(stmt.bind(py), dme, walker, py)?;
                     }
@@ -288,7 +288,7 @@ impl Node {
                     }
                     for catch_params in catch_params.iter() {
                         for catch_param in catch_params.iter() {
-                            Expression::walk(catch_param.bind(py), dme, walker, py)?;
+                            Expression::walk(catch_param.bind(py), walker, py)?;
                         }
                     }
                     for stmt in catch_block.iter() {
@@ -305,7 +305,7 @@ impl Node {
                 if walker.hasattr("visit_Switch").unwrap() {
                     walker.call_method1("visit_Switch", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(input.bind(py), dme, walker, py)?;
+                    Expression::walk(input.bind(py), walker, py)?;
                     for case in cases.iter() {
                         case.borrow(py).walk_parts(dme, walker, py)?;
                     }
@@ -344,7 +344,7 @@ impl Node {
                     Node::walk(&valuedecl.into_pyobject(py)?, dme, walker, py)?;
 
                     if let Some(in_list_expr) = in_list {
-                        Expression::walk(in_list_expr.bind(py), dme, walker, py)?;
+                        Expression::walk(in_list_expr.bind(py), walker, py)?;
                         for stmt in block.iter() {
                             Node::walk(stmt.bind(py), dme, walker, py)?;
                         }

@@ -49,7 +49,7 @@ fn _get_dir_from(arg: &Bound<PyAny>) -> Result<Dirs, PyErr> {
             Dir::Southwest => dmi::dirs::Dirs::SOUTHWEST,
         })
     } else if let Ok(dirint) = arg.cast::<PyInt>() {
-        return match dirint.extract::<u8>().unwrap() {
+        match dirint.extract::<u8>().unwrap() {
             1 => Ok(dmi::dirs::Dirs::NORTH),
             2 => Ok(dmi::dirs::Dirs::SOUTH),
             4 => Ok(dmi::dirs::Dirs::EAST),
@@ -59,7 +59,7 @@ fn _get_dir_from(arg: &Bound<PyAny>) -> Result<Dirs, PyErr> {
             6 => Ok(dmi::dirs::Dirs::SOUTHEAST),
             10 => Ok(dmi::dirs::Dirs::SOUTHWEST),
             _ => Err(PyRuntimeError::new_err("invalid direction")),
-        };
+        }
     } else {
         Err(PyRuntimeError::new_err("invalid direction"))
     }

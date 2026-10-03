@@ -1,11 +1,10 @@
 use pyo3::{Bound, PyAny, PyResult, Python, types::PyAnyMethods};
 
-use super::{Dme, expression::Expression, nodes::visit_constant, prefab::Prefab};
+use super::{expression::Expression, nodes::visit_constant, prefab::Prefab};
 
 impl Expression {
     pub fn walk(
         self_: &Bound<Self>,
-        dme: &Bound<Dme>,
         walker: &Bound<PyAny>,
         py: Python<'_>,
     ) -> PyResult<()> {
@@ -70,8 +69,8 @@ impl Expression {
                         .call_method1("visit_BinaryOp", (self_, source_loc.clone()))
                         .expect("failed to walk binary op");
                 } else {
-                    Expression::walk(lhs.bind(py), dme, walker, py).expect("bad binary op lhs");
-                    Expression::walk(rhs.bind(py), dme, walker, py).expect("bad binary op rhs");
+                    Expression::walk(lhs.bind(py), walker, py).expect("bad binary op lhs");
+                    Expression::walk(rhs.bind(py), walker, py).expect("bad binary op rhs");
                 }
 
                 Ok(())
@@ -85,8 +84,8 @@ impl Expression {
                 if walker.hasattr("visit_AssignOp").unwrap() {
                     walker.call_method1("visit_AssignOp", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(lhs.bind(py), dme, walker, py)?;
-                    Expression::walk(rhs.bind(py), dme, walker, py)?;
+                    Expression::walk(lhs.bind(py), walker, py)?;
+                    Expression::walk(rhs.bind(py), walker, py)?;
                 }
 
                 Ok(())
@@ -100,9 +99,9 @@ impl Expression {
                 if walker.hasattr("visit_TernaryOp").unwrap() {
                     walker.call_method1("visit_TernaryOp", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(cond.bind(py), dme, walker, py)?;
-                    Expression::walk(if_expr.bind(py), dme, walker, py)?;
-                    Expression::walk(else_expr.bind(py), dme, walker, py)?;
+                    Expression::walk(cond.bind(py), walker, py)?;
+                    Expression::walk(if_expr.bind(py), walker, py)?;
+                    Expression::walk(else_expr.bind(py), walker, py)?;
                 }
 
                 Ok(())
@@ -115,12 +114,12 @@ impl Expression {
                     for i in 0..dmlist.keys.len() {
                         if let Some(k) = dmlist.keys.get(i) {
                             if let Ok(k_expr) = k.cast_bound::<Expression>(py) {
-                                Expression::walk(k_expr, dme, walker, py)?;
+                                Expression::walk(k_expr, walker, py)?;
                             }
                         }
                         if let Some(v) = dmlist.vals.get(i) {
                             if let Ok(v_expr) = v.cast_bound::<Expression>(py) {
-                                Expression::walk(v_expr, dme, walker, py)?;
+                                Expression::walk(v_expr, walker, py)?;
                             }
                         }
                     }
@@ -139,7 +138,7 @@ impl Expression {
                     visit_constant(first, walker)?;
                     for (expr, str) in token_pairs.iter() {
                         if let Some(tuple_expr) = expr {
-                            Expression::walk(tuple_expr.bind(py), dme, walker, py)?;
+                            Expression::walk(tuple_expr.bind(py), walker, py)?;
                         }
                         visit_constant(str.get(), walker)?;
                     }
@@ -159,8 +158,8 @@ impl Expression {
                 if walker.hasattr("visit_Index").unwrap() {
                     walker.call_method1("visit_Index", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(expr.bind(py), dme, walker, py)?;
-                    Expression::walk(index.bind(py), dme, walker, py)?;
+                    Expression::walk(expr.bind(py), walker, py)?;
+                    Expression::walk(index.bind(py), walker, py)?;
                 }
 
                 Ok(())
@@ -174,8 +173,8 @@ impl Expression {
                     walker.call_method1("visit_Field", (self_, source_loc.clone()))?;
                 } else {
                     expr.as_ref()
-                        .map(|expr| Expression::walk(expr.bind(py), dme, walker, py));
-                    Expression::walk(field.bind(py), dme, walker, py)?;
+                        .map(|expr| Expression::walk(expr.bind(py), walker, py));
+                    Expression::walk(field.bind(py), walker, py)?;
                 }
 
                 Ok(())
@@ -188,8 +187,8 @@ impl Expression {
                 if walker.hasattr("visit_StaticField").unwrap() {
                     walker.call_method1("visit_StaticField", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(expr.bind(py), dme, walker, py)?;
-                    Expression::walk(field.bind(py), dme, walker, py)?;
+                    Expression::walk(expr.bind(py), walker, py)?;
+                    Expression::walk(field.bind(py), walker, py)?;
                 }
 
                 Ok(())
@@ -203,10 +202,10 @@ impl Expression {
                 if walker.hasattr("visit_Call").unwrap() {
                     walker.call_method1("visit_Call", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(expr.bind(py), dme, walker, py)?;
-                    Expression::walk(name.bind(py), dme, walker, py)?;
+                    Expression::walk(expr.bind(py), walker, py)?;
+                    Expression::walk(name.bind(py), walker, py)?;
                     for arg in args.iter() {
-                        Expression::walk(arg.bind(py), dme, walker, py)?;
+                        Expression::walk(arg.bind(py), walker, py)?;
                     }
                 }
 
@@ -217,7 +216,7 @@ impl Expression {
                     walker.call_method1("visit_SelfCall", (self_, source_loc.clone()))?;
                 } else {
                     for arg in args.iter() {
-                        Expression::walk(arg.bind(py), dme, walker, py)?;
+                        Expression::walk(arg.bind(py), walker, py)?;
                     }
                 }
 
@@ -228,7 +227,7 @@ impl Expression {
                     walker.call_method1("visit_ParentCall", (self_, source_loc.clone()))?;
                 } else {
                     for arg in args.iter() {
-                        Expression::walk(arg.bind(py), dme, walker, py)?;
+                        Expression::walk(arg.bind(py), walker, py)?;
                     }
                 }
 
@@ -242,7 +241,7 @@ impl Expression {
                 if walker.hasattr("visit_UnaryOp").unwrap() {
                     walker.call_method1("visit_UnaryOp", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(expr.bind(py), dme, walker, py)?;
+                    Expression::walk(expr.bind(py), walker, py)?;
                 }
 
                 Ok(())
@@ -255,8 +254,8 @@ impl Expression {
                 if walker.hasattr("visit_ProcReference").unwrap() {
                     walker.call_method1("visit_ProcReference", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(expr.bind(py), dme, walker, py)?;
-                    Expression::walk(name.bind(py), dme, walker, py)?;
+                    Expression::walk(expr.bind(py), walker, py)?;
+                    Expression::walk(name.bind(py), walker, py)?;
                 }
 
                 Ok(())
@@ -270,10 +269,10 @@ impl Expression {
                     walker.call_method1("visit_Locate", (self_, source_loc.clone()))?;
                 } else {
                     for arg in args.iter() {
-                        Expression::walk(arg.bind(py), dme, walker, py)?;
+                        Expression::walk(arg.bind(py), walker, py)?;
                     }
                     if let Some(expr) = in_list {
-                        Expression::walk(expr.bind(py), dme, walker, py)?;
+                        Expression::walk(expr.bind(py), walker, py)?;
                     }
                 }
 
@@ -288,10 +287,10 @@ impl Expression {
                 if walker.hasattr("visit_ExternalCall").unwrap() {
                     walker.call_method1("visit_ExternalCall", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(library_name.bind(py), dme, walker, py)?;
-                    Expression::walk(function_name.bind(py), dme, walker, py)?;
+                    Expression::walk(library_name.bind(py), walker, py)?;
+                    Expression::walk(function_name.bind(py), walker, py)?;
                     for arg in args.iter() {
-                        Expression::walk(arg.bind(py), dme, walker, py)?;
+                        Expression::walk(arg.bind(py), walker, py)?;
                     }
                 }
                 Ok(())
@@ -304,9 +303,9 @@ impl Expression {
                 if walker.hasattr("visit_NewMiniExpr").unwrap() {
                     walker.call_method1("visit_NewMiniExpr", (self_, source_loc.clone()))?;
                 } else {
-                    Expression::walk(name.bind(py), dme, walker, py)?;
+                    Expression::walk(name.bind(py), walker, py)?;
                     for field in fields.iter() {
-                        Expression::walk(field.bind(py), dme, walker, py)?;
+                        Expression::walk(field.bind(py), walker, py)?;
                     }
                 }
 
@@ -317,7 +316,7 @@ impl Expression {
                     walker.call_method1("visit_NewImplicit", (self_, source_loc.clone()))?;
                 } else if let Some(arg_list) = args {
                     for arg in arg_list.iter() {
-                        Expression::walk(arg.bind(py), dme, walker, py)?;
+                        Expression::walk(arg.bind(py), walker, py)?;
                     }
                 }
 
@@ -334,7 +333,7 @@ impl Expression {
                     Prefab::walk(prefab.bind(py), walker, py)?;
                     args.as_ref().map(|args| {
                         args.iter()
-                            .map(|arg| Expression::walk(arg.bind(py), dme, walker, py))
+                            .map(|arg| Expression::walk(arg.bind(py), walker, py))
                     });
                 }
 
@@ -349,10 +348,10 @@ impl Expression {
                     walker.call_method1("visit_DynamicCall", (self_, source_loc.clone()))?;
                 } else {
                     for lib_name in lib_name.iter() {
-                        Expression::walk(lib_name.bind(py), dme, walker, py)?;
+                        Expression::walk(lib_name.bind(py), walker, py)?;
                     }
                     for proc_name in proc_name.iter() {
-                        Expression::walk(proc_name.bind(py), dme, walker, py)?;
+                        Expression::walk(proc_name.bind(py), walker, py)?;
                     }
                 }
                 Ok(())
@@ -367,10 +366,10 @@ impl Expression {
                     walker.call_method1("visit_Input", (self_, source_loc.clone()))?;
                 } else {
                     for arg in args.iter() {
-                        Expression::walk(arg.bind(py), dme, walker, py)?;
+                        Expression::walk(arg.bind(py), walker, py)?;
                     }
                     if let Some(in_list) = in_list {
-                        Expression::walk(in_list.bind(py), dme, walker, py)?;
+                        Expression::walk(in_list.bind(py), walker, py)?;
                     }
                 }
 
@@ -382,9 +381,9 @@ impl Expression {
                 } else {
                     for (a, b) in args.iter() {
                         if let Some(a) = a {
-                            Expression::walk(a.bind(py), dme, walker, py)?;
+                            Expression::walk(a.bind(py), walker, py)?;
                         }
-                        Expression::walk(b.bind(py), dme, walker, py)?;
+                        Expression::walk(b.bind(py), walker, py)?;
                     }
                 }
 
