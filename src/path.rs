@@ -3,16 +3,20 @@ use std::fmt;
 use dreammaker::ast::TreePath;
 use itertools::Itertools;
 use pyo3::{
-    exceptions::{PyException, PyTypeError},
-    pyclass, IntoPyObject, Python,
-};
-use pyo3::{
+    Bound, PyAny, PyResult,
     pyclass::CompareOp,
     pymethods,
     types::{PyAnyMethods, PyString, PyStringMethods},
-    Bound, PyAny, PyResult,
 };
-use pyo3_stub_gen::{create_exception, derive::{gen_stub_pyclass, gen_stub_pymethods}};
+use pyo3::{
+    IntoPyObject, Python,
+    exceptions::{PyException, PyTypeError},
+    pyclass,
+};
+use pyo3_stub_gen::{
+    create_exception,
+    derive::{gen_stub_pyclass, gen_stub_pymethods},
+};
 use regex::Regex;
 
 create_exception!(avulto.exceptions, PathError, PyException);
@@ -46,7 +50,6 @@ pub struct Path {
     // We can either do a bunch of munging when displaying paths, which happens a lot,
     // or do a bunch of munging when operating on paths, which happens a lot,
     // or we can just keep both around, because memory is cheap.
-
     /// Returns the *absolute* representation of the path, rooted at `/datum`.
     #[pyo3(get)]
     pub abs: String,
@@ -228,7 +231,7 @@ impl Path {
     }
 
     /// Returns whether the path is a child of `other`.
-    /// 
+    ///
     /// If `strict` is true, the current path will not be considered a child of
     /// itself.
     #[pyo3(signature = (other, strict=false))]

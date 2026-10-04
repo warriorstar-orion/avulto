@@ -5,7 +5,9 @@ use pyo3::{
     Bound, Py, PyAny, PyResult, Python, pyclass, pymethods, pymodule,
     types::{PyAnyMethods, PyList, PyModule, PyModuleMethods},
 };
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum};
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum,
+};
 
 use crate::{
     dme::{
@@ -115,7 +117,7 @@ impl fmt::Display for NodeKind {
 }
 
 #[gen_stub_pyclass_complex_enum]
-#[pyclass(frozen, module="avulto.ast")]
+#[pyclass(frozen, module = "avulto.ast")]
 pub enum Node {
     Unknown(),
     Expression {

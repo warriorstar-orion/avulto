@@ -3,11 +3,7 @@ extern crate dreammaker;
 use std::collections::HashSet;
 
 use dreammaker::objtree::NodeIndex;
-use pyo3::{
-    exceptions::PyValueError,
-    prelude::*,
-    types::PyList,
-};
+use pyo3::{exceptions::PyValueError, prelude::*, types::PyList};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::{
@@ -17,46 +13,6 @@ use crate::{
     },
     path::Path,
 };
-
-/// A single variable declaration.
-#[gen_stub_pyclass]
-#[pyclass(module = "avulto")]
-pub struct VarDecl {
-    /// The name of the variable.
-    #[pyo3(get)]
-    pub name: String,
-    /// The type path the proc is declared on.
-    #[pyo3(get)]
-    pub type_path: Py<PyAny>,
-    /// The declared type of the variable, if specified.
-    #[pyo3(get)]
-    pub declared_type: Option<Path>,
-    /// The variable's value, if it can be evaluated as a constant expression.
-    #[pyo3(get)]
-    pub const_val: Option<Py<PyAny>>,
-    /// The location of the variable declaration in the source tree.
-    #[pyo3(get)]
-    pub source_loc: SourceLoc,
-}
-
-#[pymethods]
-impl VarDecl {
-    fn __str__(&self) -> PyResult<String> {
-        self.__repr__()
-    }
-
-    fn __repr__(&self) -> PyResult<String> {
-        match &self.declared_type {
-            None => Ok(format!("<Var {}>", self.name)),
-            Some(p) => Ok(format!(
-                "<Var {}/{}/{}>",
-                self.type_path,
-                p.rel.strip_prefix('/').unwrap(),
-                self.name
-            )),
-        }
-    }
-}
 
 /// A single type declaration.
 #[gen_stub_pyclass]
@@ -70,80 +26,6 @@ pub struct TypeDecl {
     /// The location of the TypeDecl's first declaration in source.
     #[pyo3(get)]
     pub source_loc: SourceLoc,
-}
-
-/// A representation of a proc declaration argument.
-#[gen_stub_pyclass]
-#[pyclass(module = "avulto")]
-#[derive(Clone)]
-pub struct ProcArg {
-    /// The argument name.
-    #[pyo3(get)]
-    pub arg_name: String,
-    /// The argument type, if available.
-    #[pyo3(get)]
-    pub arg_type: Option<Path>,
-}
-
-#[pymethods]
-impl ProcArg {
-    fn __str__(&self) -> PyResult<String> {
-        self.__repr__()
-    }
-
-    fn __repr__(&self) -> PyResult<String> {
-        match &self.arg_type {
-            Some(p) => Ok(format!("{}/{}", p, self.arg_name)),
-            None => Ok(self.arg_name.to_string()),
-        }
-    }
-}
-
-/// A single proc declaration.
-#[gen_stub_pyclass]
-#[pyclass(module = "avulto")]
-pub struct ProcDecl {
-    pub dme: Py<PyAny>,
-    /// The type path the proc is declared on.
-    #[pyo3(get)]
-    pub type_path: Py<PyAny>,
-    /// The name of the proc.
-    #[pyo3(get)]
-    pub name: String,
-    #[pyo3(get)]
-    pub args: Vec<ProcArg>,
-
-    type_index: NodeIndex,
-    proc_index: usize,
-    /// The source location of the proc declaration.
-    #[pyo3(get)]
-    source_loc: SourceLoc,
-}
-
-#[gen_stub_pymethods]
-#[pymethods]
-impl ProcDecl {
-    fn __str__(&self) -> PyResult<String> {
-        self.__repr__()
-    }
-
-    fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("<Proc {}/proc/{}>", self.type_path, self.name))
-    }
-
-    /// Walks the proc AST with *walker*, calling any `visit_*` method names on
-    /// *walker* if they exist for AST node types.
-    pub fn walk(&self, walker: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
-        let dme = self.dme.cast_bound::<Dme>(py).unwrap();
-        Dme::walk_proc(
-            &dme.borrow(),
-            self.type_index,
-            self.name.clone(),
-            walker,
-            self.proc_index,
-            py,
-        )
-    }
 }
 
 #[gen_stub_pymethods]
@@ -212,7 +94,7 @@ impl TypeDecl {
 
     /// Return the var declaration for variable *name*. If *parents* is True,
     /// check up type path if this type does not have this variable set.
-    #[gen_stub(override_return_type(type_repr="VarDecl"))]
+    #[gen_stub(override_return_type(type_repr = "VarDecl"))]
     #[pyo3(signature = (name, parents=true))]
     pub fn var_decl(&self, name: String, parents: bool, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let bound = self.dme.cast_bound::<Dme>(py).unwrap();

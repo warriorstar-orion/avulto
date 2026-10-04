@@ -10,7 +10,7 @@ use super::{
 };
 
 #[gen_stub_pyclass_complex_enum]
-#[pyclass(frozen, module="avulto.ast")]
+#[pyclass(frozen, module = "avulto.ast")]
 #[derive(Clone)]
 pub enum Constant {
     Null(),
@@ -39,7 +39,7 @@ impl Constant {
 }
 
 #[gen_stub_pyclass_complex_enum]
-#[pyclass(module="avulto.ast")]
+#[pyclass(module = "avulto.ast")]
 pub enum Expression {
     Constant {
         constant: Constant,

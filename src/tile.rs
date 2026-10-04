@@ -3,9 +3,7 @@ extern crate dmm_tools;
 use dmm_tools::dmm::Prefab;
 use pyo3::exceptions::{PyIndexError, PyKeyError, PyRuntimeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyDict, PyList, PyString};
-use pyo3::{
-    pyclass, pymethods, Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python
-};
+use pyo3::{Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python, pyclass, pymethods};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::dmm::{Address, Dmm};
@@ -223,7 +221,7 @@ impl Tile {
     }
 
     /// Return the value of the property `name` on the prefab at `index`.
-    /// 
+    ///
     /// Raises an error if the property does not exist. For a method that
     /// returns a default if the property does not exist, see get_prefab_var.
     pub fn prefab_var(&self, index: i32, name: String, py: Python<'_>) -> PyResult<Py<PyAny>> {

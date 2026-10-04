@@ -84,7 +84,8 @@ impl Dmi {
     pub fn from_file(
         #[gen_stub(override_type(type_repr = "os.PathLike | builtins.str", imports=("builtins", "os")))]
         filename: &Bound<PyAny>,
-        py: Python<'_>) -> PyResult<Dmi> {
+        py: Python<'_>,
+    ) -> PyResult<Dmi> {
         let path = if let Ok(pathbuf) = filename.extract::<std::path::PathBuf>() {
             pathbuf
         } else if let Ok(pystr) = filename.cast::<PyString>() {
@@ -155,7 +156,7 @@ impl Dmi {
 
     /// Return the icon state with the given `name`. If there are duplicates,
     /// only the first one is returned. Use `states` to retrieve duplicates.
-    #[gen_stub(override_return_type(type_repr="IconState"))]
+    #[gen_stub(override_return_type(type_repr = "IconState"))]
     pub fn state(&self, value: String, py: Python<'_>) -> PyResult<Py<PyAny>> {
         for state in self.states.bind(py).iter() {
             let cast_state = state.cast_exact::<IconState>().unwrap().borrow();

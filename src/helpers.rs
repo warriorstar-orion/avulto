@@ -1,15 +1,19 @@
 use dreammaker::constants::{Constant, Pop};
 use pyo3::{
+    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pyfunction, pymethods,
     types::{PyAnyMethods, PyBool, PyDict, PyFloat, PyInt, PyList, PyString},
-    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyResult, Python,
 };
 
 use dmm_tools::dmi::Dir as SDir;
 use pyo3_stub_gen::derive::gen_stub_pyclass_enum;
 
-use crate::{dme::prefab::Prefab, dmlist::{DmList, NewCall}, path::Path};
+use crate::{
+    dme::prefab::Prefab,
+    dmlist::{DmList, NewCall},
+    path::Path,
+};
 
 /// An enumeration of directions used in icons.
 #[gen_stub_pyclass_enum]
@@ -145,9 +149,7 @@ pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> Py<PyAny
     Python::attach(|py| match c {
         Constant::Null(_) => py.None(),
         Constant::New { type_, args } => {
-            let path = type_
-                .as_ref()
-                .map(|pop| Path::from_tree_path(&pop.path));
+            let path = type_.as_ref().map(|pop| Path::from_tree_path(&pop.path));
             let args = args.as_ref().map(|a| arguments_to_dmlist(a, py));
             NewCall { path, args }
                 .into_pyobject(py)

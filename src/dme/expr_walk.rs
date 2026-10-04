@@ -3,11 +3,7 @@ use pyo3::{Bound, PyAny, PyResult, Python, types::PyAnyMethods};
 use super::{expression::Expression, nodes::visit_constant, prefab::Prefab};
 
 impl Expression {
-    pub fn walk(
-        self_: &Bound<Self>,
-        walker: &Bound<PyAny>,
-        py: Python<'_>,
-    ) -> PyResult<()> {
+    pub fn walk(self_: &Bound<Self>, walker: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
         let self_expr = self_.get();
 
         if walker.hasattr("visit_Expr").unwrap() {

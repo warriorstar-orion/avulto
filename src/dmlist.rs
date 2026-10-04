@@ -15,7 +15,7 @@ use crate::{
 /// A primitive, read-only representation of a DM list. This is used when
 /// returning constant values of lists from the AST walker, and prefab values
 /// from the DMM reader. They are not constructable.
-/// 
+///
 /// Dmlists only support iterating over keys, and indexing with keys.
 #[gen_stub_pyclass]
 #[pyclass(module = "avulto", name = "Dmlist")]
