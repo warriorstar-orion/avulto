@@ -154,11 +154,7 @@ impl Expression {
                         source_loc: file_data.fill_source_loc(&term.location),
                     },
                     dreammaker::ast::Term::NewMiniExpr { expr, args: _ } => Self::NewMiniExpr {
-                        name: Expression::ident(
-                            expr.ident.to_string(),
-                            SourceLoc::builtin(),
-                            py,
-                        ),
+                        name: Expression::ident(expr.ident.to_string(), SourceLoc::builtin(), py),
                         fields: expr
                             .fields
                             .iter()
@@ -192,10 +188,7 @@ impl Expression {
                                             .expect("parsing base expr")
                                             .into(),
                                     );
-                                    vals.push(Expression::null(
-                                        SourceLoc::builtin(),
-                                        py,
-                                    ));
+                                    vals.push(Expression::null(SourceLoc::builtin(), py));
                                 }
                                 dreammaker::ast::Expression::AssignOp { op: _, lhs, rhs } => {
                                     keys.push(
@@ -218,10 +211,7 @@ impl Expression {
                                             .expect("parsing list binary op key")
                                             .into(),
                                     );
-                                    vals.push(Expression::null(
-                                        SourceLoc::builtin(),
-                                        py,
-                                    ));
+                                    vals.push(Expression::null(SourceLoc::builtin(), py));
                                 }
                                 dreammaker::ast::Expression::TernaryOp { cond, if_, else_ } => {
                                     keys.push(
@@ -244,10 +234,7 @@ impl Expression {
                                         .expect("bad ternary op")
                                         .into(),
                                     );
-                                    vals.push(Expression::null(
-                                        SourceLoc::builtin(),
-                                        py,
-                                    ));
+                                    vals.push(Expression::null(SourceLoc::builtin(), py));
                                 }
                             }
                         }

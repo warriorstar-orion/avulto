@@ -1,9 +1,9 @@
 use itertools::Itertools;
 use pyo3::{
+    Bound, Py, PyAny, PyRef, PyRefMut, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
     types::{PyAnyMethods, PyInt, PyString, PyStringMethods},
-    Bound, Py, PyAny, PyRef, PyRefMut, PyResult, Python,
 };
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
@@ -15,7 +15,7 @@ use crate::{
 /// A primitive, read-only representation of a DM list. This is used when
 /// returning constant values of lists from the AST walker, and prefab values
 /// from the DMM reader. They are not constructable.
-/// 
+///
 /// Dmlists only support iterating over keys, and indexing with keys.
 #[gen_stub_pyclass]
 #[pyclass(module = "avulto", name = "Dmlist")]

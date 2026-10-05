@@ -3,9 +3,7 @@ extern crate dmm_tools;
 use dmm_tools::dmm::Prefab;
 use pyo3::exceptions::{PyIndexError, PyKeyError, PyRuntimeError, PyValueError};
 use pyo3::types::{PyAnyMethods, PyDict, PyList, PyString};
-use pyo3::{
-    pyclass, pymethods, Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python
-};
+use pyo3::{Bound, IntoPyObjectExt, Py, PyAny, PyErr, PyResult, Python, pyclass, pymethods};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::dmm::{Address, Dmm};
@@ -223,7 +221,7 @@ impl Tile {
     }
 
     /// Return the value of the property `name` on the prefab at `index`.
-    /// 
+    ///
     /// Raises an error if the property does not exist. For a method that
     /// returns a default if the property does not exist, see get_prefab_var.
     pub fn prefab_var(&self, index: i32, name: String, py: Python<'_>) -> PyResult<Py<PyAny>> {
@@ -233,7 +231,7 @@ impl Tile {
             Address::Coords(c) => map[c],
         };
         let prefabs = &map.dictionary[&key];
-        if index as usize >= prefabs.len()  {
+        if index as usize >= prefabs.len() {
             return Err(PyIndexError::new_err("list index out of range"));
         }
         let prefab = &prefabs[index as usize];
@@ -372,15 +370,17 @@ impl Tile {
 
         match self.addr {
             Address::Key(_) => {
-                return Err(PyErr::new::<PyRuntimeError, &str>("can only make Tiles from DMM#tiledef(x, y, z) unique"));
-            },
+                return Err(PyErr::new::<PyRuntimeError, &str>(
+                    "can only make Tiles from DMM#tiledef(x, y, z) unique",
+                ));
+            }
             Address::Coords(c) => {
                 let new_key = dmm.generate_new_key();
                 let dim = dmm.map.grid.dim();
                 let current_dict = dmm.map.dictionary[&dmm.map[c]].clone();
                 dmm.map.dictionary.insert(new_key, current_dict);
                 dmm.map.grid[(c.z as usize - 1, dim.1 - c.y as usize, c.x as usize - 1)] = new_key;
-            },
+            }
         }
         Ok(())
     }

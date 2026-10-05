@@ -6,9 +6,6 @@ use dmi::IconError;
 use dmlist::{DmList, NewCall};
 use path::PathError;
 use pyo3::{prelude::*, types::PyDict, wrap_pymodule};
-use typedecl::{ProcDecl, TypeDecl};
-
-use crate::typedecl::VarDecl;
 
 pub mod dme;
 pub mod dmi;
@@ -17,9 +14,10 @@ pub mod dmm;
 pub mod helpers;
 pub mod path;
 pub mod tile;
-pub mod typedecl;
 
-use pyo3_stub_gen::{derive::gen_stub_pyfunction, define_stub_info_gatherer};
+use pyo3_stub_gen::{define_stub_info_gatherer, derive::gen_stub_pyfunction};
+
+use crate::dme::{proc_decl::ProcDecl, type_decl::TypeDecl, var_decl::VarDecl};
 
 #[gen_stub_pyfunction]
 #[pyfunction]

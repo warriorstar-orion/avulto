@@ -2,24 +2,26 @@ use core::fmt;
 use std::hash::Hash;
 
 use pyo3::{
-    pyclass, pymethods, pymodule,
+    Bound, Py, PyAny, PyResult, Python, pyclass, pymethods, pymodule,
     types::{PyAnyMethods, PyList, PyModule, PyModuleMethods},
-    Bound, Py, PyAny, PyResult, Python,
 };
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum};
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum,
+};
 
 use crate::{
     dme::{
+        SourceLoc,
         operators::{AssignOperator, BinaryOperator, UnaryOperator},
-        prefab::Prefab, SourceLoc,
+        prefab::Prefab,
     },
     path::Path,
 };
 
 use super::{
+    Dme,
     expression::{Constant, Expression},
     operators::SettingMode,
-    Dme,
 };
 
 extern crate dreammaker;
@@ -115,7 +117,7 @@ impl fmt::Display for NodeKind {
 }
 
 #[gen_stub_pyclass_complex_enum]
-#[pyclass(frozen, module="avulto.ast")]
+#[pyclass(frozen, module = "avulto.ast")]
 pub enum Node {
     Unknown(),
     Expression {
@@ -236,7 +238,7 @@ pub enum Node {
         in_list: Option<PyExpr>,
         block: PyCodeBlock,
         source_loc: SourceLoc,
-    }
+    },
 }
 
 pub fn visit_constant(constant: &Constant, walker: &Bound<PyAny>) -> PyResult<()> {
@@ -346,7 +348,7 @@ impl SwitchCase {
         py: Python<'_>,
     ) -> PyResult<()> {
         for f in self.exact.bind(py).into_iter() {
-            Expression::walk(&f.cast_into::<Expression>().unwrap(), dme, walker, py)?;
+            Expression::walk(&f.cast_into::<Expression>().unwrap(), walker, py)?;
         }
         for f in self.range.bind(py).into_iter() {
             if let Ok(list) = f.cast::<PyList>() {
@@ -354,7 +356,6 @@ impl SwitchCase {
                     if let Ok(range) = x {
                         let _ = Expression::walk(
                             &range.into_any().cast_into::<Expression>().unwrap(),
-                            dme,
                             walker,
                             py,
                         );

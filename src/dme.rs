@@ -17,9 +17,9 @@ use pyo3::{
 use pyo3_stub_gen::{create_exception, derive::*};
 
 use crate::{
+    dme::{type_decl::TypeDecl, var_decl::VarDecl},
     helpers,
     path::{self, Path},
-    typedecl::{TypeDecl, VarDecl},
 };
 
 pub mod expr_parse;
@@ -30,6 +30,9 @@ pub mod node_walk;
 pub mod nodes;
 pub mod operators;
 pub mod prefab;
+pub mod proc_decl;
+pub mod type_decl;
+pub mod var_decl;
 
 create_exception!(avulto.exceptions, EmptyProcError, PyException);
 create_exception!(avulto.exceptions, MissingTypeError, PyException);
@@ -334,7 +337,7 @@ impl Dme {
     fn from_file(
         #[gen_stub(override_type(type_repr = "os.PathLike | builtins.str", imports=("builtins", "os")))]
         filename: &Bound<PyAny>,
-        parse_procs: bool
+        parse_procs: bool,
     ) -> PyResult<Dme> {
         let path = if let Ok(path) = filename.extract::<std::path::PathBuf>() {
             path
