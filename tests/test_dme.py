@@ -5,7 +5,7 @@ import pytest
 from avulto import DME, Path as p
 
 
-def get_fixture_path(name):
+def get_fixture_path(name: str) -> str:
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", name)
 
 
@@ -81,6 +81,7 @@ def test_var_decl_type_path(dme: DME):
 
 def test_var_decl_new_call_in_list(dme: DME):
     var_decl = dme.types["/obj/init_list_vardecls"].var_decl("my_news")
+    assert var_decl.const_val
     news = list(var_decl.const_val.keys())
     assert len(news) == 2
 

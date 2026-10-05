@@ -335,7 +335,7 @@ impl Dme {
     #[staticmethod]
     #[pyo3(signature = (filename, parse_procs=false))]
     fn from_file(
-        #[gen_stub(override_type(type_repr = "os.PathLike | builtins.str", imports=("builtins", "os")))]
+        #[gen_stub(override_type(type_repr = "os.PathLike[builtins.str] | builtins.str", imports=("builtins", "os")))]
         filename: &Bound<PyAny>,
         parse_procs: bool,
     ) -> PyResult<Dme> {
@@ -387,7 +387,7 @@ impl Dme {
     }
 
     /// A mapping of paths in the DME to their TypeDecls.
-    #[gen_stub(override_return_type(type_repr="builtins.dict[Path, TypeDecl]", imports=("builtins")))]
+    #[gen_stub(override_return_type(type_repr="builtins.dict[Path | builtins.str, TypeDecl]", imports=("builtins")))]
     #[getter]
     fn get_types(self_: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<DmeTypeAccessor>> {
         Py::new(

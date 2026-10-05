@@ -190,7 +190,7 @@ impl Dmm {
     /// Creates a DMM from the given `filename`.
     #[staticmethod]
     fn from_file(
-        #[gen_stub(override_type(type_repr = "os.PathLike | builtins.str", imports=("builtins", "os")))]
+        #[gen_stub(override_type(type_repr = "os.PathLike[builtins.str] | builtins.str", imports=("builtins", "os")))]
         filename: &Bound<PyAny>,
     ) -> PyResult<Dmm> {
         let path = if let Ok(pathbuf) = filename.extract::<std::path::PathBuf>() {

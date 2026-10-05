@@ -17,7 +17,7 @@ pub mod tile;
 
 use pyo3_stub_gen::{define_stub_info_gatherer, derive::gen_stub_pyfunction};
 
-use crate::dme::{proc_decl::ProcDecl, type_decl::TypeDecl, var_decl::VarDecl};
+use crate::dme::{SourceLoc, proc_decl::ProcDecl, type_decl::TypeDecl, var_decl::VarDecl};
 
 #[gen_stub_pyfunction]
 #[pyfunction]
@@ -45,6 +45,7 @@ fn avulto(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<VarDecl>()?;
     m.add_class::<DmList>()?;
     m.add_class::<NewCall>()?;
+    m.add_class::<SourceLoc>()?;
 
     m.add_class::<helpers::Dir>()?;
     m.add_function(wrap_pyfunction!(helpers::as_dir, m)?)?;

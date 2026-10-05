@@ -6,7 +6,7 @@ from avulto import DMI, IconState, Dir
 from PIL import Image
 
 
-def get_fixture_path(name):
+def get_fixture_path(name: str) -> str:
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", name)
 
 

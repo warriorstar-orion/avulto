@@ -3,9 +3,7 @@ use std::fmt;
 use dreammaker::ast::TreePath;
 use itertools::Itertools;
 use pyo3::{
-    Bound, PyAny, PyResult,
-    pyclass::CompareOp,
-    pymethods,
+    Bound, PyAny, PyResult, pymethods,
     types::{PyAnyMethods, PyString, PyStringMethods},
 };
 use pyo3::{
@@ -171,6 +169,17 @@ impl Path {
 
         true
     }
+
+    /// Performs a comparison for either another path or a string.
+    fn cmp_other(&self, other: &Bound<PyAny>, op: impl Fn(&str, &str) -> bool) -> bool {
+        if let Ok(rhs) = other.extract::<Self>() {
+            op(&self.abs, &rhs.abs)
+        } else if let Ok(rhs) = other.cast::<PyString>() {
+            op(&self.abs, &to_absolute_path(rhs.to_str().unwrap()))
+        } else {
+            false
+        }
+    }
 }
 
 fn to_relative_path(value: &str) -> String {
@@ -319,28 +328,28 @@ impl Path {
         Ok(self.rel.clone())
     }
 
-    fn __richcmp__(&self, other: &Bound<PyAny>, op: CompareOp) -> PyResult<bool> {
-        if let Ok(rhs) = other.extract::<Self>() {
-            return match op {
-                CompareOp::Eq => Ok(self.abs == rhs.abs),
-                CompareOp::Ne => Ok(self.abs != rhs.abs),
-                CompareOp::Lt => Ok(self.abs < rhs.abs),
-                CompareOp::Gt => Ok(self.abs > rhs.abs),
-                CompareOp::Le => Ok(self.abs <= rhs.abs),
-                CompareOp::Ge => Ok(self.abs >= rhs.abs),
-            };
-        } else if let Ok(rhs) = other.cast::<PyString>() {
-            return match op {
-                CompareOp::Eq => Ok(self.abs == to_absolute_path(rhs.to_str().unwrap())),
-                CompareOp::Ne => Ok(self.abs != to_absolute_path(rhs.to_str().unwrap())),
-                CompareOp::Lt => Ok(self.abs < to_absolute_path(rhs.to_str().unwrap())),
-                CompareOp::Gt => Ok(self.abs > to_absolute_path(rhs.to_str().unwrap())),
-                CompareOp::Le => Ok(self.abs <= to_absolute_path(rhs.to_str().unwrap())),
-                CompareOp::Ge => Ok(self.abs >= to_absolute_path(rhs.to_str().unwrap())),
-            };
-        }
+    fn __eq__(&self, other: &Bound<PyAny>) -> bool {
+        self.cmp_other(other, |lhs, rhs| lhs == rhs)
+    }
 
-        Ok(false)
+    fn __ne__(&self, other: &Bound<PyAny>) -> bool {
+        self.cmp_other(other, |lhs, rhs| lhs != rhs)
+    }
+
+    fn __lt__(&self, other: &Bound<PyAny>) -> bool {
+        self.cmp_other(other, |lhs, rhs| lhs < rhs)
+    }
+
+    fn __le__(&self, other: &Bound<PyAny>) -> bool {
+        self.cmp_other(other, |lhs, rhs| lhs <= rhs)
+    }
+
+    fn __gt__(&self, other: &Bound<PyAny>) -> bool {
+        self.cmp_other(other, |lhs, rhs| lhs > rhs)
+    }
+
+    fn __ge__(&self, other: &Bound<PyAny>) -> bool {
+        self.cmp_other(other, |lhs, rhs| lhs >= rhs)
     }
 
     /// Return the path with the specified suffix.
