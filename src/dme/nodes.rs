@@ -6,7 +6,7 @@ use pyo3::{
     types::{PyAnyMethods, PyList, PyModule, PyModuleMethods},
 };
 use pyo3_stub_gen::derive::{
-    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum,
+    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum, gen_stub_pymethods,
 };
 
 use crate::{
@@ -248,6 +248,7 @@ pub fn visit_constant(constant: &Constant, walker: &Bound<PyAny>) -> PyResult<()
     Ok(())
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl Node {
     #[getter]

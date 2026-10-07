@@ -32,6 +32,7 @@ pub struct Coord3 {
     z: i32,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl Coord3 {
     fn __eq__(&self, other: &Bound<PyAny>) -> bool {

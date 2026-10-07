@@ -20,6 +20,7 @@ pub struct ProcArg {
     pub arg_type: Option<Path>,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl ProcArg {
     fn __str__(&self) -> PyResult<String> {

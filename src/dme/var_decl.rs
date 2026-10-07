@@ -1,5 +1,5 @@
 use pyo3::{Py, PyAny, PyResult, pyclass, pymethods};
-use pyo3_stub_gen::derive::gen_stub_pyclass;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::{dme::SourceLoc, path::Path};
 
@@ -24,6 +24,7 @@ pub struct VarDecl {
     pub source_loc: SourceLoc,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl VarDecl {
     fn __str__(&self) -> PyResult<String> {

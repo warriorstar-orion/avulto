@@ -22,6 +22,7 @@ pub enum Constant {
     ProcMacro(),
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl Constant {
     #[getter]
