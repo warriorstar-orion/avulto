@@ -31,7 +31,6 @@ pub type PyExpr = Py<Expression>;
 
 #[pymodule]
 pub fn ast(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
-    m.add_class::<SourceLoc>()?;
     m.add_class::<UnaryOperator>()?;
     m.add_class::<AssignOperator>()?;
     m.add_class::<SettingMode>()?;
