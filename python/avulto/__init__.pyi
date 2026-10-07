@@ -42,6 +42,7 @@ class Coord3:
     def y(self) -> builtins.int: ...
     @property
     def z(self) -> builtins.int: ...
+    def __eq__(self, other: typing.Any) -> builtins.bool: ...
 
 @typing.final
 class DME:
@@ -345,6 +346,8 @@ class ProcArg:
         r"""
         The argument type, if available.
         """
+    def __str__(self) -> builtins.str: ...
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class ProcDecl:
@@ -396,6 +399,9 @@ class SourceLoc:
         r"""
         The column number, starting at 1.
         """
+    def __str__(self) -> builtins.str: ...
+    def __repr__(self) -> builtins.str: ...
+    def is_builtin(self) -> builtins.bool: ...
 
 @typing.final
 class Tile:
@@ -540,6 +546,8 @@ class VarDecl:
         r"""
         The location of the variable declaration in the source tree.
         """
+    def __str__(self) -> builtins.str: ...
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class Dir(enum.Enum):

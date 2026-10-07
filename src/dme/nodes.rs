@@ -6,7 +6,7 @@ use pyo3::{
     types::{PyAnyMethods, PyList, PyModule, PyModuleMethods},
 };
 use pyo3_stub_gen::derive::{
-    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum,
+    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum, gen_stub_pymethods,
 };
 
 use crate::{
@@ -248,35 +248,36 @@ pub fn visit_constant(constant: &Constant, walker: &Bound<PyAny>) -> PyResult<()
     Ok(())
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl Node {
     #[getter]
-    fn get_kind(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+    fn get_kind(&self, py: Python<'_>) -> NodeKind {
         match self {
-            Node::Unknown() => Ok(Py::new(py, NodeKind::Unknown).unwrap().into_any()),
-            Node::Expression { expr, .. } => expr.call_method0(py, "kind"),
-            Node::Crash { .. } => Ok(Py::new(py, NodeKind::Crash).unwrap().into_any()),
-            Node::Return { .. } => Ok(Py::new(py, NodeKind::Return).unwrap().into_any()),
-            Node::Throw { .. } => Ok(Py::new(py, NodeKind::Throw).unwrap().into_any()),
-            Node::Del { .. } => Ok(Py::new(py, NodeKind::Del).unwrap().into_any()),
-            Node::Break { .. } => Ok(Py::new(py, NodeKind::Break).unwrap().into_any()),
-            Node::While { .. } => Ok(Py::new(py, NodeKind::While).unwrap().into_any()),
-            Node::DoWhile { .. } => Ok(Py::new(py, NodeKind::DoWhile).unwrap().into_any()),
-            Node::If { .. } => Ok(Py::new(py, NodeKind::If).unwrap().into_any()),
-            Node::ForInfinite { .. } => Ok(Py::new(py, NodeKind::ForInfinite).unwrap().into_any()),
-            Node::ForList { .. } => Ok(Py::new(py, NodeKind::ForList).unwrap().into_any()),
-            Node::ForLoop { .. } => Ok(Py::new(py, NodeKind::ForLoop).unwrap().into_any()),
-            Node::ForRange { .. } => Ok(Py::new(py, NodeKind::ForRange).unwrap().into_any()),
-            Node::Var { .. } => Ok(Py::new(py, NodeKind::Var).unwrap().into_any()),
-            Node::Vars { .. } => Ok(Py::new(py, NodeKind::Vars).unwrap().into_any()),
-            Node::Setting { .. } => Ok(Py::new(py, NodeKind::Setting).unwrap().into_any()),
-            Node::Spawn { .. } => Ok(Py::new(py, NodeKind::Spawn).unwrap().into_any()),
-            Node::Continue { .. } => Ok(Py::new(py, NodeKind::Continue).unwrap().into_any()),
-            Node::Goto { .. } => Ok(Py::new(py, NodeKind::Goto).unwrap().into_any()),
-            Node::Label { .. } => Ok(Py::new(py, NodeKind::Label).unwrap().into_any()),
-            Node::TryCatch { .. } => Ok(Py::new(py, NodeKind::TryCatch).unwrap().into_any()),
-            Node::Switch { .. } => Ok(Py::new(py, NodeKind::Switch).unwrap().into_any()),
-            Node::ForKeyValue { .. } => Ok(Py::new(py, NodeKind::ForKeyValue).unwrap().into_any()),
+            Node::Unknown() => NodeKind::Unknown,
+            Node::Expression { expr, .. } => expr.bind(py).get().get_kind(),
+            Node::Crash { .. } => NodeKind::Crash,
+            Node::Return { .. } => NodeKind::Return,
+            Node::Throw { .. } => NodeKind::Throw,
+            Node::Del { .. } => NodeKind::Del,
+            Node::Break { .. } => NodeKind::Break,
+            Node::While { .. } => NodeKind::While,
+            Node::DoWhile { .. } => NodeKind::DoWhile,
+            Node::If { .. } => NodeKind::If,
+            Node::ForInfinite { .. } => NodeKind::ForInfinite,
+            Node::ForList { .. } => NodeKind::ForList,
+            Node::ForLoop { .. } => NodeKind::ForLoop,
+            Node::ForRange { .. } => NodeKind::ForRange,
+            Node::Var { .. } => NodeKind::Var,
+            Node::Vars { .. } => NodeKind::Vars,
+            Node::Setting { .. } => NodeKind::Setting,
+            Node::Spawn { .. } => NodeKind::Spawn,
+            Node::Continue { .. } => NodeKind::Continue,
+            Node::Goto { .. } => NodeKind::Goto,
+            Node::Label { .. } => NodeKind::Label,
+            Node::TryCatch { .. } => NodeKind::TryCatch,
+            Node::Switch { .. } => NodeKind::Switch,
+            Node::ForKeyValue { .. } => NodeKind::ForKeyValue,
         }
     }
 

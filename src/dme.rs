@@ -170,6 +170,7 @@ impl SourceLoc {
     }
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl SourceLoc {
     fn __str__(&self) -> PyResult<String> {

@@ -19,6 +19,8 @@ __all__ = [
 ]
 
 class Constant:
+    @property
+    def val(self) -> typing.Any: ...
     @typing.final
     class Null(Constant):
         __match_args__ = ()
@@ -78,7 +80,6 @@ class Constant:
         def __len__(self) -> builtins.int: ...
         def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
     
-    ...
 
 class Expression:
     @property
@@ -347,6 +348,10 @@ class Expression:
     
 
 class Node:
+    @property
+    def kind(self) -> NodeKind: ...
+    def __str__(self) -> builtins.str: ...
+    def __repr__(self) -> builtins.str: ...
     @typing.final
     class Unknown(Node):
         __match_args__ = ()
@@ -615,7 +620,6 @@ class Node:
         def source_loc(self) -> avulto.SourceLoc: ...
         def __new__(cls, var_type: typing.Optional[avulto.Path], key: Expression, value: Expression, in_list: typing.Optional[Expression], block: typing.Sequence[Node], source_loc: avulto.SourceLoc) -> Node.ForKeyValue: ...
     
-    ...
 
 @typing.final
 class Prefab:
