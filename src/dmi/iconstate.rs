@@ -197,6 +197,7 @@ impl IconState {
     }
 
     /// The directions available in the icon state.
+    #[gen_stub(override_return_type(type_repr="builtins.list[Dir]", imports=("builtins")))]
     #[getter]
     pub fn dirs(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
         Ok(PyList::new(

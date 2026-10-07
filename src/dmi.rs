@@ -82,7 +82,7 @@ impl Dmi {
     /// Creates a DMI from the given `filename`.
     #[staticmethod]
     pub fn from_file(
-        #[gen_stub(override_type(type_repr = "os.PathLike | builtins.str", imports=("builtins", "os")))]
+        #[gen_stub(override_type(type_repr = "os.PathLike[builtins.str] | builtins.str", imports=("builtins", "os")))]
         filename: &Bound<PyAny>,
         py: Python<'_>,
     ) -> PyResult<Dmi> {
@@ -132,7 +132,7 @@ impl Dmi {
     }
 
     /// The states in the DMI.
-    #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[IconState]", imports=("collections.abc")))]
+    #[gen_stub(override_return_type(type_repr="builtins.list[IconState]", imports=("builtins")))]
     #[getter]
     pub fn get_states(&self, py: Python<'_>) -> Py<PyList> {
         self.states.clone_ref(py)

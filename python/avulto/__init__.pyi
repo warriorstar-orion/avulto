@@ -54,12 +54,12 @@ class DME:
         The original filename of the DME.
         """
     @property
-    def types(self) -> builtins.dict[Path, TypeDecl]:
+    def types(self) -> builtins.dict[Path | builtins.str, TypeDecl]:
         r"""
         A mapping of paths in the DME to their TypeDecls.
         """
     @staticmethod
-    def from_file(filename: os.PathLike | builtins.str, parse_procs: builtins.bool = False) -> DME:
+    def from_file(filename: os.PathLike[builtins.str] | builtins.str, parse_procs: builtins.bool = False) -> DME:
         r"""
         Creates a DME from the given `filename`.
         
@@ -98,7 +98,7 @@ class DMI:
         The height of icons in the DMI.
         """
     @property
-    def states(self) -> collections.abc.Iterator[IconState]:
+    def states(self) -> builtins.list[IconState]:
         r"""
         The states in the DMI.
         """
@@ -113,7 +113,7 @@ class DMI:
         Creates an empty DMI file with the given icon width-height tuple `dims`.
         """
     @staticmethod
-    def from_file(filename: os.PathLike | builtins.str) -> DMI:
+    def from_file(filename: os.PathLike[builtins.str] | builtins.str) -> DMI:
         r"""
         Creates a DMI from the given `filename`.
         """
@@ -149,7 +149,7 @@ class DMM:
         The original filename of the DMM.
         """
     @staticmethod
-    def from_file(filename: os.PathLike | builtins.str) -> DMM:
+    def from_file(filename: os.PathLike[builtins.str] | builtins.str) -> DMM:
         r"""
         Creates a DMM from the given `filename`.
         """
@@ -233,7 +233,7 @@ class IconState:
         Whether or not the state is a movement state.
         """
     @property
-    def dirs(self) -> list:
+    def dirs(self) -> builtins.list[Dir]:
         r"""
         The directions available in the icon state.
         """
@@ -319,7 +319,12 @@ class Path:
     def __hash__(self) -> builtins.int: ...
     def __str__(self) -> builtins.str: ...
     def __repr__(self) -> builtins.str: ...
-    def __richcmp__(self, other: typing.Any, op: int) -> builtins.bool: ...
+    def __eq__(self, other: typing.Any) -> builtins.bool: ...
+    def __ne__(self, other: typing.Any) -> builtins.bool: ...
+    def __lt__(self, other: typing.Any) -> builtins.bool: ...
+    def __le__(self, other: typing.Any) -> builtins.bool: ...
+    def __gt__(self, other: typing.Any) -> builtins.bool: ...
+    def __ge__(self, other: typing.Any) -> builtins.bool: ...
     def __truediv__(self, other: typing.Any) -> Path:
         r"""
         Return the path with the specified suffix.
