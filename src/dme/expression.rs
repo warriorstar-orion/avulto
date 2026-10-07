@@ -198,7 +198,7 @@ impl Expression {
 #[pymethods]
 impl Expression {
     #[getter]
-    fn get_kind(&self) -> NodeKind {
+    pub(crate) fn get_kind(&self) -> NodeKind {
         match self {
             Expression::Constant { .. } => NodeKind::Constant,
             Expression::Identifier { .. } => NodeKind::Identifier,
