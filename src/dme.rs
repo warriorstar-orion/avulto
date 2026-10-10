@@ -388,7 +388,7 @@ impl Dme {
     }
 
     /// A mapping of paths in the DME to their TypeDecls.
-    #[gen_stub(override_return_type(type_repr="builtins.dict[Path | builtins.str, TypeDef]", imports=("builtins")))]
+    #[gen_stub(override_return_type(type_repr="builtins.dict[TypePath | builtins.str, TypeDef]", imports=("builtins")))]
     #[getter]
     fn get_types(self_: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<DmeTypeAccessor>> {
         Py::new(
@@ -400,10 +400,10 @@ impl Dme {
     }
 
     /// Returns a list of type paths with the given `prefix`.
-    #[gen_stub(override_return_type(type_repr="builtins.list[Path]", imports=("builtins")))]
+    #[gen_stub(override_return_type(type_repr="builtins.list[TypePath]", imports=("builtins")))]
     fn typesof(
         &self,
-        #[gen_stub(override_type(type_repr = "Path | builtins.str", imports=("builtins")))]
+        #[gen_stub(override_type(type_repr = "TypePath | builtins.str", imports=("builtins")))]
         prefix: &Bound<PyAny>,
         py: Python<'_>,
     ) -> PyResult<Py<PyList>> {
@@ -427,10 +427,10 @@ impl Dme {
     }
 
     /// Returns a list of type paths with the given `prefix`, excluding `prefix` itself.
-    #[gen_stub(override_return_type(type_repr="builtins.list[Path]", imports=("builtins")))]
+    #[gen_stub(override_return_type(type_repr="builtins.list[TypePath]", imports=("builtins")))]
     fn subtypesof(
         &self,
-        #[gen_stub(override_type(type_repr = "Path | builtins.str", imports=("builtins")))]
+        #[gen_stub(override_type(type_repr = "TypePath | builtins.str", imports=("builtins")))]
         prefix: &Bound<PyAny>,
         py: Python<'_>,
     ) -> PyResult<Py<PyList>> {

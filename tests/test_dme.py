@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from avulto import DME, Path as p
+from avulto import DME, TypePath as p
 
 
 def get_fixture_path(name: str) -> str:

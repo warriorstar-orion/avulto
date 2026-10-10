@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from avulto import DMM, Path as p
+from avulto import DMM, TypePath as p
 
 
 def get_fixture_path(name: str) -> str:
