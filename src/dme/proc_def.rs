@@ -38,7 +38,7 @@ impl ProcArg {
 /// A single proc declaration.
 #[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
-pub struct ProcDecl {
+pub struct ProcDef {
     pub dme: Py<PyAny>,
     /// The type path the proc is declared on.
     #[pyo3(get)]
@@ -58,7 +58,7 @@ pub struct ProcDecl {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl ProcDecl {
+impl ProcDef {
     fn __str__(&self) -> PyResult<String> {
         self.__repr__()
     }

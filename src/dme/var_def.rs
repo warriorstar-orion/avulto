@@ -6,7 +6,7 @@ use crate::{dme::SourceLoc, path::Path};
 /// A single variable declaration.
 #[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
-pub struct VarDecl {
+pub struct VarDef {
     /// The name of the variable.
     #[pyo3(get)]
     pub name: String,
@@ -26,7 +26,7 @@ pub struct VarDecl {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl VarDecl {
+impl VarDef {
     fn __str__(&self) -> PyResult<String> {
         self.__repr__()
     }

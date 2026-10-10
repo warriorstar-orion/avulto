@@ -17,7 +17,7 @@ use pyo3::{
 use pyo3_stub_gen::{create_exception, derive::*};
 
 use crate::{
-    dme::{type_decl::TypeDecl, var_decl::VarDecl},
+    dme::{type_def::TypeDef, var_def::VarDef},
     helpers,
     path::{self, Path},
 };
@@ -30,9 +30,9 @@ pub mod node_walk;
 pub mod nodes;
 pub mod operators;
 pub mod prefab;
-pub mod proc_decl;
-pub mod type_decl;
-pub mod var_decl;
+pub mod proc_def;
+pub mod type_def;
+pub mod var_def;
 
 create_exception!(avulto.exceptions, EmptyProcError, PyException);
 create_exception!(avulto.exceptions, MissingTypeError, PyException);
@@ -64,7 +64,7 @@ impl DmeTypeAccessor {
 
 #[pymethods]
 impl DmeTypeAccessor {
-    fn __getitem__(&self, path: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<TypeDecl>> {
+    fn __getitem__(&self, path: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<TypeDef>> {
         let dme = self.dme.bind(py).borrow();
         if let Ok((obj_path, search_string)) = self.convert_path(path) {
             match dme.objtree.find(&search_string) {
@@ -82,7 +82,7 @@ impl DmeTypeAccessor {
                         .as_unbound()
                         .clone_ref(py)
                         .into_any();
-                    Ok(TypeDecl {
+                    Ok(TypeDef {
                         dme,
                         path: Path::make_trusted(obj_path.as_str()),
                         node_index: type_ref_index,
@@ -302,7 +302,7 @@ impl Dme {
                     source_loc = self.file_data.fill_source_loc(&decl.location);
                 }
             }
-            return VarDecl {
+            return VarDef {
                 name,
                 type_path: Path::make_trusted(&type_def.path).into_py_any(py).unwrap(),
                 declared_type,
@@ -388,7 +388,7 @@ impl Dme {
     }
 
     /// A mapping of paths in the DME to their TypeDecls.
-    #[gen_stub(override_return_type(type_repr="builtins.dict[Path | builtins.str, TypeDecl]", imports=("builtins")))]
+    #[gen_stub(override_return_type(type_repr="builtins.dict[Path | builtins.str, TypeDef]", imports=("builtins")))]
     #[getter]
     fn get_types(self_: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<DmeTypeAccessor>> {
         Py::new(

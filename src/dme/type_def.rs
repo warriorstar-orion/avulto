@@ -9,7 +9,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use crate::{
     dme::{
         Dme, SourceLoc,
-        proc_decl::{ProcArg, ProcDecl},
+        proc_def::{ProcArg, ProcDef},
     },
     path::Path,
 };
@@ -17,20 +17,20 @@ use crate::{
 /// A single type declaration.
 #[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
-pub struct TypeDecl {
+pub struct TypeDef {
     pub dme: Py<PyAny>,
     pub node_index: NodeIndex,
-    /// The typepath of the TypeDecl.
+    /// The typepath of the TypeDef.
     #[pyo3(get)]
     pub path: Path,
-    /// The location of the TypeDecl's first declaration in source.
+    /// The location of the TypeDef's first declaration in source.
     #[pyo3(get)]
     pub source_loc: SourceLoc,
 }
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl TypeDecl {
+impl TypeDef {
     /// Return a list of variable names for the type declaration.
     #[gen_stub(override_return_type(type_repr="builtins.list[builtins.str]", imports=("builtins")))]
     #[pyo3(signature = (declared=false, modified=false, unmodified=false))]
@@ -94,7 +94,7 @@ impl TypeDecl {
 
     /// Return the var declaration for variable *name*. If *parents* is True,
     /// check up type path if this type does not have this variable set.
-    #[gen_stub(override_return_type(type_repr = "VarDecl"))]
+    #[gen_stub(override_return_type(type_repr = "VarDef"))]
     #[pyo3(signature = (name, parents=true))]
     pub fn var_decl(&self, name: String, parents: bool, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let bound = self.dme.cast_bound::<Dme>(py).unwrap();
@@ -164,12 +164,12 @@ impl TypeDecl {
 
     /// Return proc declarations for the type. If *name* is set, only return
     /// proc declarations with this name.
-    #[gen_stub(override_return_type(type_repr="builtins.list[ProcDecl]", imports=("builtins")))]
+    #[gen_stub(override_return_type(type_repr="builtins.list[ProcDef]", imports=("builtins")))]
     #[pyo3(signature = (name=None))]
     pub fn proc_decls(&self, name: Option<String>, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let dme = self.dme.cast_bound::<Dme>(py).unwrap();
         let objtree = &dme.borrow().objtree;
-        let mut out: Vec<ProcDecl> = Vec::new();
+        let mut out: Vec<ProcDef> = Vec::new();
 
         let type_def = &objtree[self.node_index];
         for (proc_name, proc) in type_def.procs.iter() {
@@ -191,7 +191,7 @@ impl TypeDecl {
                         });
                     }
 
-                    out.push(ProcDecl {
+                    out.push(ProcDef {
                         dme: self.dme.clone_ref(py),
                         name: proc_name.clone(),
                         type_path: self.path.clone().into_pyobject(py)?.into_any().unbind(),
