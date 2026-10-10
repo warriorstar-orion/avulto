@@ -18,7 +18,7 @@ pub enum Constant {
     Float(f32),
     String(String),
     Resource(String),
-    Path(TypePath),
+    TypePath(TypePath),
     ProcMacro(),
 }
 
@@ -33,7 +33,7 @@ impl Constant {
             Constant::Float(f) => f.into_pyobject(py)?.into_any().unbind(),
             Constant::String(s) => s.into_pyobject(py)?.into_any().unbind(),
             Constant::Resource(s) => s.into_pyobject(py)?.into_any().unbind(),
-            Constant::Path(p) => p.clone().into_pyobject(py)?.into_any().unbind(),
+            Constant::TypePath(p) => p.clone().into_pyobject(py)?.into_any().unbind(),
             Constant::ProcMacro() => Constant::ProcMacro().into_pyobject(py)?.into_any().unbind(),
         })
     }
