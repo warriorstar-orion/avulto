@@ -11,7 +11,7 @@ use crate::{
         Dme, SourceLoc,
         proc_def::{ProcArg, ProcDef},
     },
-    path::Path,
+    path::TypePath,
 };
 
 /// A single type declaration.
@@ -22,7 +22,7 @@ pub struct TypeDef {
     pub node_index: NodeIndex,
     /// The typepath of the TypeDef.
     #[pyo3(get)]
-    pub path: Path,
+    pub path: TypePath,
     /// The location of the TypeDef's first declaration in source.
     #[pyo3(get)]
     pub source_loc: SourceLoc,
@@ -180,10 +180,10 @@ impl TypeDef {
                 if !proc_value.location.is_builtins() {
                     let mut args_out: Vec<ProcArg> = Vec::new();
                     for arg in proc_value.parameters.iter() {
-                        let arg_typepath: Option<Path> = if arg.var_type.type_path.is_empty() {
+                        let arg_typepath: Option<TypePath> = if arg.var_type.type_path.is_empty() {
                             None
                         } else {
-                            Some(Path::from_tree_path(&arg.var_type.type_path))
+                            Some(TypePath::from_tree_path(&arg.var_type.type_path))
                         };
                         args_out.push(ProcArg {
                             arg_name: arg.name.clone(),

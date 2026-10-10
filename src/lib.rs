@@ -29,7 +29,7 @@ fn version() -> String {
 fn avulto(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(version, m)?)?;
 
-    m.add_class::<path::Path>()?;
+    m.add_class::<path::TypePath>()?;
 
     m.add_class::<dmm::Dmm>()?;
     m.add_class::<dmm::CoordIterator>()?;

@@ -15,7 +15,7 @@ use crate::{
         operators::{AssignOperator, BinaryOperator, UnaryOperator},
         prefab::Prefab,
     },
-    path::Path,
+    path::TypePath,
 };
 
 use super::{
@@ -163,7 +163,7 @@ pub enum Node {
         source_loc: SourceLoc,
     },
     ForList {
-        var_type: Option<Path>,
+        var_type: Option<TypePath>,
         name: PyExpr,
         in_list: Option<PyExpr>,
         block: PyCodeBlock,
@@ -187,7 +187,7 @@ pub enum Node {
     Var {
         name: PyExpr,
         value: Option<PyExpr>,
-        declared_type: Option<Path>,
+        declared_type: Option<TypePath>,
         source_loc: SourceLoc,
     },
     Vars {
@@ -231,7 +231,7 @@ pub enum Node {
         source_loc: SourceLoc,
     },
     ForKeyValue {
-        var_type: Option<Path>,
+        var_type: Option<TypePath>,
         key: PyExpr,
         value: PyExpr,
         in_list: Option<PyExpr>,

@@ -3,7 +3,7 @@ use pyo3::{IntoPyObject, Py, Python, types::PyList};
 
 use crate::{
     dme::{FileData, SourceLoc},
-    path::Path,
+    path::TypePath,
 };
 
 use super::{
@@ -31,7 +31,7 @@ impl Node {
                 declared_type: if v.var_type.type_path.is_empty() {
                     None
                 } else {
-                    Some(Path::from_tree_path(&v.var_type.type_path))
+                    Some(TypePath::from_tree_path(&v.var_type.type_path))
                 },
                 source_loc,
             }
@@ -240,10 +240,10 @@ impl Node {
             .expect("parsing for loop")
             .into(),
             Statement::ForList(for_list_statement) => {
-                let mut var_type_path: Option<Path> = None;
+                let mut var_type_path: Option<TypePath> = None;
                 if let Some(var_type) = &for_list_statement.var_type {
                     if !var_type.type_path.is_empty() {
-                        var_type_path = Some(Path::from_tree_path(&var_type.type_path));
+                        var_type_path = Some(TypePath::from_tree_path(&var_type.type_path));
                     }
                 }
                 Self::ForList {
@@ -335,7 +335,7 @@ impl Node {
                             declared_type: if vs.var_type.type_path.is_empty() {
                                 None
                             } else {
-                                Some(Path::from_tree_path(&vs.var_type.type_path))
+                                Some(TypePath::from_tree_path(&vs.var_type.type_path))
                             },
                             source_loc: source_loc.clone(),
                         }
@@ -600,10 +600,10 @@ impl Node {
             .expect("parsing crash")
             .into(),
             Statement::ForKeyValue(stmt) => {
-                let mut var_type_path: Option<Path> = None;
+                let mut var_type_path: Option<TypePath> = None;
                 if let Some(var_type) = &stmt.var_type {
                     if !var_type.type_path.is_empty() {
-                        var_type_path = Some(Path::from_tree_path(&var_type.type_path));
+                        var_type_path = Some(TypePath::from_tree_path(&var_type.type_path));
                     }
                 }
                 Self::ForKeyValue {

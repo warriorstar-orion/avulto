@@ -1,7 +1,7 @@
 use pyo3::{Py, PyAny, PyResult, pyclass, pymethods};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::{dme::SourceLoc, path::Path};
+use crate::{dme::SourceLoc, path::TypePath};
 
 /// A single variable declaration.
 #[gen_stub_pyclass]
@@ -15,7 +15,7 @@ pub struct VarDef {
     pub type_path: Py<PyAny>,
     /// The declared type of the variable, if specified.
     #[pyo3(get)]
-    pub declared_type: Option<Path>,
+    pub declared_type: Option<TypePath>,
     /// The variable's value, if it can be evaluated as a constant expression.
     #[pyo3(get)]
     pub const_val: Option<Py<PyAny>>,

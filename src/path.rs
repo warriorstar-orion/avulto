@@ -44,7 +44,7 @@ const CORE_TYPES: &[&str] = &[
 #[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
 #[derive(Clone, Eq, Hash, PartialOrd, Ord, PartialEq)]
-pub struct Path {
+pub struct TypePath {
     // We can either do a bunch of munging when displaying paths, which happens a lot,
     // or do a bunch of munging when operating on paths, which happens a lot,
     // or we can just keep both around, because memory is cheap.
@@ -56,14 +56,14 @@ pub struct Path {
     pub rel: String,
 }
 
-impl fmt::Display for Path {
+impl fmt::Display for TypePath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.abs)
     }
 }
 
-impl From<Path> for String {
-    fn from(val: Path) -> Self {
+impl From<TypePath> for String {
+    fn from(val: TypePath) -> Self {
         val.abs
     }
 }
@@ -76,9 +76,9 @@ fn invalid_path_part(part: &&str) -> bool {
     VALID_PATH_PART_RE.captures(part).is_none()
 }
 
-impl Path {
-    pub fn root() -> Path {
-        Path {
+impl TypePath {
+    pub fn root() -> TypePath {
+        TypePath {
             abs: String::from("/"),
             rel: String::from("/"),
         }
@@ -86,10 +86,10 @@ impl Path {
 
     /// Used where we know the path is coming from a source guaranteed
     /// to emit valid paths, such as DMEs themselves.
-    pub fn make_trusted(value: &str) -> Path {
+    pub fn make_trusted(value: &str) -> TypePath {
         let rel = to_relative_path(value);
         let abs = to_absolute_path(rel.as_str());
-        Path { abs, rel }
+        TypePath { abs, rel }
     }
 
     pub fn from_tree_path(tree_path: &TreePath) -> Self {
@@ -103,10 +103,10 @@ impl Path {
         parts
     }
 
-    pub fn make_untrusted(value: &str) -> Result<Path, String> {
+    pub fn make_untrusted(value: &str) -> Result<TypePath, String> {
         let trimmed = value.trim();
         if trimmed.eq("/") {
-            return Ok(Path::root());
+            return Ok(TypePath::root());
         }
         if trimmed.is_empty() {
             return Err(String::from("empty path"));
@@ -123,7 +123,7 @@ impl Path {
         }
         let rel = to_relative_path(trimmed);
         let abs = to_absolute_path(rel.as_str());
-        Ok(Path { abs, rel })
+        Ok(TypePath { abs, rel })
     }
 
     pub fn internal_child_of_string(&self, rhs: &String, strict: bool) -> bool {
@@ -229,11 +229,11 @@ fn to_absolute_path(value: &str) -> String {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl Path {
+impl TypePath {
     /// Returns a new path.
     #[new]
     pub fn new(value: &str) -> PyResult<Self> {
-        match Path::make_untrusted(value) {
+        match TypePath::make_untrusted(value) {
             Ok(p) => Ok(p),
             Err(e) => Err(PathError::new_err(e)),
         }
@@ -271,21 +271,21 @@ impl Path {
 
     /// The parent path.
     #[getter]
-    pub fn get_parent(&self) -> PyResult<Path> {
+    pub fn get_parent(&self) -> PyResult<TypePath> {
         if self.abs == "/" {
             return Ok(self.clone());
         }
         let mut parts: Vec<&str> = self.abs.split('/').filter(|&x| !x.is_empty()).collect();
         let _ = parts.split_off(parts.len() - 1);
         if parts.is_empty() {
-            Ok(Path {
+            Ok(TypePath {
                 abs: String::from("/"),
                 rel: String::from("/"),
             })
         } else {
             let mut parent = parts.join("/");
             parent.insert(0, '/');
-            Path::new(parent.as_str())
+            TypePath::new(parent.as_str())
         }
     }
 
@@ -356,7 +356,7 @@ impl Path {
     fn __truediv__(&self, other: &Bound<PyAny>) -> PyResult<Self> {
         if let Ok(rhs) = other.extract::<Self>() {
             let new_path = self.abs.clone() + &rhs.rel;
-            return Path::new(new_path.as_str());
+            return TypePath::new(new_path.as_str());
         } else if let Ok(rhs) = other.cast::<PyString>() {
             let new_path = if self.get_is_root() {
                 String::from("")
@@ -367,7 +367,7 @@ impl Path {
                     .to_string()
                     .strip_prefix('/')
                     .unwrap_or(rhs.to_string().as_str());
-            return Path::new(new_path.as_str());
+            return TypePath::new(new_path.as_str());
         }
 
         Err(PathError::new_err("cannot append"))

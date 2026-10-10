@@ -19,7 +19,7 @@ use pyo3_stub_gen::{create_exception, derive::*};
 use crate::{
     dme::{type_def::TypeDef, var_def::VarDef},
     helpers,
-    path::{self, Path},
+    path::{self, TypePath},
 };
 
 pub mod expr_parse;
@@ -45,7 +45,7 @@ pub struct DmeTypeAccessor {
 
 impl DmeTypeAccessor {
     fn convert_path(&self, path: &Bound<PyAny>) -> Result<(String, String), String> {
-        let objpath = if let Ok(patht) = path.extract::<path::Path>() {
+        let objpath = if let Ok(patht) = path.extract::<path::TypePath>() {
             patht.rel
         } else if let Ok(pystr) = path.cast::<PyString>() {
             pystr.to_string()
@@ -84,7 +84,7 @@ impl DmeTypeAccessor {
                         .into_any();
                     Ok(TypeDef {
                         dme,
-                        path: Path::make_trusted(obj_path.as_str()),
+                        path: TypePath::make_trusted(obj_path.as_str()),
                         node_index: type_ref_index,
                         source_loc,
                     }
@@ -207,16 +207,16 @@ impl FileData {
 }
 
 impl Dme {
-    fn collect_child_paths(&self, needle: &Path, strict: bool, out: &mut Vec<Path>) {
+    fn collect_child_paths(&self, needle: &TypePath, strict: bool, out: &mut Vec<TypePath>) {
         for ty in self.objtree.iter_types() {
             // special handling for root
             if ty.path.is_empty() && needle.abs.eq("/") {
                 if !strict {
-                    out.push(Path::root());
+                    out.push(TypePath::root());
                 }
                 continue;
             }
-            let trusted = Path::make_trusted(&ty.path.clone());
+            let trusted = TypePath::make_trusted(&ty.path.clone());
             if needle.internal_parent_of_string(&trusted.abs, strict) {
                 out.push(trusted);
             }
@@ -288,7 +288,7 @@ impl Dme {
             let declared_type = var
                 .declaration
                 .as_ref()
-                .map(|decl| Path::from_tree_path(&decl.var_type.type_path));
+                .map(|decl| TypePath::from_tree_path(&decl.var_type.type_path));
             let const_val = var
                 .value
                 .constant
@@ -304,7 +304,7 @@ impl Dme {
             }
             return VarDef {
                 name,
-                type_path: Path::make_trusted(&type_def.path).into_py_any(py).unwrap(),
+                type_path: TypePath::make_trusted(&type_def.path).into_py_any(py).unwrap(),
                 declared_type,
                 const_val,
                 source_loc,
@@ -407,12 +407,12 @@ impl Dme {
         prefix: &Bound<PyAny>,
         py: Python<'_>,
     ) -> PyResult<Py<PyList>> {
-        let mut out: Vec<Path> = Vec::new();
+        let mut out: Vec<TypePath> = Vec::new();
 
-        let prefix_path = if let Ok(path) = prefix.extract::<path::Path>() {
+        let prefix_path = if let Ok(path) = prefix.extract::<path::TypePath>() {
             path
         } else if let Ok(pystr) = prefix.cast::<PyString>() {
-            match Path::make_untrusted(pystr.to_str()?) {
+            match TypePath::make_untrusted(pystr.to_str()?) {
                 Ok(p) => p,
                 Err(e) => {
                     return Err(PyRuntimeError::new_err(e));
@@ -434,12 +434,12 @@ impl Dme {
         prefix: &Bound<PyAny>,
         py: Python<'_>,
     ) -> PyResult<Py<PyList>> {
-        let mut out: Vec<Path> = Vec::new();
+        let mut out: Vec<TypePath> = Vec::new();
 
-        let prefix_path = if let Ok(path) = prefix.extract::<path::Path>() {
+        let prefix_path = if let Ok(path) = prefix.extract::<path::TypePath>() {
             path
         } else if let Ok(pystr) = prefix.cast::<PyString>() {
-            match Path::make_untrusted(pystr.to_str()?) {
+            match TypePath::make_untrusted(pystr.to_str()?) {
                 Ok(p) => p,
                 Err(e) => {
                     return Err(PyRuntimeError::new_err(e));

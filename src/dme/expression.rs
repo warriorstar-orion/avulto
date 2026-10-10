@@ -1,7 +1,7 @@
 use pyo3::{IntoPyObject, Py, PyAny, PyResult, Python, pyclass, pymethods};
 use pyo3_stub_gen::derive::{gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
-use crate::{dme::SourceLoc, dmlist::DmList, path::Path};
+use crate::{dme::SourceLoc, dmlist::DmList, path::TypePath};
 
 use super::{
     nodes::{NodeKind, PyExpr},
@@ -18,7 +18,7 @@ pub enum Constant {
     Float(f32),
     String(String),
     Resource(String),
-    Path(Path),
+    Path(TypePath),
     ProcMacro(),
 }
 

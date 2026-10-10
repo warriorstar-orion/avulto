@@ -4,7 +4,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::{
     dme::{Dme, SourceLoc},
-    path::Path,
+    path::TypePath,
 };
 
 /// A representation of a proc declaration argument.
@@ -17,7 +17,7 @@ pub struct ProcArg {
     pub arg_name: String,
     /// The argument type, if available.
     #[pyo3(get)]
-    pub arg_type: Option<Path>,
+    pub arg_type: Option<TypePath>,
 }
 
 #[gen_stub_pymethods]
