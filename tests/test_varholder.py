@@ -37,6 +37,15 @@ def test_varholder_all(dme: DME):
     # Analyze
     assert {"a", "icon", "icon_state"}.issubset(def_to_names(all_vars))
 
+def test_varholder_all_inherited(dme: DME):
+    # Setup
+    foo = dme.types["/obj/foo/bar"]
+
+    # Invoke
+    all_vars = foo.vars.all()
+
+    # Analyze
+    assert {"a", "icon", "icon_state"}.issubset(def_to_names(all_vars))
 
 def test_varholder_declared(dme: DME):
     # Setup
