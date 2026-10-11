@@ -1,4 +1,4 @@
-from avulto import Path as p
+from avulto import TypePath as p
 
 
 def test_isparent():

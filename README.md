@@ -6,7 +6,7 @@ other community libraries.
 
 Its primary use cases are to easily
 
-- read and modify map (`.dmm`) files 
+- read and modify map (`.dmm`) files
 - read, modify, and create icon (`.dmi`) files
 - inspect and walk BYOND reflection data and ASTs
 
@@ -15,8 +15,8 @@ Its primary use cases are to easily
 
 ## Usage
 
-Avulto is available as a [release][] on PyPI. See the **Development** section
-below for directions on using the library locally.
+Avulto is available as a [release][] on PyPI. See [DEVELOPMENT.md](DEVELOPMENT.md)
+for directions on using the library locally.
 
 A Quickstart and the API reference are available at the library's [documentation site][]
 and in the `docs/` directory of the repository. Its API is documented in full in its [stub file][].
@@ -24,27 +24,6 @@ and in the `docs/` directory of the repository. Its API is documented in full in
 [documentation site]: https://warriorstar-orion.github.io/avulto/
 [release]: https://pypi.org/project/avulto/
 [stub file]: https://github.com/warriorstar-orion/avulto/blob/main/avulto.pyi
-
-## Development
-
-Avulto is written in Rust and implemented using
-[PyO3](https://github.com/PyO3/pyo3), and uses
-[maturin](https://www.maturin.rs/) for development. To build and install
-locally:
-
-```sh
-$ python -m maturin build; python -m pip install .
-$ python -m pytest
-```
-
-### Planned Development
-
-- DMI file modification.
-- Better errors and consistent API surface area.
-- More improvement of AST walking and code reflection API.
-- Pre-defined AST walker superclass with useful behaviors.
-- Ability to create new tile definitions in DMM files.
-- Passing compiler defines to parser.
 
 ## License
 

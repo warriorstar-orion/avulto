@@ -7,6 +7,7 @@ import enum
 import os
 import pathlib
 import typing
+import typing_extensions
 from . import ast
 from . import exceptions
 __all__ = [
@@ -18,13 +19,15 @@ __all__ = [
     "Dmlist",
     "IconState",
     "NewCall",
-    "Path",
     "ProcArg",
-    "ProcDecl",
+    "ProcDef",
+    "ProcHolder",
     "SourceLoc",
     "Tile",
-    "TypeDecl",
-    "VarDecl",
+    "TypeDef",
+    "TypePath",
+    "VarDef",
+    "VarHolder",
     "ast",
     "exceptions",
     "version",
@@ -55,7 +58,7 @@ class DME:
         The original filename of the DME.
         """
     @property
-    def types(self) -> builtins.dict[Path | builtins.str, TypeDecl]:
+    def types(self) -> builtins.dict[TypePath | builtins.str, TypeDef]:
         r"""
         A mapping of paths in the DME to their TypeDecls.
         """
@@ -68,11 +71,11 @@ class DME:
         This is slower than the default but provides more reflection
         information.
         """
-    def typesof(self, prefix: Path | builtins.str) -> builtins.list[Path]:
+    def typesof(self, prefix: TypePath | builtins.str) -> builtins.list[TypePath]:
         r"""
         Returns a list of type paths with the given `prefix`.
         """
-    def subtypesof(self, prefix: Path | builtins.str) -> builtins.list[Path]:
+    def subtypesof(self, prefix: TypePath | builtins.str) -> builtins.list[TypePath]:
         r"""
         Returns a list of type paths with the given `prefix`, excluding `prefix` itself.
         """
@@ -257,7 +260,7 @@ class NewCall:
     A `new` call appearing in a constant-value position.
     """
     @property
-    def path(self) -> typing.Optional[Path]:
+    def path(self) -> typing.Optional[TypePath]:
         r"""
         The type being instantiated, or `None` for an implicit `new()`.
         """
@@ -270,68 +273,6 @@ class NewCall:
     def __repr__(self) -> builtins.str: ...
 
 @typing.final
-class Path:
-    r"""
-    A DM typepath.
-    """
-    @property
-    def abs(self) -> builtins.str:
-        r"""
-        Returns the *absolute* representation of the path, rooted at `/datum`.
-        """
-    @property
-    def rel(self) -> builtins.str:
-        r"""
-        Returns the *relative* or *declared* representation of the path.
-        """
-    @property
-    def parent(self) -> Path:
-        r"""
-        The parent path.
-        """
-    @property
-    def stem(self) -> builtins.str:
-        r"""
-        The final part of the path.
-        """
-    @property
-    def is_root(self) -> builtins.bool:
-        r"""
-        Whether or not the path is `/`.
-        """
-    def __new__(cls, value: builtins.str) -> Path:
-        r"""
-        Returns a new path.
-        """
-    def child_of(self, other: typing.Any, strict: builtins.bool = False) -> builtins.bool:
-        r"""
-        Returns whether the path is a child of `other`.
-        
-        If `strict` is true, the current path will not be considered a child of
-        itself.
-        """
-    def parent_of(self, other: typing.Any, strict: builtins.bool = False) -> builtins.bool:
-        r"""
-        Returns whether the path is a parent of `other`.
-        
-        If `strict` is true, the current path will not be considered a parent of
-        itself.
-        """
-    def __hash__(self) -> builtins.int: ...
-    def __str__(self) -> builtins.str: ...
-    def __repr__(self) -> builtins.str: ...
-    def __eq__(self, other: typing.Any) -> builtins.bool: ...
-    def __ne__(self, other: typing.Any) -> builtins.bool: ...
-    def __lt__(self, other: typing.Any) -> builtins.bool: ...
-    def __le__(self, other: typing.Any) -> builtins.bool: ...
-    def __gt__(self, other: typing.Any) -> builtins.bool: ...
-    def __ge__(self, other: typing.Any) -> builtins.bool: ...
-    def __truediv__(self, other: typing.Any) -> Path:
-        r"""
-        Return the path with the specified suffix.
-        """
-
-@typing.final
 class ProcArg:
     r"""
     A representation of a proc declaration argument.
@@ -342,7 +283,7 @@ class ProcArg:
         The argument name.
         """
     @property
-    def arg_type(self) -> typing.Optional[Path]:
+    def arg_type(self) -> typing.Optional[TypePath]:
         r"""
         The argument type, if available.
         """
@@ -350,7 +291,7 @@ class ProcArg:
     def __repr__(self) -> builtins.str: ...
 
 @typing.final
-class ProcDecl:
+class ProcDef:
     r"""
     A single proc declaration.
     """
@@ -378,6 +319,31 @@ class ProcDecl:
         Walks the proc AST with *walker*, calling any `visit_*` method names on
         *walker* if they exist for AST node types.
         """
+
+@typing.final
+class ProcHolder:
+    def names(self) -> builtins.list[builtins.str]:
+        r"""
+        Return the names of all procs visible from this type path.
+        """
+    def all(self) -> builtins.list[ProcDef]:
+        r"""
+        Return all proc declarations visible from this type path.
+        """
+    def declared(self) -> builtins.list[ProcDef]:
+        r"""
+        Return procs declared directly on this type path.
+        """
+    def modified(self) -> builtins.list[ProcDef]:
+        r"""
+        Return procs that override inherited values on this subtype.
+        """
+    def unmodified(self) -> builtins.list[ProcDef]:
+        r"""
+        Return inherited procs that were not changed on this subtype.
+        """
+    def __iter__(self) -> collections.abc.Iterator[ProcDef]: ...
+    def __getitem__(self, key: typing.Any) -> builtins.list[ProcDef]: ...
 
 @typing.final
 class SourceLoc:
@@ -409,13 +375,13 @@ class Tile:
     An individual map tile definition.
     """
     @property
-    def area_path(self) -> Path:
+    def area_path(self) -> TypePath:
         r"""
         Returns the path of the tile's area. Returns only the first area if
         multiple exist.
         """
     @property
-    def turf_path(self) -> Path:
+    def turf_path(self) -> TypePath:
         r"""
         Returns the path of the tile's turf. Returns only the first area if
         multiple exist.
@@ -448,7 +414,7 @@ class Tile:
         with the given prefix. If exact is True, then the prefab path must match
         exactly.
         """
-    def prefab_path(self, index: builtins.int) -> Path:
+    def prefab_path(self, index: builtins.int) -> TypePath:
         r"""
         Return the path of the prefab at `index`.
         """
@@ -482,34 +448,48 @@ class Tile:
     def __ne__(self, other: typing.Any) -> builtins.bool: ...
 
 @typing.final
-class TypeDecl:
+class TypeDef:
     r"""
     A single type declaration.
     """
     @property
-    def path(self) -> Path:
+    def path(self) -> TypePath:
         r"""
-        The typepath of the TypeDecl.
+        The typepath of the TypeDef.
         """
     @property
     def source_loc(self) -> SourceLoc:
         r"""
-        The location of the TypeDecl's first declaration in source.
+        The location of the TypeDef's first declaration in source.
         """
+    @property
+    def vars(self) -> VarHolder:
+        r"""
+        A class to access variables on this typepath.
+        """
+    @property
+    def procs(self) -> ProcHolder:
+        r"""
+        A class to access procs on this typepath.
+        """
+    @typing_extensions.deprecated("[Since 0.4.0] Use `vars` variable instead")
     def var_names(self, declared: builtins.bool = False, modified: builtins.bool = False, unmodified: builtins.bool = False) -> builtins.list[builtins.str]:
         r"""
         Return a list of variable names for the type declaration.
         """
-    def var_decl(self, name: builtins.str, parents: builtins.bool = True) -> VarDecl:
+    @typing_extensions.deprecated("[Since 0.5.0] Use `vars` variable instead")
+    def var_decl(self, name: builtins.str, parents: builtins.bool = True) -> VarDef:
         r"""
         Return the var declaration for variable *name*. If *parents* is True,
         check up type path if this type does not have this variable set.
         """
+    @typing_extensions.deprecated("[Since 0.5.0] Use `procs` variable instead")
     def proc_names(self, declared: builtins.bool = False, modified: builtins.bool = False, unmodified: builtins.bool = False) -> builtins.list[builtins.str]:
         r"""
         Return a list of proc names for the type declaration.
         """
-    def proc_decls(self, name: typing.Optional[builtins.str] = None) -> builtins.list[ProcDecl]:
+    @typing_extensions.deprecated("[Since 0.5.0] Use `procs` variable instead")
+    def proc_decls(self, name: typing.Optional[builtins.str] = None) -> builtins.list[ProcDef]:
         r"""
         Return proc declarations for the type. If *name* is set, only return
         proc declarations with this name.
@@ -517,7 +497,69 @@ class TypeDecl:
     def __repr__(self) -> builtins.str: ...
 
 @typing.final
-class VarDecl:
+class TypePath:
+    r"""
+    A DM typepath.
+    """
+    @property
+    def abs(self) -> builtins.str:
+        r"""
+        Returns the *absolute* representation of the path, rooted at `/datum`.
+        """
+    @property
+    def rel(self) -> builtins.str:
+        r"""
+        Returns the *relative* or *declared* representation of the path.
+        """
+    @property
+    def parent(self) -> TypePath:
+        r"""
+        The parent path.
+        """
+    @property
+    def stem(self) -> builtins.str:
+        r"""
+        The final part of the path.
+        """
+    @property
+    def is_root(self) -> builtins.bool:
+        r"""
+        Whether or not the path is `/`.
+        """
+    def __new__(cls, value: builtins.str) -> TypePath:
+        r"""
+        Returns a new path.
+        """
+    def child_of(self, other: typing.Any, strict: builtins.bool = False) -> builtins.bool:
+        r"""
+        Returns whether the path is a child of `other`.
+        
+        If `strict` is true, the current path will not be considered a child of
+        itself.
+        """
+    def parent_of(self, other: typing.Any, strict: builtins.bool = False) -> builtins.bool:
+        r"""
+        Returns whether the path is a parent of `other`.
+        
+        If `strict` is true, the current path will not be considered a parent of
+        itself.
+        """
+    def __hash__(self) -> builtins.int: ...
+    def __str__(self) -> builtins.str: ...
+    def __repr__(self) -> builtins.str: ...
+    def __eq__(self, other: typing.Any) -> builtins.bool: ...
+    def __ne__(self, other: typing.Any) -> builtins.bool: ...
+    def __lt__(self, other: typing.Any) -> builtins.bool: ...
+    def __le__(self, other: typing.Any) -> builtins.bool: ...
+    def __gt__(self, other: typing.Any) -> builtins.bool: ...
+    def __ge__(self, other: typing.Any) -> builtins.bool: ...
+    def __truediv__(self, other: typing.Any) -> TypePath:
+        r"""
+        Return the path with the specified suffix.
+        """
+
+@typing.final
+class VarDef:
     r"""
     A single variable declaration.
     """
@@ -532,7 +574,7 @@ class VarDecl:
         The type path the proc is declared on.
         """
     @property
-    def declared_type(self) -> typing.Optional[Path]:
+    def declared_type(self) -> typing.Optional[TypePath]:
         r"""
         The declared type of the variable, if specified.
         """
@@ -548,6 +590,31 @@ class VarDecl:
         """
     def __str__(self) -> builtins.str: ...
     def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class VarHolder:
+    def names(self) -> builtins.list[builtins.str]:
+        r"""
+        Return the names of all variables visible from this type path.
+        """
+    def all(self) -> builtins.list[VarDef]:
+        r"""
+        Return all variable declarations visible from this type path.
+        """
+    def declared(self) -> builtins.list[VarDef]:
+        r"""
+        Return variables declared directly on this type path.
+        """
+    def modified(self) -> builtins.list[VarDef]:
+        r"""
+        Return variables that override inherited values on this subtype.
+        """
+    def unmodified(self) -> builtins.list[VarDef]:
+        r"""
+        Return inherited variables that were not changed on this subtype.
+        """
+    def __iter__(self) -> collections.abc.Iterator[VarDef]: ...
+    def __getitem__(self, key: typing.Any) -> VarDef: ...
 
 @typing.final
 class Dir(enum.Enum):

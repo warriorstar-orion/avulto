@@ -17,9 +17,13 @@ use pyo3::{
 use pyo3_stub_gen::{create_exception, derive::*};
 
 use crate::{
-    dme::{type_decl::TypeDecl, var_decl::VarDecl},
+    dme::{
+        proc_def::{ProcArg, ProcDef},
+        type_def::TypeDef,
+        var_def::VarDef,
+    },
     helpers,
-    path::{self, Path},
+    path::{self, TypePath},
 };
 
 pub mod expr_parse;
@@ -30,9 +34,9 @@ pub mod node_walk;
 pub mod nodes;
 pub mod operators;
 pub mod prefab;
-pub mod proc_decl;
-pub mod type_decl;
-pub mod var_decl;
+pub mod proc_def;
+pub mod type_def;
+pub mod var_def;
 
 create_exception!(avulto.exceptions, EmptyProcError, PyException);
 create_exception!(avulto.exceptions, MissingTypeError, PyException);
@@ -45,7 +49,7 @@ pub struct DmeTypeAccessor {
 
 impl DmeTypeAccessor {
     fn convert_path(&self, path: &Bound<PyAny>) -> Result<(String, String), String> {
-        let objpath = if let Ok(patht) = path.extract::<path::Path>() {
+        let objpath = if let Ok(patht) = path.extract::<path::TypePath>() {
             patht.rel
         } else if let Ok(pystr) = path.cast::<PyString>() {
             pystr.to_string()
@@ -64,7 +68,7 @@ impl DmeTypeAccessor {
 
 #[pymethods]
 impl DmeTypeAccessor {
-    fn __getitem__(&self, path: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<TypeDecl>> {
+    fn __getitem__(&self, path: &Bound<PyAny>, py: Python<'_>) -> PyResult<Py<TypeDef>> {
         let dme = self.dme.bind(py).borrow();
         if let Ok((obj_path, search_string)) = self.convert_path(path) {
             match dme.objtree.find(&search_string) {
@@ -82,9 +86,9 @@ impl DmeTypeAccessor {
                         .as_unbound()
                         .clone_ref(py)
                         .into_any();
-                    Ok(TypeDecl {
+                    Ok(TypeDef {
                         dme,
-                        path: Path::make_trusted(obj_path.as_str()),
+                        path: TypePath::make_trusted(obj_path.as_str()),
                         node_index: type_ref_index,
                         source_loc,
                     }
@@ -207,16 +211,16 @@ impl FileData {
 }
 
 impl Dme {
-    fn collect_child_paths(&self, needle: &Path, strict: bool, out: &mut Vec<Path>) {
+    fn collect_child_paths(&self, needle: &TypePath, strict: bool, out: &mut Vec<TypePath>) {
         for ty in self.objtree.iter_types() {
             // special handling for root
             if ty.path.is_empty() && needle.abs.eq("/") {
                 if !strict {
-                    out.push(Path::root());
+                    out.push(TypePath::root());
                 }
                 continue;
             }
-            let trusted = Path::make_trusted(&ty.path.clone());
+            let trusted = TypePath::make_trusted(&ty.path.clone());
             if needle.internal_parent_of_string(&trusted.abs, strict) {
                 out.push(trusted);
             }
@@ -288,7 +292,7 @@ impl Dme {
             let declared_type = var
                 .declaration
                 .as_ref()
-                .map(|decl| Path::from_tree_path(&decl.var_type.type_path));
+                .map(|decl| TypePath::from_tree_path(&decl.var_type.type_path));
             let const_val = var
                 .value
                 .constant
@@ -302,9 +306,9 @@ impl Dme {
                     source_loc = self.file_data.fill_source_loc(&decl.location);
                 }
             }
-            return VarDecl {
+            return VarDef {
                 name,
-                type_path: Path::make_trusted(&type_def.path).into_py_any(py).unwrap(),
+                type_path: TypePath::make_trusted(&type_def.path).into_py_any(py).unwrap(),
                 declared_type,
                 const_val,
                 source_loc,
@@ -322,6 +326,78 @@ impl Dme {
             "cannot find value for {}/{}",
             type_def.path, name
         )))
+    }
+
+    pub fn get_proc_decls(
+        &self,
+        name: String,
+        node_index: NodeIndex,
+        parents: bool,
+        dme: Py<PyAny>,
+        py: Python<'_>,
+    ) -> PyResult<Py<PyAny>> {
+        let objtree = &self.objtree;
+        let current_path = TypePath::make_trusted(&objtree[node_index].path);
+        let search_string = if current_path.rel.eq("/") {
+            ""
+        } else {
+            current_path.rel.as_str()
+        };
+        let mut type_ref = objtree.find(search_string);
+        let mut out = Vec::new();
+
+        while let Some(ty) = type_ref {
+            if let Some(proc) = ty.procs.get(&name) {
+                if ty.index() != node_index && !parents {
+                    type_ref = ty.parent_type_without_root();
+                    continue;
+                }
+
+                for (proc_index, proc_value) in proc.value.iter().enumerate() {
+                    if proc_value.location.is_builtins() {
+                        continue;
+                    }
+
+                    let mut args_out: Vec<ProcArg> = Vec::new();
+                    for arg in proc_value.parameters.iter() {
+                        let arg_typepath: Option<TypePath> = if arg.var_type.type_path.is_empty() {
+                            None
+                        } else {
+                            Some(TypePath::from_tree_path(&arg.var_type.type_path))
+                        };
+                        args_out.push(ProcArg {
+                            arg_name: arg.name.clone(),
+                            arg_type: arg_typepath,
+                        });
+                    }
+
+                    out.push(ProcDef {
+                        dme: dme.clone_ref(py),
+                        name: name.clone(),
+                        type_path: TypePath::make_trusted(&ty.path)
+                            .into_pyobject(py)
+                            .unwrap()
+                            .into_any()
+                            .unbind(),
+                        args: args_out,
+                        proc_index,
+                        type_index: ty.index(),
+                        source_loc: self.file_data.fill_source_loc(&proc_value.location),
+                    });
+                }
+                break;
+            }
+            type_ref = ty.parent_type_without_root();
+        }
+
+        Ok(PyList::new(
+            py,
+            out.into_iter()
+                .map(|item| item.into_pyobject(py).unwrap().into_any().unbind())
+                .collect::<Vec<Py<PyAny>>>(),
+        )?
+        .into_any()
+        .unbind())
     }
 }
 
@@ -388,7 +464,7 @@ impl Dme {
     }
 
     /// A mapping of paths in the DME to their TypeDecls.
-    #[gen_stub(override_return_type(type_repr="builtins.dict[Path | builtins.str, TypeDecl]", imports=("builtins")))]
+    #[gen_stub(override_return_type(type_repr="builtins.dict[TypePath | builtins.str, TypeDef]", imports=("builtins")))]
     #[getter]
     fn get_types(self_: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<DmeTypeAccessor>> {
         Py::new(
@@ -400,19 +476,19 @@ impl Dme {
     }
 
     /// Returns a list of type paths with the given `prefix`.
-    #[gen_stub(override_return_type(type_repr="builtins.list[Path]", imports=("builtins")))]
+    #[gen_stub(override_return_type(type_repr="builtins.list[TypePath]", imports=("builtins")))]
     fn typesof(
         &self,
-        #[gen_stub(override_type(type_repr = "Path | builtins.str", imports=("builtins")))]
+        #[gen_stub(override_type(type_repr = "TypePath | builtins.str", imports=("builtins")))]
         prefix: &Bound<PyAny>,
         py: Python<'_>,
     ) -> PyResult<Py<PyList>> {
-        let mut out: Vec<Path> = Vec::new();
+        let mut out: Vec<TypePath> = Vec::new();
 
-        let prefix_path = if let Ok(path) = prefix.extract::<path::Path>() {
+        let prefix_path = if let Ok(path) = prefix.extract::<path::TypePath>() {
             path
         } else if let Ok(pystr) = prefix.cast::<PyString>() {
-            match Path::make_untrusted(pystr.to_str()?) {
+            match TypePath::make_untrusted(pystr.to_str()?) {
                 Ok(p) => p,
                 Err(e) => {
                     return Err(PyRuntimeError::new_err(e));
@@ -427,19 +503,19 @@ impl Dme {
     }
 
     /// Returns a list of type paths with the given `prefix`, excluding `prefix` itself.
-    #[gen_stub(override_return_type(type_repr="builtins.list[Path]", imports=("builtins")))]
+    #[gen_stub(override_return_type(type_repr="builtins.list[TypePath]", imports=("builtins")))]
     fn subtypesof(
         &self,
-        #[gen_stub(override_type(type_repr = "Path | builtins.str", imports=("builtins")))]
+        #[gen_stub(override_type(type_repr = "TypePath | builtins.str", imports=("builtins")))]
         prefix: &Bound<PyAny>,
         py: Python<'_>,
     ) -> PyResult<Py<PyList>> {
-        let mut out: Vec<Path> = Vec::new();
+        let mut out: Vec<TypePath> = Vec::new();
 
-        let prefix_path = if let Ok(path) = prefix.extract::<path::Path>() {
+        let prefix_path = if let Ok(path) = prefix.extract::<path::TypePath>() {
             path
         } else if let Ok(pystr) = prefix.cast::<PyString>() {
-            match Path::make_untrusted(pystr.to_str()?) {
+            match TypePath::make_untrusted(pystr.to_str()?) {
                 Ok(p) => p,
                 Err(e) => {
                     return Err(PyRuntimeError::new_err(e));
