@@ -26,6 +26,15 @@ def test_procholder_names(dme: DME):
     # Analyze
     assert {"proc1", "proc2"}.issubset(set(names))
 
+def test_procholder_names_inherited(dme: DME):
+    # Setup
+    override = dme.types["/obj/base/override"]
+
+    # Invoke
+    names = override.procs.names()
+
+    # Analyze
+    assert {"foobar", "barbaz"}.issubset(set(names))
 
 def test_procholder_all(dme: DME):
     # Setup
@@ -47,6 +56,18 @@ def test_procholder_declared(dme: DME):
 
     # Analyze
     assert {"foobar", "barbaz"} == def_to_names(declared)
+
+def test_procholder_declared_duped(dme: DME):
+    # Setup
+    foo = dme.types["/obj/test_object_2"]
+
+    # Invoke
+    declared = foo.procs.declared()
+
+    # Analyze
+    assert len(declared) == 2
+    assert declared[0].name == "dupe_named_proc"
+    assert declared[1].name == "dupe_named_proc"
 
 def test_procholder_modified(dme: DME):
     # Setup
@@ -92,3 +113,38 @@ def test_procholder_getitem(dme: DME):
     assert len(proc1) == 1
     assert proc1[0].name == "proc1"
     assert proc1[0].type_path == foo.path
+
+
+def test_procholder_getitem_inherited(dme: DME):
+    # Setup
+    override = dme.types["/obj/base/override"]
+
+    # Invoke
+    barbaz: list[ProcDef] = override.procs["barbaz"]
+
+    # Analyze
+    assert len(barbaz) == 1
+    assert barbaz[0].name == "barbaz"
+    assert barbaz[0].type_path == dme.types["/obj/base"].path
+
+
+def test_procholder_getitem_missing(dme: DME):
+    # Setup
+    foo = dme.types["/obj/foo"]
+
+    # Invoke / Analyze
+    with pytest.raises(KeyError):
+        foo.procs["missing_proc"]
+
+
+def test_procholder_getitem_duped(dme: DME):
+    # Setup
+    override = dme.types["/obj/test_object_2"]
+
+    # Invoke
+    dupe_named_proc: list[ProcDef] = override.procs["dupe_named_proc"]
+
+    # Analyze
+    assert len(dupe_named_proc) == 2
+    assert dupe_named_proc[0].name == "dupe_named_proc"
+    assert dupe_named_proc[1].name == "dupe_named_proc"

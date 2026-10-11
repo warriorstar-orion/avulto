@@ -20,11 +20,13 @@ __all__ = [
     "NewCall",
     "ProcArg",
     "ProcDef",
+    "ProcHolder",
     "SourceLoc",
     "Tile",
     "TypeDef",
     "TypePath",
     "VarDef",
+    "VarHolder",
     "ast",
     "exceptions",
     "version",
@@ -318,6 +320,31 @@ class ProcDef:
         """
 
 @typing.final
+class ProcHolder:
+    def names(self) -> builtins.list[builtins.str]:
+        r"""
+        Return the names of all procs visible from this type path.
+        """
+    def all(self) -> builtins.list[ProcDef]:
+        r"""
+        Return all proc declarations visible from this type path.
+        """
+    def declared(self) -> builtins.list[ProcDef]:
+        r"""
+        Return procs declared directly on this type path.
+        """
+    def modified(self) -> builtins.list[ProcDef]:
+        r"""
+        Return procs that override inherited values on this subtype.
+        """
+    def unmodified(self) -> builtins.list[ProcDef]:
+        r"""
+        Return inherited procs that were not changed on this subtype.
+        """
+    def __iter__(self) -> collections.abc.Iterator[ProcDef]: ...
+    def __getitem__(self, key: typing.Any) -> builtins.list[ProcDef]: ...
+
+@typing.final
 class SourceLoc:
     r"""
     Information about the location of a source token in the tree.
@@ -434,6 +461,16 @@ class TypeDef:
         r"""
         The location of the TypeDef's first declaration in source.
         """
+    @property
+    def vars(self) -> VarHolder:
+        r"""
+        A class to access variables on this typepath.
+        """
+    @property
+    def procs(self) -> ProcHolder:
+        r"""
+        A class to access procs on this typepath.
+        """
     def var_names(self, declared: builtins.bool = False, modified: builtins.bool = False, unmodified: builtins.bool = False) -> builtins.list[builtins.str]:
         r"""
         Return a list of variable names for the type declaration.
@@ -548,6 +585,31 @@ class VarDef:
         """
     def __str__(self) -> builtins.str: ...
     def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class VarHolder:
+    def names(self) -> builtins.list[builtins.str]:
+        r"""
+        Return the names of all variables visible from this type path.
+        """
+    def all(self) -> builtins.list[VarDef]:
+        r"""
+        Return all variable declarations visible from this type path.
+        """
+    def declared(self) -> builtins.list[VarDef]:
+        r"""
+        Return variables declared directly on this type path.
+        """
+    def modified(self) -> builtins.list[VarDef]:
+        r"""
+        Return variables that override inherited values on this subtype.
+        """
+    def unmodified(self) -> builtins.list[VarDef]:
+        r"""
+        Return inherited variables that were not changed on this subtype.
+        """
+    def __iter__(self) -> collections.abc.Iterator[VarDef]: ...
+    def __getitem__(self, key: typing.Any) -> VarDef: ...
 
 @typing.final
 class Dir(enum.Enum):

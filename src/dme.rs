@@ -17,7 +17,11 @@ use pyo3::{
 use pyo3_stub_gen::{create_exception, derive::*};
 
 use crate::{
-    dme::{type_def::TypeDef, var_def::VarDef},
+    dme::{
+        proc_def::{ProcArg, ProcDef},
+        type_def::TypeDef,
+        var_def::VarDef,
+    },
     helpers,
     path::{self, TypePath},
 };
@@ -322,6 +326,78 @@ impl Dme {
             "cannot find value for {}/{}",
             type_def.path, name
         )))
+    }
+
+    pub fn get_proc_decls(
+        &self,
+        name: String,
+        node_index: NodeIndex,
+        parents: bool,
+        dme: Py<PyAny>,
+        py: Python<'_>,
+    ) -> PyResult<Py<PyAny>> {
+        let objtree = &self.objtree;
+        let current_path = TypePath::make_trusted(&objtree[node_index].path);
+        let search_string = if current_path.rel.eq("/") {
+            ""
+        } else {
+            current_path.rel.as_str()
+        };
+        let mut type_ref = objtree.find(search_string);
+        let mut out = Vec::new();
+
+        while let Some(ty) = type_ref {
+            if let Some(proc) = ty.procs.get(&name) {
+                if ty.index() != node_index && !parents {
+                    type_ref = ty.parent_type_without_root();
+                    continue;
+                }
+
+                for (proc_index, proc_value) in proc.value.iter().enumerate() {
+                    if proc_value.location.is_builtins() {
+                        continue;
+                    }
+
+                    let mut args_out: Vec<ProcArg> = Vec::new();
+                    for arg in proc_value.parameters.iter() {
+                        let arg_typepath: Option<TypePath> = if arg.var_type.type_path.is_empty() {
+                            None
+                        } else {
+                            Some(TypePath::from_tree_path(&arg.var_type.type_path))
+                        };
+                        args_out.push(ProcArg {
+                            arg_name: arg.name.clone(),
+                            arg_type: arg_typepath,
+                        });
+                    }
+
+                    out.push(ProcDef {
+                        dme: dme.clone_ref(py),
+                        name: name.clone(),
+                        type_path: TypePath::make_trusted(&ty.path)
+                            .into_pyobject(py)
+                            .unwrap()
+                            .into_any()
+                            .unbind(),
+                        args: args_out,
+                        proc_index,
+                        type_index: ty.index(),
+                        source_loc: self.file_data.fill_source_loc(&proc_value.location),
+                    });
+                }
+                break;
+            }
+            type_ref = ty.parent_type_without_root();
+        }
+
+        Ok(PyList::new(
+            py,
+            out.into_iter()
+                .map(|item| item.into_pyobject(py).unwrap().into_any().unbind())
+                .collect::<Vec<Py<PyAny>>>(),
+        )?
+        .into_any()
+        .unbind())
     }
 }
 

@@ -92,3 +92,25 @@ def test_varholder_getitem(dme: DME):
     assert a_var.name == "a"
     assert a_var.const_val == 3
     assert a_var.type_path == foo.path
+
+
+def test_varholder_getitem_inherited(dme: DME):
+    # Setup
+    bar = dme.types["/obj/foo/bar"]
+
+    # Invoke
+    inherited = bar.vars["icon"]
+
+    # Analyze
+    assert inherited.name == "icon"
+    assert inherited.const_val == "icon1.dmi"
+    assert inherited.type_path == dme.types["/obj/foo"].path
+
+
+def test_varholder_getitem_missing(dme: DME):
+    # Setup
+    foo = dme.types["/obj/foo"]
+
+    # Invoke / Analyze
+    with pytest.raises(KeyError):
+        foo.vars["missing_var"]
