@@ -32,7 +32,7 @@ def test_walker_base(dme: DME):
             pass
 
     varw = VarAndReturnWalker()
-    dme.types["/obj/test_object"].proc_decls("var_and_return")[0].walk(varw)
+    dme.types["/obj/test_object"].procs["var_and_return"][0].walk(varw)
 
 def test_visit_call(dme: DME):
     class CallWalker:
@@ -43,6 +43,6 @@ def test_visit_call(dme: DME):
             self.calls.append(node)
 
     walker = CallWalker()
-    dme.types["/obj/test_object"].proc_decls("test_visit_call")[0].walk(walker)
+    dme.types["/obj/test_object"].procs["test_visit_call"][0].walk(walker)
     assert len(walker.calls) == 2
     assert all([isinstance(call, Expression.Call) for call in walker.calls])

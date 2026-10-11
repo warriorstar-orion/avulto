@@ -41,26 +41,26 @@ def test_missing_type(dme: DME):
 
 def test_dme_vars(dme: DME):
     foo = dme.types["/obj/foo"]
-    var_names = foo.var_names(declared=True, unmodified=True)
+    var_names = [var.name for var in foo.vars.declared() + foo.vars.unmodified()]
     assert all([x in var_names for x in ["a", "icon", "icon_state"]])
-    assert foo.var_decl("a").const_val == 3
+    assert foo.vars["a"].const_val == 3
 
     bar = dme.types["/obj/foo/bar"]
-    assert bar.var_names(modified=True) == ["a"]
-    assert bar.var_decl("a").const_val == 4
+    assert [var.name for var in bar.vars.modified()] == ["a"]
+    assert bar.vars["a"].const_val == 4
 
     baz = dme.types["/obj/foo/baz"]
-    assert baz.var_decl("a").const_val == 3
+    assert baz.vars["a"].const_val == 3
 
 
 def test_dme_procs(dme: DME):
     foo = dme.types["/obj/foo"]
-    assert sorted(foo.proc_names(declared=True)) == ["proc1", "proc2"]
+    assert sorted([proc.name for proc in foo.procs.declared()]) == ["proc1", "proc2"]
 
 
 def test_proc_decls(dme: DME):
     foo = dme.types["/obj/foo"]
-    assert [x.name for x in foo.proc_decls("proc1")] == ["proc1"]
+    assert [x.name for x in foo.procs["proc1"]] == ["proc1"]
 
 
 def test_builtin_source_loc(dme: DME):
@@ -70,17 +70,17 @@ def test_builtin_source_loc(dme: DME):
 
 def test_root_lookups(dme: DME):
     root = dme.types["/"]
-    assert "hell_yeah" in root.proc_names(declared=True)
+    assert "hell_yeah" in [proc.name for proc in root.procs.declared()]
 
 
 def test_var_decl_type_path(dme: DME):
     foo = dme.types["/obj/foo"]
-    var_decl = foo.var_decl("a")
+    var_decl = foo.vars["a"]
     assert p("/obj/foo") == var_decl.type_path
 
 
 def test_var_decl_new_call_in_list(dme: DME):
-    var_decl = dme.types["/obj/init_list_vardecls"].var_decl("my_news")
+    var_decl = dme.types["/obj/init_list_vardecls"].vars["my_news"]
     assert var_decl.const_val
     news = list(var_decl.const_val.keys())
     assert len(news) == 2
