@@ -397,6 +397,7 @@ impl TypeDef {
     /// Return a list of variable names for the type declaration.
     #[gen_stub(override_return_type(type_repr="builtins.list[builtins.str]", imports=("builtins")))]
     #[pyo3(signature = (declared=false, modified=false, unmodified=false))]
+    #[deprecated(since = "0.5.0", note = "Use `vars` variable instead")]
     pub fn var_names(
         &self,
         declared: bool,
@@ -459,6 +460,7 @@ impl TypeDef {
     /// check up type path if this type does not have this variable set.
     #[gen_stub(override_return_type(type_repr = "VarDef"))]
     #[pyo3(signature = (name, parents=true))]
+    #[deprecated(since = "0.5.0", note = "Use `vars` variable instead")]
     pub fn var_decl(&self, name: String, parents: bool, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let bound = self.dme.cast_bound::<Dme>(py).unwrap();
         let dme = bound.borrow();
@@ -468,6 +470,7 @@ impl TypeDef {
     /// Return a list of proc names for the type declaration.
     #[gen_stub(override_return_type(type_repr="builtins.list[builtins.str]", imports=("builtins")))]
     #[pyo3(signature = (declared=false, modified=false, unmodified=false))]
+    #[deprecated(since = "0.5.0", note = "Use `procs` variable instead")]
     pub fn proc_names(
         &self,
         declared: bool,
@@ -529,6 +532,7 @@ impl TypeDef {
     /// proc declarations with this name.
     #[gen_stub(override_return_type(type_repr="builtins.list[ProcDef]", imports=("builtins")))]
     #[pyo3(signature = (name=None))]
+    #[deprecated(since = "0.5.0", note = "Use `procs` variable instead")]
     pub fn proc_decls(&self, name: Option<String>, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let dme = self.dme.cast_bound::<Dme>(py).unwrap();
         let objtree = &dme.borrow().objtree;

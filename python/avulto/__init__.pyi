@@ -7,6 +7,7 @@ import enum
 import os
 import pathlib
 import typing
+import typing_extensions
 from . import ast
 from . import exceptions
 __all__ = [
@@ -471,19 +472,23 @@ class TypeDef:
         r"""
         A class to access procs on this typepath.
         """
+    @typing_extensions.deprecated("[Since 0.4.0] Use `vars` variable instead")
     def var_names(self, declared: builtins.bool = False, modified: builtins.bool = False, unmodified: builtins.bool = False) -> builtins.list[builtins.str]:
         r"""
         Return a list of variable names for the type declaration.
         """
+    @typing_extensions.deprecated("[Since 0.5.0] Use `vars` variable instead")
     def var_decl(self, name: builtins.str, parents: builtins.bool = True) -> VarDef:
         r"""
         Return the var declaration for variable *name*. If *parents* is True,
         check up type path if this type does not have this variable set.
         """
+    @typing_extensions.deprecated("[Since 0.5.0] Use `procs` variable instead")
     def proc_names(self, declared: builtins.bool = False, modified: builtins.bool = False, unmodified: builtins.bool = False) -> builtins.list[builtins.str]:
         r"""
         Return a list of proc names for the type declaration.
         """
+    @typing_extensions.deprecated("[Since 0.5.0] Use `procs` variable instead")
     def proc_decls(self, name: typing.Optional[builtins.str] = None) -> builtins.list[ProcDef]:
         r"""
         Return proc declarations for the type. If *name* is set, only return
