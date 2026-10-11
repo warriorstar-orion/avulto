@@ -19,7 +19,7 @@ def test_walker_base(dme: DME):
     class VarAndReturnWalker:
         def visit_Return(self, node: Node.Return, source_loc: SourceLoc):
             assert str(source_loc.file_path) == "testenv.dm"
-            assert source_loc.line == 27
+            assert source_loc.line == 36
             assert source_loc.column == 2
 
         def visit_Expr(self, node: Expression, source_loc: SourceLoc):

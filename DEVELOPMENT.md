@@ -30,14 +30,24 @@ python -m venv .venv
 python -m pip install --group dev
 # Build the package, alternative use `python -m pip install -e .` instead for updates to show up in real time.
 python -m pip install .
-# Testing
-python -m pytest
 ```
 
 ## Stub Generation
 Python stubs are automatically generated using `pyo3-stub-gen`. This will update the python folder automatically. If using pip's editable mode, these changes will automatically show up. If not, you will need to reinstall with pip.
 ```sh
+# python -m pip install -e .
 cargo run --bin stub_gen
+```
+
+```sh
+cargo run --bin stub_gen && python -m pip install .
+```
+
+## Testing
+Our testing uses pytest. This is included as part of the dev group pip install.
+```sh
+# Testing
+python -m pytest
 ```
 
 ### Planned Development
