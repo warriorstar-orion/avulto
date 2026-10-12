@@ -472,7 +472,7 @@ class TypeDef:
         r"""
         A class to access procs on this typepath.
         """
-    @typing_extensions.deprecated("[Since 0.4.0] Use `vars` variable instead")
+    @typing_extensions.deprecated("[Since 0.5.0] Use `vars` variable instead")
     def var_names(self, declared: builtins.bool = False, modified: builtins.bool = False, unmodified: builtins.bool = False) -> builtins.list[builtins.str]:
         r"""
         Return a list of variable names for the type declaration.

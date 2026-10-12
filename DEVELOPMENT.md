@@ -32,6 +32,12 @@ python -m pip install --group dev
 python -m pip install .
 ```
 
+Alternatively, you can use the maturin build tool directly.
+```sh
+python -m pip install maturin
+python -m maturin build
+```
+
 ## Stub Generation
 Python stubs are automatically generated using `pyo3-stub-gen`. This will update the python folder automatically. If using pip's editable mode, these changes will automatically show up. If not, you will need to reinstall with pip.
 ```sh
