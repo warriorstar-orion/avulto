@@ -151,7 +151,7 @@ impl FileData {
 /// Information about the location of a source token in the tree.
 #[gen_stub_pyclass]
 #[derive(Clone)]
-#[pyclass(frozen, module = "avulto")]
+#[pyclass(frozen, from_py_object, module = "avulto")]
 pub struct SourceLoc {
     /// The file path of the source location.
     #[pyo3(get)]

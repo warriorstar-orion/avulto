@@ -17,7 +17,7 @@ use crate::{
 
 /// An enumeration of directions used in icons.
 #[gen_stub_pyclass_enum]
-#[pyclass(eq, eq_int, ord)]
+#[pyclass(from_py_object, eq, eq_int, ord)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub enum Dir {
     #[pyo3(name = "NORTH")]

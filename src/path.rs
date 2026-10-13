@@ -42,7 +42,7 @@ const CORE_TYPES: &[&str] = &[
 
 /// A DM typepath.
 #[gen_stub_pyclass]
-#[pyclass(module = "avulto")]
+#[pyclass(from_py_object, module = "avulto")]
 #[derive(Clone, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub struct TypePath {
     // We can either do a bunch of munging when displaying paths, which happens a lot,
