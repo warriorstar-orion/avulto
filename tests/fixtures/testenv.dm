@@ -18,6 +18,15 @@
 
 /obj/foo_2
 
+/obj/base/proc/foobar()
+	return
+
+/obj/base/proc/barbaz()
+	return
+
+/obj/base/override/foobar()
+	return
+
 /obj/test_object
 
 /obj/test_object/proc/var_and_return()

@@ -12,7 +12,7 @@ use pyo3_stub_gen::derive::gen_stub_pyclass_enum;
 use crate::{
     dme::prefab::Prefab,
     dmlist::{DmList, NewCall},
-    path::Path,
+    path::TypePath,
 };
 
 /// An enumeration of directions used in icons.
@@ -116,7 +116,7 @@ pub fn python_value_to_constant(val: &Bound<PyAny>) -> Option<Constant> {
             }
             let boxed_slice = r.into_boxed_slice();
             Some(Constant::List(boxed_slice))
-        } else if let Ok(pypth) = val.cast::<Path>() {
+        } else if let Ok(pypth) = val.cast::<TypePath>() {
             Some(Constant::Prefab(Box::new(Pop {
                 path: pypth.borrow().to_tree_path(),
                 vars: Default::default(),
@@ -149,7 +149,7 @@ pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> Py<PyAny
     Python::attach(|py| match c {
         Constant::Null(_) => py.None(),
         Constant::New { type_, args } => {
-            let path = type_.as_ref().map(|pop| Path::from_tree_path(&pop.path));
+            let path = type_.as_ref().map(|pop| TypePath::from_tree_path(&pop.path));
             let args = args.as_ref().map(|a| arguments_to_dmlist(a, py));
             NewCall { path, args }
                 .into_pyobject(py)
@@ -162,7 +162,7 @@ pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> Py<PyAny
         Constant::Call(_, _) => py.None(),
         Constant::Prefab(p) => {
             if p.vars.is_empty() {
-                Path::from_tree_path(&p.path)
+                TypePath::from_tree_path(&p.path)
                     .into_pyobject(py)
                     .expect("constant to prefab")
                     .into_any()
@@ -177,7 +177,7 @@ pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> Py<PyAny
                     out.push(var);
                 }
                 Prefab {
-                    path: Path::from_tree_path(&p.path),
+                    path: TypePath::from_tree_path(&p.path),
                     vars: PyList::new(py, out)
                         .expect("building prefab vars list")
                         .into_any()

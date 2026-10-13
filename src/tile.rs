@@ -29,7 +29,7 @@ impl Tile {
             Address::Coords(c) => bound.borrow_mut().map[c],
         };
 
-        if let Ok(val) = entry.extract::<path::Path>() {
+        if let Ok(val) = entry.extract::<path::TypePath>() {
             let prefab = Prefab {
                 path: val.rel.clone(),
                 vars: Default::default(),
@@ -63,7 +63,7 @@ impl Tile {
     /// Returns the path of the tile's area. Returns only the first area if
     /// multiple exist.
     #[getter]
-    pub fn area_path(&self, py: Python<'_>) -> PyResult<path::Path> {
+    pub fn area_path(&self, py: Python<'_>) -> PyResult<path::TypePath> {
         let bound = self.dmm.cast_bound::<Dmm>(py).unwrap();
         let map = &bound.borrow().map;
 
@@ -74,7 +74,7 @@ impl Tile {
         let prefabs = &map.dictionary[&key];
         for p in prefabs.iter() {
             if p.path.starts_with("/area") {
-                return path::Path::new(p.path.as_str());
+                return path::TypePath::new(p.path.as_str());
             }
         }
 
@@ -163,7 +163,7 @@ impl Tile {
             Address::Coords(c) => map[c],
         };
 
-        let prefix_str = if let Ok(v) = prefix.extract::<path::Path>() {
+        let prefix_str = if let Ok(v) = prefix.extract::<path::TypePath>() {
             v.rel
         } else if let Ok(pystr) = prefix.cast::<PyString>() {
             pystr.to_string()
@@ -204,7 +204,7 @@ impl Tile {
     }
 
     /// Return the path of the prefab at `index`.
-    pub fn prefab_path(&self, index: i32, py: Python<'_>) -> PyResult<path::Path> {
+    pub fn prefab_path(&self, index: i32, py: Python<'_>) -> PyResult<path::TypePath> {
         let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
         let key = match self.addr {
             Address::Key(k) => k,
@@ -217,7 +217,7 @@ impl Tile {
 
         let binding = prefabs[index as usize].path.clone();
         let s = binding.as_str();
-        path::Path::new(s)
+        path::TypePath::new(s)
     }
 
     /// Return the value of the property `name` on the prefab at `index`.
@@ -328,7 +328,7 @@ impl Tile {
             Address::Coords(c) => bound.borrow().map[c],
         };
 
-        if let Ok(val) = path.extract::<path::Path>() {
+        if let Ok(val) = path.extract::<path::TypePath>() {
             bound.borrow_mut().map.dictionary.get_mut(&key).unwrap()[index as usize].path = val.rel;
             return Ok(());
         } else if let Ok(pystr) = path.cast::<PyString>() {
@@ -343,7 +343,7 @@ impl Tile {
     /// Returns the path of the tile's turf. Returns only the first area if
     /// multiple exist.
     #[getter]
-    pub fn turf_path(&self, py: Python<'_>) -> PyResult<path::Path> {
+    pub fn turf_path(&self, py: Python<'_>) -> PyResult<path::TypePath> {
         let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
         let key = match self.addr {
             Address::Key(k) => k,
@@ -352,7 +352,7 @@ impl Tile {
         let prefabs = &map.dictionary[&key];
         for p in prefabs.iter() {
             if p.path.starts_with("/turf") {
-                return path::Path::new(p.path.as_str());
+                return path::TypePath::new(p.path.as_str());
             }
         }
 

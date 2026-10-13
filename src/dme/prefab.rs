@@ -6,7 +6,7 @@ use pyo3::{
 };
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 
-use crate::{dme::FileData, path::Path};
+use crate::{dme::FileData, path::TypePath};
 
 use super::expression::Expression;
 
@@ -14,7 +14,7 @@ use super::expression::Expression;
 #[pyclass(module = "avulto.ast")]
 pub struct Prefab {
     #[pyo3(get)]
-    pub path: Path,
+    pub path: TypePath,
     #[pyo3(get)]
     pub vars: Py<PyAny>,
 }
@@ -25,7 +25,7 @@ impl Prefab {
         for (op, val) in prefab.path.iter() {
             path.push_str(format!("{}{}", op, val).as_str());
         }
-        let pypath = Path::make_trusted(path.as_str());
+        let pypath = TypePath::make_trusted(path.as_str());
         let mut out: Vec<Bound<PyDict>> = Vec::new();
 
         for (k, v) in prefab.vars.iter() {

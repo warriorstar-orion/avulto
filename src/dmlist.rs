@@ -40,7 +40,7 @@ impl DmList {
 pub struct NewCall {
     /// The type being instantiated, or `None` for an implicit `new()`.
     #[pyo3(get)]
-    pub path: Option<path::Path>,
+    pub path: Option<path::TypePath>,
     /// The constructor arguments.
     #[pyo3(get)]
     pub args: Option<Py<DmList>>,
@@ -142,7 +142,7 @@ impl DmList {
                     }
                 }
             }
-        } else if let Ok(pypth) = item.extract::<path::Path>() {
+        } else if let Ok(pypth) = item.extract::<path::TypePath>() {
             for (idx, key) in self.keys.iter().enumerate() {
                 if let Ok(key_expr) = key.cast_bound::<Expression>(py) {
                     if let Expression::Prefab { prefab, .. } = key_expr.get() {
@@ -150,7 +150,7 @@ impl DmList {
                             return Ok(self.vals.get(idx).unwrap().clone_ref(py));
                         }
                     }
-                } else if let Ok(keypth) = key.extract::<path::Path>(py) {
+                } else if let Ok(keypth) = key.extract::<path::TypePath>(py) {
                     if pypth.eq(&keypth) {
                         return Ok(self.vals.get(idx).unwrap().clone_ref(py));
                     }
