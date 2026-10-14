@@ -9,7 +9,7 @@ use crate::{
 
 /// A representation of a proc declaration argument.
 #[gen_stub_pyclass]
-#[pyclass(module = "avulto")]
+#[pyclass(from_py_object, module = "avulto")]
 #[derive(Clone)]
 pub struct ProcArg {
     /// The argument name.

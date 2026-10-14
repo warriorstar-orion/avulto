@@ -10,7 +10,7 @@ use super::{
 };
 
 #[gen_stub_pyclass_complex_enum]
-#[pyclass(frozen, module = "avulto.ast")]
+#[pyclass(frozen, from_py_object, module = "avulto.ast")]
 #[derive(Clone)]
 pub enum Constant {
     Null(),

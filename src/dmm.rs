@@ -21,7 +21,7 @@ use crate::tile::Tile;
 /// A three-dimensional integer coordinate. These are currently only returned by
 /// certain DMM properties, and are not constructable.
 #[gen_stub_pyclass]
-#[pyclass(module = "avulto")]
+#[pyclass(from_py_object, module = "avulto")]
 #[derive(Clone, Eq, Hash, PartialOrd, Ord, PartialEq)]
 pub struct Coord3 {
     #[pyo3(get)]

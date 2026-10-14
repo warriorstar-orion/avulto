@@ -44,7 +44,7 @@ pub fn ast(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
 }
 
 #[gen_stub_pyclass_enum]
-#[pyclass(
+#[pyclass(from_py_object,
     module = "avulto.ast",
     name = "NodeKind",
     eq,

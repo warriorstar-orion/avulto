@@ -2,7 +2,7 @@ use pyo3::pyclass;
 use pyo3_stub_gen::derive::gen_stub_pyclass_enum;
 
 #[gen_stub_pyclass_enum]
-#[pyclass(
+#[pyclass(from_py_object,
     module = "avulto.ast",
     name = "UnaryOperator",
     eq,
@@ -23,7 +23,7 @@ pub enum UnaryOperator {
 }
 
 #[gen_stub_pyclass_enum]
-#[pyclass(
+#[pyclass(from_py_object,
     module = "avulto.ast",
     name = "Operator",
     eq,
@@ -50,7 +50,7 @@ pub enum AssignOperator {
 }
 
 #[gen_stub_pyclass_enum]
-#[pyclass(
+#[pyclass(from_py_object,
     module = "avulto.ast",
     name = "SettingMode",
     eq,
@@ -64,7 +64,7 @@ pub enum SettingMode {
 }
 
 #[gen_stub_pyclass_enum]
-#[pyclass(
+#[pyclass(from_py_object,
     module = "avulto.ast",
     name = "BinaryOperator",
     eq,
