@@ -14,13 +14,22 @@ version = release
 
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
     'sphinxext.opengraph',
+    'autoapi.extension',
 ]
+
+autoapi_dirs = ["../../python/avulto"]
+autoapi_generate_api_docs = False
+autoapi_file_patterns = ["*.pyi", "*.py"]
+autoapi_ignore = ["*/ast/*"]
 
 autosummary_generate = True
 autosummary_imported_members = True
+
+default_role = "py:obj"
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
@@ -32,13 +41,7 @@ exclude_patterns = []
 
 pygments_style = 'lightbulb'
 
-html_theme = 'alabaster'
+html_theme = 'furo'
 html_static_path = ['_static']
-html_css_files = [
-    'css/alabaster_wso.css',
-]
-html_sidebars = {
-   '**': ['globaltoc.html', 'sourcelink.html', 'searchbox.html'],
-}
 
 ogp_site_url = "https://warriorstar-orion.github.io/avulto/"

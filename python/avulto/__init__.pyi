@@ -60,24 +60,29 @@ class DME:
     @property
     def types(self) -> builtins.dict[TypePath | builtins.str, TypeDef]:
         r"""
-        A mapping of paths in the DME to their TypeDecls.
+        A mapping of paths in the DME to their type definitions.
         """
     @staticmethod
     def from_file(filename: os.PathLike[builtins.str] | builtins.str, parse_procs: builtins.bool = False) -> DME:
         r"""
-        Creates a DME from the given `filename`.
+        Read the BYOND environment from the *filename* referring to a ".dme" file.
         
-        If parse_procs is True, the entire AST of the codebase is traversed.
-        This is slower than the default but provides more reflection
-        information.
+        Args:
+            filename: Path to the ".dme" file.
+            parse_procs: If `True`, parsing is slower but reflection data is
+                         made available for all procs.
+        
+        Raises:
+           OSError: If the file is not found or there was an error opening it.
+           RuntimeError: If there was an error parsing the DME environment.
         """
     def typesof(self, prefix: TypePath | builtins.str) -> builtins.list[TypePath]:
         r"""
-        Returns a list of type paths with the given `prefix`.
+        Returns a list of type paths with the given *prefix*, including itself.
         """
     def subtypesof(self, prefix: TypePath | builtins.str) -> builtins.list[TypePath]:
         r"""
-        Returns a list of type paths with the given `prefix`, excluding `prefix` itself.
+        Returns a list of type paths with the given *prefix*, excluding *prefix* itself.
         """
     def __repr__(self) -> builtins.str: ...
 
@@ -85,6 +90,9 @@ class DME:
 class DMI:
     r"""
     A DMI file.
+    
+    The DMI class provides the ability to create, parse, and modify `*.dmi`
+    files.
     """
     @property
     def filepath(self) -> typing.Optional[pathlib.Path]:
@@ -104,7 +112,7 @@ class DMI:
     @property
     def states(self) -> builtins.list[IconState]:
         r"""
-        The states in the DMI.
+        The states in the DMI, in declaration order.
         """
     @property
     def icon_dims(self) -> tuple[builtins.int, builtins.int]:
@@ -114,27 +122,27 @@ class DMI:
     @staticmethod
     def new(dims: tuple[builtins.int, builtins.int]) -> DMI:
         r"""
-        Creates an empty DMI file with the given icon width-height tuple `dims`.
+        Creates an empty DMI file with the given icon width-height tuple *dims*.
         """
     @staticmethod
     def from_file(filename: os.PathLike[builtins.str] | builtins.str) -> DMI:
         r"""
-        Creates a DMI from the given `filename`.
+        Creates a DMI from the given *filename*.
         """
-    def state_names(self) -> typing.Any:
+    def state_names(self) -> builtins.list[builtins.str]:
         r"""
         Return a list of strings containing all state names in the file.
         """
     def state(self, value: builtins.str) -> IconState:
         r"""
-        Return the icon state with the given `name`. If there are duplicates,
+        Return the icon state with the given *name*. If there are duplicates,
         only the first one is returned. Use `states` to retrieve duplicates.
         """
     def __str__(self) -> builtins.str: ...
     def __repr__(self) -> builtins.str: ...
     def save_to(self, filename: typing.Any, compress: builtins.int = 0) -> None:
         r"""
-        Saves the DMI to the given `filename`.
+        Saves the DMI to the given *filename*.
         """
 
 @typing.final
@@ -199,12 +207,12 @@ class IconState:
     @property
     def name(self) -> builtins.str:
         r"""
-        The state name.
+        The state name. May not be unique within a file.
         """
     @name.setter
     def name(self, value: builtins.str) -> None:
         r"""
-        The state name.
+        The state name. May not be unique within a file.
         """
     @property
     def dir_count(self) -> builtins.int:
@@ -219,7 +227,7 @@ class IconState:
     @property
     def delay(self) -> builtins.list[builtins.float]:
         r"""
-        The icon's frame delays.
+        The icon's frame delays, in ticks.
         """
     @property
     def loop_flag(self) -> builtins.int:
@@ -244,8 +252,13 @@ class IconState:
     @staticmethod
     def from_data(data: typing.Mapping[Dir, typing.Sequence[bytes]], width: builtins.int = 32, height: builtins.int = 32, name: builtins.str = '', delays: typing.Optional[typing.Sequence[builtins.float]] = None, loops: builtins.int = 0, rewind: builtins.bool = False, movement: builtins.bool = False) -> IconState:
         r"""
-        Creates an IconState with the given frame `data`, which must be a dict
-        of Dirs to arrays of RGBA8 image byte data.
+        Construct an `IconState` with the given *data* and other arguments.
+        
+        *data* must be a dict mapping `Dir` values to lists of `bytes`
+        containing RGBA image data. The number of images in each list must be
+        the same, and if there is more than one frame in the icon state,
+        *delays* must contain the same number of delay intervals as there are
+        images in the state.
         """
     def data_rgba8(self, frame: builtins.int, dir: typing.Any) -> bytes:
         r"""
@@ -316,8 +329,12 @@ class ProcDef:
     def __repr__(self) -> builtins.str: ...
     def walk(self, walker: typing.Any) -> None:
         r"""
-        Walks the proc AST with *walker*, calling any `visit_*` method names on
-        *walker* if they exist for AST node types.
+        Walk this proc's AST with *walker*.
+        
+        For each node class ``X`` in `ast.Node` and `ast.Expression`, *walker* may
+        define ``visit_X(node, source_loc)``; it is called with the node and its
+        `SourceLoc`. Undefined methods are skipped. As with `ast.NodeVisitor`, the
+        children of a node handled by a custom visitor are not visited.
         """
 
 @typing.final
@@ -388,59 +405,59 @@ class Tile:
         """
     def add_path(self, index: builtins.int, entry: typing.Any) -> None:
         r"""
-        Add a prefab with the given `path` at `index`.
+        Add a prefab with the given *path* at *index*.
         """
     def convert(self) -> typing.Any:
         r"""
         Convert the tile definition to a Python data structure.
         
-        The result of `convert` is completely disassociated from the map tile
+        The result of *convert* is completely disassociated from the map tile
         definition, and modifying it will have no effect on the original tile.
         """
     def del_prefab(self, index: builtins.int) -> None:
         r"""
-        Deletes the prefab at `index`.
+        Deletes the prefab at *index*.
         """
     def del_prefab_var(self, index: builtins.int, name: builtins.str) -> None: ...
     def find(self, prefix: typing.Any, exact: builtins.bool = False) -> builtins.list[builtins.int]:
         r"""
-        Return the indexes of the prefabs prefixed with the given path `prefix`.
+        Return the indexes of the prefabs prefixed with the given path *prefix*.
         If exact is True, then the prefab path must match exactly.
         """
     def only(self, prefix: typing.Any, exact: builtins.bool = False) -> typing.Any:
         r"""
-        Returns the index of the only prefab with the given `prefix`, or None if
+        Returns the index of the only prefab with the given *prefix*, or None if
         no such prefab exists. Raises an error if there is more than one prefab
         with the given prefix. If exact is True, then the prefab path must match
         exactly.
         """
     def prefab_path(self, index: builtins.int) -> TypePath:
         r"""
-        Return the path of the prefab at `index`.
+        Return the path of the prefab at *index*.
         """
     def prefab_var(self, index: builtins.int, name: builtins.str) -> typing.Any:
         r"""
-        Return the value of the property `name` on the prefab at `index`.
+        Return the value of the property *name* on the prefab at *index*.
         
         Raises an error if the property does not exist. For a method that
-        returns a default if the property does not exist, see get_prefab_var.
+        returns a default if the property does not exist, see `get_prefab_var`.
         """
     def get_prefab_var(self, index: builtins.int, name: builtins.str, default: typing.Optional[typing.Any] = None) -> typing.Any:
         r"""
-        Returns the value of the property `name` on the prefab at `index`. If
-        the property does not exist, return `default`.
+        Returns the value of the property *name* on the prefab at *index*. If
+        the property does not exist, return *default*.
         """
     def prefab_vars(self, index: builtins.int) -> builtins.list[builtins.str]:
         r"""
-        Return the list of variable names on the prefab at `index`.
+        Return the list of variable names on the prefab at *index*.
         """
     def set_prefab_var(self, atom_index: builtins.int, name: builtins.str, val: typing.Any) -> None:
         r"""
-        Set the value of the variable `name` to `val` at `index`.
+        Set the value of the variable *name* to *val* at *index*.
         """
     def set_path(self, index: builtins.int, path: typing.Any) -> None:
         r"""
-        Set the path of the prefab at `index` to `path`.
+        Set the path of the prefab at *index* to *path*.
         """
     def make_unique(self) -> None: ...
     def __repr__(self) -> builtins.str: ...

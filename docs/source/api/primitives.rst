@@ -3,32 +3,12 @@ API Primitives
 
 Several parts of Avulto are useful with all of its APIs.
 
-.. class:: Path
+.. autoapiclass:: avulto.TypePath
 
-   :class:`Path` wraps type paths and provides several useful methods and
-   properties for manipulating and comparing paths::
+   `TypePath` wraps type paths and provides several useful methods and
+   properties for manipulating and comparing paths.
 
-    >>> from avulto import Path as p
-
-    >>> p('/obj/machinery').parent_of('/obj/machinery/oven')
-    True
-
-    >>> p('/turf').child_of('/turf', strict=True)
-    False
-
-    >>> p('/obj/machinery') / 'microwave'
-    /obj/machinery/microwave
-
-    >>> p('/obj/machinery/microwave').parent
-    /obj/machinery
-
-    >>> p('/obj/machinery/microwave').stem
-    "microwave"
-
-   .. property:: abs
-      :type: str
-
-      Returns the *absolute* representation of the path, rooted at ``/datum``.
+   .. autoapiproperty:: avulto.TypePath.abs
 
       .. code-block:: python
 
@@ -38,10 +18,7 @@ Several parts of Avulto are useful with all of its APIs.
          >>> p('/foo').abs
          '/datum/foo'
 
-   .. property:: rel
-      :type: str
-
-      Returns the *relative* or *declared* representation of the path.
+   .. autoapiproperty:: avulto.TypePath.rel
 
       .. code-block:: python
 
@@ -54,30 +31,12 @@ Several parts of Avulto are useful with all of its APIs.
          >>> p('/foo').rel
          '/foo'
 
-   .. property:: parent
-      :type: Path
-
-      Returns the immediate parent path of ourselves.
-
-   .. property:: stem
-      :type: str
-
-      Returns the last part of our path.
-
-   .. property:: is_root
-      :type: bool
-
-      Returns whether the path is ``/``.
-
-   .. method:: parent_of(path: Path | str, strict=False)
-
-      Returns whether we are a parent of *path*. If *strict* is :const:`True`, a
-      path will not count as a parent of itself.
-
-   .. method:: child_of(path: Path | str, strict=False)
-
-      Returns whether we are a child of *path*. If *strict* is :const:`True`, a
-      path will not count as a child of itself.
+   .. autoapiproperty:: avulto.TypePath.parent
+   .. autoapiproperty:: avulto.TypePath.stem
+   .. autoapiproperty:: avulto.TypePath.is_root
+      
+   .. autoapimethod:: avulto.TypePath.parent_of
+   .. autoapimethod:: avulto.TypePath.child_of
 
 .. class:: SourceLoc
 

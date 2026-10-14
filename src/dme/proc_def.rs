@@ -67,8 +67,12 @@ impl ProcDef {
         Ok(format!("<Proc {}/proc/{}>", self.type_path, self.name))
     }
 
-    /// Walks the proc AST with *walker*, calling any `visit_*` method names on
-    /// *walker* if they exist for AST node types.
+    /// Walk this proc's AST with *walker*.
+    /// 
+    /// For each node class ``X`` in `ast.Node` and `ast.Expression`, *walker* may
+    /// define ``visit_X(node, source_loc)``; it is called with the node and its
+    /// `SourceLoc`. Undefined methods are skipped. As with `ast.NodeVisitor`, the
+    /// children of a node handled by a custom visitor are not visited.
     pub fn walk(&self, walker: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
         let dme = self.dme.cast_bound::<Dme>(py).unwrap();
         Dme::walk_proc(

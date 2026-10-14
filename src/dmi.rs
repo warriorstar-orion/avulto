@@ -21,6 +21,9 @@ pub mod iconstate;
 create_exception!(avulto.exceptions, IconError, PyException);
 
 /// A DMI file.
+/// 
+/// The DMI class provides the ability to create, parse, and modify `*.dmi`
+/// files.
 #[gen_stub_pyclass]
 #[pyclass(module = "avulto", name = "DMI")]
 pub struct Dmi {
@@ -68,7 +71,7 @@ fn _get_dir_from(arg: &Bound<PyAny>) -> Result<Dirs, PyErr> {
 #[gen_stub_pymethods]
 #[pymethods]
 impl Dmi {
-    /// Creates an empty DMI file with the given icon width-height tuple `dims`.
+    /// Creates an empty DMI file with the given icon width-height tuple *dims*.
     #[staticmethod]
     pub fn new(dims: (u32, u32), py: Python<'_>) -> Self {
         Dmi {
@@ -79,7 +82,7 @@ impl Dmi {
         }
     }
 
-    /// Creates a DMI from the given `filename`.
+    /// Creates a DMI from the given *filename*.
     #[staticmethod]
     pub fn from_file(
         #[gen_stub(override_type(type_repr = "os.PathLike[builtins.str] | builtins.str", imports=("builtins", "os")))]
@@ -131,7 +134,7 @@ impl Dmi {
         )
     }
 
-    /// The states in the DMI.
+    /// The states in the DMI, in declaration order.
     #[gen_stub(override_return_type(type_repr="builtins.list[IconState]", imports=("builtins")))]
     #[getter]
     pub fn get_states(&self, py: Python<'_>) -> Py<PyList> {
@@ -139,6 +142,7 @@ impl Dmi {
     }
 
     /// Return a list of strings containing all state names in the file.
+    #[gen_stub(override_return_type(type_repr="builtins.list[builtins.str]", imports=("builtins")))]
     pub fn state_names(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let mut out = vec![];
         for boundstate in self.states.bind(py).iter() {
@@ -154,7 +158,7 @@ impl Dmi {
         PyList::new(py, out).unwrap().into_py_any(py)
     }
 
-    /// Return the icon state with the given `name`. If there are duplicates,
+    /// Return the icon state with the given *name*. If there are duplicates,
     /// only the first one is returned. Use `states` to retrieve duplicates.
     #[gen_stub(override_return_type(type_repr = "IconState"))]
     pub fn state(&self, value: String, py: Python<'_>) -> PyResult<Py<PyAny>> {
@@ -190,7 +194,7 @@ impl Dmi {
         ))
     }
 
-    /// Saves the DMI to the given `filename`.
+    /// Saves the DMI to the given *filename*.
     #[pyo3(signature = (filename, compress=0))]
     fn save_to(&self, filename: &Bound<PyAny>, compress: u8, py: Python<'_>) -> PyResult<()> {
         let path = if let Ok(path) = filename.extract::<std::path::PathBuf>() {

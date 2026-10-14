@@ -404,11 +404,16 @@ impl Dme {
 #[gen_stub_pymethods]
 #[pymethods]
 impl Dme {
-    /// Creates a DME from the given `filename`.
+    /// Read the BYOND environment from the *filename* referring to a ".dme" file.
+    /// 
+    /// Args:
+    ///     filename: Path to the ".dme" file.
+    ///     parse_procs: If `True`, parsing is slower but reflection data is
+    ///                  made available for all procs.
     ///
-    /// If parse_procs is True, the entire AST of the codebase is traversed.
-    /// This is slower than the default but provides more reflection
-    /// information.
+    /// Raises:
+    ///    OSError: If the file is not found or there was an error opening it.
+    ///    RuntimeError: If there was an error parsing the DME environment.
     #[staticmethod]
     #[pyo3(signature = (filename, parse_procs=false))]
     fn from_file(
@@ -463,7 +468,7 @@ impl Dme {
         Ok(dme)
     }
 
-    /// A mapping of paths in the DME to their TypeDecls.
+    /// A mapping of paths in the DME to their type definitions.
     #[gen_stub(override_return_type(type_repr="builtins.dict[TypePath | builtins.str, TypeDef]", imports=("builtins")))]
     #[getter]
     fn get_types(self_: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<DmeTypeAccessor>> {
@@ -475,7 +480,7 @@ impl Dme {
         )
     }
 
-    /// Returns a list of type paths with the given `prefix`.
+    /// Returns a list of type paths with the given *prefix*, including itself.
     #[gen_stub(override_return_type(type_repr="builtins.list[TypePath]", imports=("builtins")))]
     fn typesof(
         &self,
@@ -502,7 +507,7 @@ impl Dme {
         Ok(PyList::new(py, out)?.unbind().clone_ref(py))
     }
 
-    /// Returns a list of type paths with the given `prefix`, excluding `prefix` itself.
+    /// Returns a list of type paths with the given *prefix*, excluding *prefix* itself.
     #[gen_stub(override_return_type(type_repr="builtins.list[TypePath]", imports=("builtins")))]
     fn subtypesof(
         &self,
