@@ -24,7 +24,7 @@ use crate::helpers::Dir;
 pub struct IconState {
     pub images: Vec<image::DynamicImage>,
 
-    /// The state name.
+    /// The state name. May not be unique within a file.
     #[pyo3(get, set)]
     pub(crate) name: String,
     /// The number of directions in the icon state, either 1, 4, or 8.
@@ -33,7 +33,7 @@ pub struct IconState {
     /// The number of frames in the icon state.
     #[pyo3(get)]
     pub frames: u32,
-    /// The icon's frame delays.
+    /// The icon's frame delays, in ticks.
     #[pyo3(get)]
     pub delay: Vec<f32>,
     /// The number of times the icon animation loops, or 0 for indefinitely.
@@ -86,8 +86,13 @@ impl IconState {
 #[gen_stub_pymethods]
 #[pymethods]
 impl IconState {
-    /// Creates an IconState with the given frame `data`, which must be a dict
-    /// of Dirs to arrays of RGBA8 image byte data.
+    /// Construct an `IconState` with the given *data* and other arguments.
+    /// 
+    /// *data* must be a dict mapping `Dir` values to lists of `bytes`
+    /// containing RGBA image data. The number of images in each list must be
+    /// the same, and if there is more than one frame in the icon state,
+    /// *delays* must contain the same number of delay intervals as there are
+    /// images in the state.
     #[staticmethod]
     #[pyo3(signature=(data, width=32, height=32, name="", delays=None, loops=0, rewind=false, movement=false))]
     pub fn from_data(
