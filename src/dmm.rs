@@ -1,8 +1,7 @@
 extern crate dmm_tools;
 
 use std::borrow::BorrowMut;
-use std::collections::btree_map::Keys as BTreeMapKeysIter;
-use std::collections::{HashMap, HashSet, btree_map};
+use std::collections::{HashMap, HashSet};
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -94,7 +93,7 @@ pub struct CoordIterator {
 #[pyclass(module = "avulto")]
 pub struct KeyIterator {
     dmm: Py<PyAny>,
-    iter: BTreeMapKeysIter<'static, dmm_tools::dmm::Key, Vec<dmm_tools::dmm::Prefab>>,
+    iter: std::vec::IntoIter<Key>,
 }
 
 #[pymethods]
@@ -107,7 +106,7 @@ impl KeyIterator {
         slf.iter.next().map(|c| {
             Tile {
                 dmm: slf.dmm.bind(py).into_py_any(py).unwrap(),
-                addr: Address::Key(*c),
+                addr: Address::Key(c),
             }
             .into_py_any(py)
             .unwrap()
@@ -262,22 +261,18 @@ impl Dmm {
     }
 
     /// Return an iterator over all unique tiles in the map.
+    ///
+    /// The iterator returns a copy of the keys in the map at the time of the
+    /// call. If a key is removed from the map while the iterator is active,
+    /// a KeyError may result.
     #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[Tile]", imports=("collections.abc")))]
     fn tiles(self_: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<KeyIterator>> {
         let self_ = &self_;
         let owner = self_.into_py_any(self_.py()).unwrap();
+        let keys: Vec<_> = self_.map.dictionary.keys().copied().collect();
         let it = KeyIterator {
             dmm: owner,
-            // WARNING: According to the Nomicon this is one of the most 'wildly
-            // unsafe' things it is possible to do in Rust; I don't fully
-            // understand it myself but the gist is that we can't guarantee a
-            // limited lifetime of the iterator.
-            iter: unsafe {
-                std::mem::transmute::<
-                    btree_map::Keys<'_, dmm_tools::dmm::Key, Vec<dmm_tools::dmm::Prefab>>,
-                    btree_map::Keys<'static, dmm_tools::dmm::Key, Vec<dmm_tools::dmm::Prefab>>,
-                >(self_.map.dictionary.keys())
-            },
+            iter: keys.into_iter(),
         };
 
         Py::new(py, it)
