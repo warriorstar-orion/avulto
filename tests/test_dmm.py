@@ -40,3 +40,20 @@ def test_dmm_tile_eq(dmm: DMM):
 
 def test_dmm_tile_only(dmm: DMM):
     assert dmm.tiledef(8, 8, 1).only("/obj/foo") == 0
+
+
+def test_dmm_keyiter_modified(dmm: DMM):
+    # make a unique tile for every tile on the map
+    for x in range(1, dmm.size.x):
+        for y in range(1, dmm.size.y):
+            dmm.tiledef(x, y, 1).make_unique()
+
+    tile_count = len(list(dmm.tiles()))
+    tiles = dmm.tiles()
+    next(tiles)
+
+    # save the file, causing tile coalescing, with the iterator active
+    dmm.save_to("keyiter_modified.dmm")
+
+    rest = list(tiles)
+    assert tile_count == 1 + len(rest)
