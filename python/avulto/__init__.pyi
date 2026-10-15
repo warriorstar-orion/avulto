@@ -313,7 +313,7 @@ class ProcDef:
     A single proc declaration.
     """
     @property
-    def type_path(self) -> typing.Any:
+    def type_path(self) -> TypePath:
         r"""
         The type path the proc is declared on.
         """
@@ -590,7 +590,7 @@ class VarDef:
         The name of the variable.
         """
     @property
-    def type_path(self) -> typing.Any:
+    def type_path(self) -> TypePath:
         r"""
         The type path the proc is declared on.
         """
