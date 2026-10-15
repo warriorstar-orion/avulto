@@ -21,7 +21,7 @@ pub mod iconstate;
 create_exception!(avulto.exceptions, IconError, PyException);
 
 /// A DMI file.
-/// 
+///
 /// The DMI class provides the ability to create, parse, and modify `*.dmi`
 /// files.
 #[gen_stub_pyclass]

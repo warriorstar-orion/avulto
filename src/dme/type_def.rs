@@ -49,7 +49,12 @@ where
 
     while let Some(ty) = type_ref {
         // magic B.S. B)
-        visit_type(&ty, &mut leaf_declared_names, &mut leaf_undeclared_names, &mut parent_names);
+        visit_type(
+            &ty,
+            &mut leaf_declared_names,
+            &mut leaf_undeclared_names,
+            &mut parent_names,
+        );
         type_ref = ty.parent_type_without_root();
     }
 
@@ -118,11 +123,7 @@ impl VarHolder {
         Ok(names)
     }
 
-    fn var_defs(
-        &self,
-        py: Python<'_>,
-        names: Vec<String>
-    ) -> PyResult<Py<PyList>> {
+    fn var_defs(&self, py: Python<'_>, names: Vec<String>) -> PyResult<Py<PyList>> {
         let dme = self.dme.cast_bound::<Dme>(py).unwrap();
         let mut out = Vec::new();
         for name in names {
@@ -174,14 +175,11 @@ impl VarHolder {
     pub fn __iter__(slf: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<PythonIter>> {
         let all_list = slf.all(py)?;
         let list = all_list.bind(py).iter().map(|item| item.unbind()).collect();
-        let iter = PythonIter {
-            list,
-            index: 0,
-        };
+        let iter = PythonIter { list, index: 0 };
         Py::new(slf.py(), iter)
     }
 
-    #[gen_stub(override_return_type(type_repr="VarDef"))]
+    #[gen_stub(override_return_type(type_repr = "VarDef"))]
     pub fn __getitem__(&self, key: Bound<'_, PyAny>, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let names = self.collect_names(py, true, true, true)?;
 
@@ -283,12 +281,7 @@ impl ProcHolder {
         Ok(names)
     }
 
-    fn proc_defs(
-        &self,
-        py: Python<'_>,
-        names: Vec<String>,
-        parents: bool,
-    ) -> PyResult<Py<PyList>> {
+    fn proc_defs(&self, py: Python<'_>, names: Vec<String>, parents: bool) -> PyResult<Py<PyList>> {
         let dme = self.dme.cast_bound::<Dme>(py).unwrap();
         let mut out: Vec<Py<PyAny>> = Vec::new();
 
@@ -350,10 +343,7 @@ impl ProcHolder {
     pub fn __iter__(slf: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<PythonIter>> {
         let all_list = slf.all(py)?;
         let list = all_list.bind(py).iter().map(|item| item.unbind()).collect();
-        let iter = PythonIter {
-            list,
-            index: 0,
-        };
+        let iter = PythonIter { list, index: 0 };
         Py::new(slf.py(), iter)
     }
 
@@ -366,14 +356,16 @@ impl ProcHolder {
             }
 
             let dme = self.dme.cast_bound::<Dme>(py).unwrap();
-            return dme
-                .borrow()
-                .get_proc_decls(name, self.node_index, true, self.dme.clone_ref(py), py);
+            return dme.borrow().get_proc_decls(
+                name,
+                self.node_index,
+                true,
+                self.dme.clone_ref(py),
+                py,
+            );
         }
 
-        Err(PyTypeError::new_err(
-            "ProcHolder indices must be strings",
-        ))
+        Err(PyTypeError::new_err("ProcHolder indices must be strings"))
     }
 }
 
