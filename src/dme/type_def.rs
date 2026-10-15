@@ -64,7 +64,7 @@ where
 #[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
 pub struct VarHolder {
-    pub dme: Py<PyAny>,
+    pub dme: Py<Dme>,
     pub node_index: NodeIndex,
 }
 
@@ -82,8 +82,8 @@ impl VarHolder {
             ));
         }
 
-        let dme = self.dme.cast_bound::<Dme>(py).unwrap();
-        let objtree = &dme.borrow().objtree;
+        let dme = self.dme.borrow(py);
+        let objtree = &dme.objtree;
         let (leaf_declared_names, leaf_undeclared_names, parent_names) = collect_name_sets(
             objtree,
             self.node_index,
@@ -124,10 +124,10 @@ impl VarHolder {
     }
 
     fn var_defs(&self, py: Python<'_>, names: Vec<String>) -> PyResult<Py<PyList>> {
-        let dme = self.dme.cast_bound::<Dme>(py).unwrap();
+        let dme = self.dme.borrow(py);
         let mut out = Vec::new();
         for name in names {
-            out.push(dme.borrow().get_var_decl(name, self.node_index, true, py)?);
+            out.push(dme.get_var_decl(name, self.node_index, true, py)?);
         }
         Ok(PyList::new(py, out)?.into_pyobject(py)?.unbind())
     }
@@ -187,8 +187,8 @@ impl VarHolder {
             if !names.iter().any(|item| item == &name) {
                 return Err(PyKeyError::new_err(name));
             }
-            let dme = self.dme.cast_bound::<Dme>(py).unwrap();
-            return dme.borrow().get_var_decl(name, self.node_index, true, py);
+            let dme = self.dme.borrow(py);
+            return dme.get_var_decl(name, self.node_index, true, py);
         }
 
         Err(PyTypeError::new_err(
@@ -221,7 +221,7 @@ impl PythonIter {
 #[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
 pub struct ProcHolder {
-    pub dme: Py<PyAny>,
+    pub dme: Py<Dme>,
     pub node_index: NodeIndex,
 }
 
@@ -239,8 +239,8 @@ impl ProcHolder {
             ));
         }
 
-        let dme = self.dme.cast_bound::<Dme>(py).unwrap();
-        let objtree = &dme.borrow().objtree;
+        let dme = self.dme.borrow(py);
+        let objtree = &dme.objtree;
         let (leaf_declared_names, leaf_undeclared_names, parent_names) = collect_name_sets(
             objtree,
             self.node_index,
@@ -282,17 +282,12 @@ impl ProcHolder {
     }
 
     fn proc_defs(&self, py: Python<'_>, names: Vec<String>, parents: bool) -> PyResult<Py<PyList>> {
-        let dme = self.dme.cast_bound::<Dme>(py).unwrap();
+        let dme = self.dme.borrow(py);
         let mut out: Vec<Py<PyAny>> = Vec::new();
 
         for name in names {
-            let proc_decls = dme.borrow().get_proc_decls(
-                name,
-                self.node_index,
-                parents,
-                self.dme.clone_ref(py),
-                py,
-            )?;
+            let proc_decls =
+                dme.get_proc_decls(name, self.node_index, parents, self.dme.clone_ref(py), py)?;
             let proc_list = proc_decls.bind(py).extract::<Vec<Py<PyAny>>>()?;
             out.extend(proc_list);
         }
@@ -355,14 +350,8 @@ impl ProcHolder {
                 return Err(PyKeyError::new_err(name));
             }
 
-            let dme = self.dme.cast_bound::<Dme>(py).unwrap();
-            return dme.borrow().get_proc_decls(
-                name,
-                self.node_index,
-                true,
-                self.dme.clone_ref(py),
-                py,
-            );
+            let dme = self.dme.borrow(py);
+            return dme.get_proc_decls(name, self.node_index, true, self.dme.clone_ref(py), py);
         }
 
         Err(PyTypeError::new_err("ProcHolder indices must be strings"))
@@ -373,7 +362,7 @@ impl ProcHolder {
 #[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
 pub struct TypeDef {
-    pub dme: Py<PyAny>,
+    pub dme: Py<Dme>,
     pub node_index: NodeIndex,
     /// The typepath of the TypeDef.
     #[pyo3(get)]
@@ -403,8 +392,8 @@ impl TypeDef {
             ));
         }
 
-        let dme = self.dme.cast_bound::<Dme>(py).unwrap();
-        let objtree = &dme.borrow().objtree;
+        let dme = self.dme.borrow(py);
+        let objtree = &dme.objtree;
 
         let search_string = if self.path.rel.eq("/") {
             ""
@@ -454,8 +443,7 @@ impl TypeDef {
     #[pyo3(signature = (name, parents=true))]
     #[deprecated(since = "0.5.0", note = "Use `vars` variable instead")]
     pub fn var_decl(&self, name: String, parents: bool, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        let bound = self.dme.cast_bound::<Dme>(py).unwrap();
-        let dme = bound.borrow();
+        let dme = self.dme.borrow(py);
         dme.get_var_decl(name, self.node_index, parents, py)
     }
 
@@ -475,8 +463,8 @@ impl TypeDef {
                 "at least one of declared, modified, or unmodified must be True",
             ));
         }
-        let dme = self.dme.cast_bound::<Dme>(py).unwrap();
-        let objtree = &dme.borrow().objtree;
+        let dme = self.dme.borrow(py);
+        let objtree = &dme.objtree;
 
         let search_string = if self.path.rel.eq("/") {
             ""
@@ -526,8 +514,8 @@ impl TypeDef {
     #[pyo3(signature = (name=None))]
     #[deprecated(since = "0.5.0", note = "Use `procs` variable instead")]
     pub fn proc_decls(&self, name: Option<String>, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        let dme = self.dme.cast_bound::<Dme>(py).unwrap();
-        let objtree = &dme.borrow().objtree;
+        let dme = self.dme.borrow(py);
+        let objtree = &dme.objtree;
         let mut out: Vec<ProcDef> = Vec::new();
 
         let type_def = &objtree[self.node_index];
@@ -553,11 +541,11 @@ impl TypeDef {
                     out.push(ProcDef {
                         dme: self.dme.clone_ref(py),
                         name: proc_name.clone(),
-                        type_path: self.path.clone().into_pyobject(py)?.into_any().unbind(),
+                        type_path: self.path.clone(),
                         args: args_out,
                         proc_index,
                         type_index: self.node_index,
-                        source_loc: dme.borrow().file_data.fill_source_loc(&proc_value.location),
+                        source_loc: dme.file_data.fill_source_loc(&proc_value.location),
                     });
                 }
             }

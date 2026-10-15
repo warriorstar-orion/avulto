@@ -79,22 +79,15 @@ impl DmeTypeAccessor {
                         .borrow(py)
                         .file_data
                         .fill_source_loc(&type_ref.location);
-                    let dme = dme
-                        .into_pyobject(py)
-                        .expect("passing dme")
-                        .clone()
-                        .as_unbound()
-                        .clone_ref(py)
-                        .into_any();
-                    Ok(TypeDef {
-                        dme,
-                        path: TypePath::make_trusted(obj_path.as_str()),
-                        node_index: type_ref_index,
-                        source_loc,
-                    }
-                    .into_pyobject(py)
-                    .expect("building typedecl")
-                    .into())
+                    Ok(Py::new(
+                        py,
+                        TypeDef {
+                            dme: dme.into(),
+                            path: TypePath::make_trusted(obj_path.as_str()),
+                            node_index: type_ref_index,
+                            source_loc,
+                        },
+                    )?)
                 }
                 None => Err(PyKeyError::new_err(format!(
                     "unrecognized path {}",
@@ -308,9 +301,7 @@ impl Dme {
             }
             return VarDef {
                 name,
-                type_path: TypePath::make_trusted(&type_def.path)
-                    .into_py_any(py)
-                    .unwrap(),
+                type_path: TypePath::make_trusted(&type_def.path),
                 declared_type,
                 const_val,
                 source_loc,
@@ -335,7 +326,7 @@ impl Dme {
         name: String,
         node_index: NodeIndex,
         parents: bool,
-        dme: Py<PyAny>,
+        dme: Py<Dme>,
         py: Python<'_>,
     ) -> PyResult<Py<PyAny>> {
         let objtree = &self.objtree;
@@ -376,11 +367,7 @@ impl Dme {
                     out.push(ProcDef {
                         dme: dme.clone_ref(py),
                         name: name.clone(),
-                        type_path: TypePath::make_trusted(&ty.path)
-                            .into_pyobject(py)
-                            .unwrap()
-                            .into_any()
-                            .unbind(),
+                        type_path: TypePath::make_trusted(&ty.path),
                         args: args_out,
                         proc_index,
                         type_index: ty.index(),

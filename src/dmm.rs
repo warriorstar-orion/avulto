@@ -92,7 +92,7 @@ pub struct CoordIterator {
 
 #[pyclass(module = "avulto")]
 pub struct KeyIterator {
-    dmm: Py<PyAny>,
+    dmm: Py<Dmm>,
     iter: std::vec::IntoIter<Key>,
 }
 
@@ -102,14 +102,11 @@ impl KeyIterator {
         slf
     }
 
-    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> Option<Py<PyAny>> {
-        slf.iter.next().map(|c| {
-            Tile {
-                dmm: slf.dmm.bind(py).into_py_any(py).unwrap(),
-                addr: Address::Key(c),
-            }
-            .into_py_any(py)
-            .unwrap()
+    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> Option<Tile> {
+        let dmm = slf.dmm.clone_ref(py);
+        slf.iter.next().map(|c| Tile {
+            dmm,
+            addr: Address::Key(c),
         })
     }
 }
@@ -240,9 +237,9 @@ impl Dmm {
     }
 
     /// Return the tile definition at coords (`x`, `y`, `z`).
-    fn tiledef(self_: PyRef<'_, Self>, x: i32, y: i32, z: i32) -> Tile {
-        Python::attach(|py| Tile {
-            dmm: self_.into_pyobject(py).unwrap().into_any().unbind(),
+    fn tiledef(self_: PyRef<'_, Self>, x: i32, y: i32, z: i32, py: Python<'_>) -> PyResult<Tile> {
+        Ok(Tile {
+            dmm: self_.into_pyobject(py)?.unbind(),
             addr: Address::Coords(dmm_tools::dmm::Coord3 { x, y, z }),
         })
     }
@@ -267,11 +264,9 @@ impl Dmm {
     /// a KeyError may result.
     #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[Tile]", imports=("collections.abc")))]
     fn tiles(self_: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<KeyIterator>> {
-        let self_ = &self_;
-        let owner = self_.into_py_any(self_.py()).unwrap();
         let keys: Vec<_> = self_.map.dictionary.keys().copied().collect();
         let it = KeyIterator {
-            dmm: owner,
+            dmm: self_.into_pyobject(py)?.unbind(),
             iter: keys.into_iter(),
         };
 
