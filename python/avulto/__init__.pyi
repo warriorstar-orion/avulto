@@ -180,6 +180,10 @@ class DMM:
     def tiles(self) -> collections.abc.Iterator[Tile]:
         r"""
         Return an iterator over all unique tiles in the map.
+        
+        The iterator returns a copy of the keys in the map at the time of the
+        call. If a key is removed from the map while the iterator is active,
+        a KeyError may result.
         """
     def __repr__(self) -> builtins.str: ...
 
