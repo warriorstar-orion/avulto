@@ -151,7 +151,9 @@ pub fn constant_to_python_value(c: &dreammaker::constants::Constant) -> Py<PyAny
     Python::attach(|py| match c {
         Constant::Null(_) => py.None(),
         Constant::New { type_, args } => {
-            let path = type_.as_ref().map(|pop| TypePath::from_tree_path(&pop.path));
+            let path = type_
+                .as_ref()
+                .map(|pop| TypePath::from_tree_path(&pop.path));
             let args = args.as_ref().map(|a| arguments_to_dmlist(a, py));
             NewCall { path, args }
                 .into_pyobject(py)

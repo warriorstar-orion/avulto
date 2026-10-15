@@ -68,7 +68,7 @@ impl ProcDef {
     }
 
     /// Walk this proc's AST with *walker*.
-    /// 
+    ///
     /// For each node class ``X`` in `ast.Node` and `ast.Expression`, *walker* may
     /// define ``visit_X(node, source_loc)``; it is called with the node and its
     /// `SourceLoc`. Undefined methods are skipped. As with `ast.NodeVisitor`, the

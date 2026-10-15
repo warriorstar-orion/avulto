@@ -308,7 +308,9 @@ impl Dme {
             }
             return VarDef {
                 name,
-                type_path: TypePath::make_trusted(&type_def.path).into_py_any(py).unwrap(),
+                type_path: TypePath::make_trusted(&type_def.path)
+                    .into_py_any(py)
+                    .unwrap(),
                 declared_type,
                 const_val,
                 source_loc,
@@ -405,7 +407,7 @@ impl Dme {
 #[pymethods]
 impl Dme {
     /// Read the BYOND environment from the *filename* referring to a ".dme" file.
-    /// 
+    ///
     /// Args:
     ///     filename: Path to the ".dme" file.
     ///     parse_procs: If `True`, parsing is slower but reflection data is

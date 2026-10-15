@@ -87,7 +87,7 @@ impl IconState {
 #[pymethods]
 impl IconState {
     /// Construct an `IconState` with the given *data* and other arguments.
-    /// 
+    ///
     /// *data* must be a dict mapping `Dir` values to lists of `bytes`
     /// containing RGBA image data. The number of images in each list must be
     /// the same, and if there is more than one frame in the icon state,
