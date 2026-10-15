@@ -101,7 +101,7 @@ impl DmListKeyIter {
 #[gen_stub_pymethods]
 #[pymethods]
 impl DmList {
-    /// Iterates over the keys in the list.
+    /// Returns an iterator over the keys in the list.
     #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[typing.Any]", imports=("collections.abc", "typing")))]
     fn keys(slf: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<DmListKeyIter>> {
         let iter = DmListKeyIter {

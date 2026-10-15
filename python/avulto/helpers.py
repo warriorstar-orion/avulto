@@ -39,12 +39,18 @@ def pickweight(l: dict):
 
 
 def pick_weight_recursive(list_to_pick):
+    """
+    Returns a recursive weighted pick from the items in *l*.
+    """
     result = pickweight(fill_with_ones(list_to_pick))
     while isinstance(result, Dmlist):
         result = pickweight(fill_with_ones(result))
     return result
 
 def prob(p):
+    """
+    Returns 1 with probability *p* percent, otherwise 0.
+    """
     r = random.randint(1, 100)
     if r <= p:
         return 1

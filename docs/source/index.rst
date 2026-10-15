@@ -19,9 +19,10 @@ API Reference
 *************
 
 .. toctree::
+   :maxdepth: 2
+   
    api/primitives
    api/helpers
    api/dme
    api/dmi
    api/dmm
-   :maxdepth: 2

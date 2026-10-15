@@ -1,5 +1,5 @@
-`DME` --- Code Reflection
-=========================
+``DME`` --- Code Reflection
+===========================
 
 .. autoapiclass:: avulto.DME
 
@@ -36,12 +36,40 @@
 
    .. autoapiproperty:: avulto.TypeDef.path
    .. autoapiproperty:: avulto.TypeDef.source_loc
+   .. autoapiproperty:: avulto.TypeDef.procs      
    .. autoapiproperty:: avulto.TypeDef.vars
 
-      .. autoapimethod:: avulto.VarHolder.names
-      .. autoapimethod:: avulto.VarHolder.all
-      .. autoapimethod:: avulto.VarHolder.declared
-      .. autoapimethod:: avulto.VarHolder.modified
-      .. autoapimethod:: avulto.VarHolder.unmodified
+.. autoapiclass:: avulto.ProcHolder
 
-   .. autoapiproperty:: avulto.TypeDef.procs
+   A collection of the procs on a `TypeDef`, returned from `TypeDef.procs`.
+
+   .. autoapimethod:: avulto.ProcHolder.__getitem__
+
+      Usage: ``procs[name]``. Return an array of `ProcDef` instances for proc
+      declaration with the given *name*. Raises :exc:`KeyError` if the type has
+      no such procs.
+
+   .. autoapimethod:: avulto.ProcHolder.names
+   .. autoapimethod:: avulto.ProcHolder.all
+   .. autoapimethod:: avulto.ProcHolder.declared
+   .. autoapimethod:: avulto.ProcHolder.modified
+   .. autoapimethod:: avulto.ProcHolder.unmodified
+
+.. autoapiclass:: avulto.VarHolder
+
+   A collection of the vars on a `TypeDef`, returned from `TypeDef.vars`.
+
+   .. describe:: vars[name]
+
+      Return the `VarDef` for the var *name*. Raises :exc:`KeyError` if the type
+      has no such var.
+
+   .. describe:: iter(vars)
+
+      Return an iterator over every `VarDef` on the type.
+
+   .. autoapimethod:: avulto.VarHolder.names
+   .. autoapimethod:: avulto.VarHolder.all
+   .. autoapimethod:: avulto.VarHolder.declared
+   .. autoapimethod:: avulto.VarHolder.modified
+   .. autoapimethod:: avulto.VarHolder.unmodified         

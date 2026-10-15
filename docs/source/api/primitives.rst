@@ -38,56 +38,27 @@ Several parts of Avulto are useful with all of its APIs.
    .. autoapimethod:: avulto.TypePath.parent_of
    .. autoapimethod:: avulto.TypePath.child_of
 
-.. class:: SourceLoc
+.. autoapiclass:: avulto.SourceLoc
 
    :class:`SourceLoc` contains source file information about types, procs, and
    vars. This is useful for tasks like linters which want to show line and
    column-level information about a finding.
 
-   .. property:: file_path
-      :type: pathlib.Path
+   .. autoapiproperty:: avulto.SourceLoc.file_path
+   .. autoapiproperty:: avulto.SourceLoc.line
+   .. autoapiproperty:: avulto.SourceLoc.column
 
-      The file path of the source location.
+.. autoapiclass:: avulto.Coord3
 
-   .. property:: line
-      :type: int
+   .. autoapiproperty:: avulto.Coord3.x
+   .. autoapiproperty:: avulto.Coord3.y
+   .. autoapiproperty:: avulto.Coord3.z
 
-      The line number.
+.. autoapiclass:: avulto.Dmlist
 
-   .. property:: column
-      :type: int
+   .. autoapimethod:: avulto.Dmlist.keys
 
-      The column number.
-
-.. class:: Coord3
-
-   A three-dimensional integer coordinate. These are currently only returned by
-   certain :class:`DMM` properties, and are not constructable.
-
-   .. property:: x
-      :type: int
-
-   .. property:: y
-      :type: int
-
-   .. property:: z
-      :type: int
-
-.. class:: Dmlist
-
-   A primitive, read-only representation of a DM list. This is used when
-   returning constant values of lists from the AST walker, and prefab values
-   from the DMM reader. They are not constructable.
-
-   Dmlists only support iterating over keys, and indexing with keys.
-
-   .. method:: keys()
-
-      Returns an interator over the list's keys.
-
-.. class:: Dir
-
-   Representation of BYOND directions.
+.. autoapiclass:: avulto.Dir
 
    .. property:: NORTH
    .. property:: SOUTH
