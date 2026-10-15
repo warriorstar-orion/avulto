@@ -15,7 +15,9 @@ use crate::{
     path::TypePath,
 };
 
-/// An enumeration of directions used in icons.
+/// The directions BYOND uses for atoms and icon states. Each member has the
+/// same integer value as the matching BYOND constant, so ``Dir.NORTH == 1``
+/// is `True`.
 #[gen_stub_pyclass_enum]
 #[pyclass(from_py_object, eq, eq_int, ord)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]

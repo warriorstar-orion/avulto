@@ -1,5 +1,5 @@
-`DMI` --- Icon Parsing
-======================
+``DMI`` --- Icon Parsing
+========================
 
 .. autoapiclass:: avulto.DMI
 

@@ -1,5 +1,5 @@
-`DMM` --- Map Processing and Manipulation
-=========================================
+``DMM`` --- Map Processing and Manipulation
+===========================================
 
 .. autoapiclass:: avulto.DMM
 
@@ -22,8 +22,8 @@
    
 .. autoapiclass:: avulto.Tile
 
-   :class:`Tile` objects returned from :func:`DMM.tiledef` can be read and
-   operated upon with the following methods.
+   :class:`Tile` objects returned from :meth:`DMM.tiledef` or :meth:`DMM.tiles`
+   can be read and operated upon with the following methods.
 
    .. autoapiproperty:: avulto.Tile.area_path
    .. autoapiproperty:: avulto.Tile.turf_path
@@ -33,8 +33,8 @@
    .. autoapimethod:: avulto.Tile.only
 
    Once the indexes of the prefabs you wish to work with are returned from
-   :func:`Tile.find` or :func:`Tile.only`, they may be used to operate on the
-   prefabs of the tile with the following methods.
+   :meth:`Tile.find` or :meth:`Tile.only`, they may be used to operate on the
+   prefabs of the tile.
 
    Prefabs
    -------

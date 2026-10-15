@@ -194,7 +194,7 @@ class Dmlist:
     """
     def keys(self) -> collections.abc.Iterator[typing.Any]:
         r"""
-        Iterates over the keys in the list.
+        Returns an iterator over the keys in the list.
         """
     def __getitem__(self, item: typing.Any) -> typing.Any: ...
     def __str__(self) -> builtins.str: ...
@@ -636,7 +636,9 @@ class VarHolder:
 @typing.final
 class Dir(enum.Enum):
     r"""
-    An enumeration of directions used in icons.
+    The directions BYOND uses for atoms and icon states. Each member has the
+    same integer value as the matching BYOND constant, so ``Dir.NORTH == 1``
+    is `True`.
     """
     NORTH = ...
     SOUTH = ...
