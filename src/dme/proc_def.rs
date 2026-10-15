@@ -39,10 +39,10 @@ impl ProcArg {
 #[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
 pub struct ProcDef {
-    pub dme: Py<PyAny>,
+    pub dme: Py<Dme>,
     /// The type path the proc is declared on.
     #[pyo3(get)]
-    pub type_path: Py<PyAny>,
+    pub type_path: TypePath,
     /// The name of the proc.
     #[pyo3(get)]
     pub name: String,
@@ -74,9 +74,9 @@ impl ProcDef {
     /// `SourceLoc`. Undefined methods are skipped. As with `ast.NodeVisitor`, the
     /// children of a node handled by a custom visitor are not visited.
     pub fn walk(&self, walker: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
-        let dme = self.dme.cast_bound::<Dme>(py).unwrap();
+        let dme = self.dme.borrow(py);
         Dme::walk_proc(
-            &dme.borrow(),
+            &dme,
             self.type_index,
             self.name.clone(),
             walker,

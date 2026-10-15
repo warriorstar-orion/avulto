@@ -12,7 +12,7 @@ pub struct VarDef {
     pub name: String,
     /// The type path the proc is declared on.
     #[pyo3(get)]
-    pub type_path: Py<PyAny>,
+    pub type_path: TypePath,
     /// The declared type of the variable, if specified.
     #[pyo3(get)]
     pub declared_type: Option<TypePath>,

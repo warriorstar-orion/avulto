@@ -14,7 +14,7 @@ use crate::path;
 #[gen_stub_pyclass]
 #[pyclass(module = "avulto")]
 pub struct Tile {
-    pub(crate) dmm: Py<PyAny>,
+    pub(crate) dmm: Py<Dmm>,
     pub(crate) addr: Address,
 }
 
@@ -23,10 +23,10 @@ pub struct Tile {
 impl Tile {
     /// Add a prefab with the given *path* at *index*.
     pub fn add_path(&mut self, index: i32, entry: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
-        let bound: &Bound<Dmm> = self.dmm.cast_bound(py).unwrap();
+        let mut dmm = self.dmm.borrow_mut(py);
         let key = match self.addr {
             Address::Key(k) => k,
-            Address::Coords(c) => bound.borrow_mut().map[c],
+            Address::Coords(c) => dmm.map[c],
         };
 
         if let Ok(val) = entry.extract::<path::TypePath>() {
@@ -34,9 +34,8 @@ impl Tile {
                 path: val.rel.clone(),
                 vars: Default::default(),
             };
-            bound
-                .borrow_mut()
-                .map
+
+            dmm.map
                 .dictionary
                 .get_mut(&key)
                 .unwrap()
@@ -47,9 +46,7 @@ impl Tile {
                 path: pystr.to_string(),
                 vars: Default::default(),
             };
-            bound
-                .borrow_mut()
-                .map
+            dmm.map
                 .dictionary
                 .get_mut(&key)
                 .unwrap()
@@ -64,9 +61,7 @@ impl Tile {
     /// multiple exist.
     #[getter]
     pub fn area_path(&self, py: Python<'_>) -> PyResult<path::TypePath> {
-        let bound = self.dmm.cast_bound::<Dmm>(py).unwrap();
-        let map = &bound.borrow().map;
-
+        let map = &self.dmm.borrow(py).map;
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],
@@ -94,7 +89,7 @@ impl Tile {
     pub fn convert(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let mut out: Vec<Bound<PyDict>> = Vec::new();
 
-        let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
+        let map = &self.dmm.borrow(py).map;
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],
@@ -124,15 +119,13 @@ impl Tile {
 
     /// Deletes the prefab at *index*.
     pub fn del_prefab(&self, index: i32, py: Python<'_>) {
-        let bound = self.dmm.cast_bound::<Dmm>(py).unwrap();
+        let mut dmm = self.dmm.borrow_mut(py);
         let key = match self.addr {
             Address::Key(k) => k,
-            Address::Coords(c) => bound.borrow().map[c],
+            Address::Coords(c) => dmm.map[c],
         };
 
-        bound
-            .borrow_mut()
-            .map
+        dmm.map
             .dictionary
             .get_mut(&key)
             .unwrap()
@@ -140,13 +133,13 @@ impl Tile {
     }
 
     pub fn del_prefab_var(&self, index: i32, name: String, py: Python<'_>) {
-        let bound = self.dmm.cast_bound::<Dmm>(py).unwrap();
+        let mut dmm = self.dmm.borrow_mut(py);
         let key = match self.addr {
             Address::Key(k) => k,
-            Address::Coords(c) => bound.borrow().map[c],
+            Address::Coords(c) => dmm.map[c],
         };
 
-        bound.borrow_mut().map.dictionary.get_mut(&key).unwrap()[index as usize]
+        dmm.map.dictionary.get_mut(&key).unwrap()[index as usize]
             .vars
             .shift_remove(&name);
     }
@@ -156,7 +149,7 @@ impl Tile {
     #[pyo3(signature = (prefix, exact=false))]
     pub fn find(&self, prefix: &Bound<PyAny>, exact: bool, py: Python<'_>) -> PyResult<Vec<i32>> {
         let mut vec = Vec::new();
-        let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
+        let map = &self.dmm.borrow(py).map;
 
         let key = match self.addr {
             Address::Key(k) => k,
@@ -205,7 +198,7 @@ impl Tile {
 
     /// Return the path of the prefab at *index*.
     pub fn prefab_path(&self, index: i32, py: Python<'_>) -> PyResult<path::TypePath> {
-        let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
+        let map = &self.dmm.borrow(py).map;
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],
@@ -225,7 +218,7 @@ impl Tile {
     /// Raises an error if the property does not exist. For a method that
     /// returns a default if the property does not exist, see `get_prefab_var`.
     pub fn prefab_var(&self, index: i32, name: String, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
+        let map = &self.dmm.borrow(py).map;
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],
@@ -252,7 +245,7 @@ impl Tile {
         default: Option<&Bound<PyAny>>,
         py: Python<'_>,
     ) -> PyResult<Py<PyAny>> {
-        let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
+        let map = &self.dmm.borrow(py).map;
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],
@@ -276,7 +269,7 @@ impl Tile {
 
     /// Return the list of variable names on the prefab at *index*.
     pub fn prefab_vars(&self, index: i32, py: Python<'_>) -> PyResult<Vec<String>> {
-        let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
+        let map = &self.dmm.borrow(py).map;
         let mut vec = Vec::new();
         let key = match self.addr {
             Address::Key(k) => k,
@@ -302,15 +295,13 @@ impl Tile {
         val: &Bound<PyAny>,
         py: Python<'_>,
     ) {
-        let bound = self.dmm.cast_bound::<Dmm>(py).unwrap();
+        let mut dmm = self.dmm.borrow_mut(py);
         let key = match self.addr {
             Address::Key(k) => k,
-            Address::Coords(c) => bound.borrow().map[c],
+            Address::Coords(c) => dmm.map[c],
         };
 
-        bound
-            .borrow_mut()
-            .map
+        dmm.map
             .dictionary
             .get_mut(&key)
             .unwrap()
@@ -322,18 +313,17 @@ impl Tile {
 
     /// Set the path of the prefab at *index* to *path*.
     pub fn set_path(&self, index: i32, path: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
-        let bound = self.dmm.cast_bound::<Dmm>(py).unwrap();
+        let mut dmm = self.dmm.borrow_mut(py);
         let key = match self.addr {
             Address::Key(k) => k,
-            Address::Coords(c) => bound.borrow().map[c],
+            Address::Coords(c) => dmm.map[c],
         };
 
         if let Ok(val) = path.extract::<path::TypePath>() {
-            bound.borrow_mut().map.dictionary.get_mut(&key).unwrap()[index as usize].path = val.rel;
+            dmm.map.dictionary.get_mut(&key).unwrap()[index as usize].path = val.rel;
             return Ok(());
         } else if let Ok(pystr) = path.cast::<PyString>() {
-            bound.borrow_mut().map.dictionary.get_mut(&key).unwrap()[index as usize].path =
-                pystr.to_string();
+            dmm.map.dictionary.get_mut(&key).unwrap()[index as usize].path = pystr.to_string();
             return Ok(());
         }
 
@@ -344,7 +334,7 @@ impl Tile {
     /// multiple exist.
     #[getter]
     pub fn turf_path(&self, py: Python<'_>) -> PyResult<path::TypePath> {
-        let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
+        let map = &self.dmm.borrow(py).map;
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],
@@ -366,7 +356,7 @@ impl Tile {
     }
 
     fn make_unique(&mut self, py: Python<'_>) -> PyResult<()> {
-        let mut dmm = self.dmm.cast_bound::<Dmm>(py).unwrap().borrow_mut();
+        let mut dmm = self.dmm.borrow_mut(py);
 
         match self.addr {
             Address::Key(_) => {
@@ -386,7 +376,7 @@ impl Tile {
     }
 
     fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
-        let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
+        let map = &self.dmm.borrow(py).map;
         Ok(format!(
             "<Tile {}>",
             match self.addr {
@@ -397,7 +387,7 @@ impl Tile {
     }
 
     fn __eq__(&self, other: &Bound<PyAny>, py: Python<'_>) -> bool {
-        let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
+        let map = &self.dmm.borrow(py).map;
         let key = match self.addr {
             Address::Key(k) => k,
             Address::Coords(c) => map[c],
@@ -405,8 +395,7 @@ impl Tile {
         let prefabs = &map.dictionary[&key];
         if let Ok(other) = other.extract::<Py<Self>>() {
             let otile = &other.bind(py).borrow();
-            let obound = self.dmm.cast_bound::<Dmm>(py).unwrap();
-            let omap = &obound.borrow().map;
+            let omap = &otile.dmm.borrow(py).map;
             let okey = match otile.addr {
                 Address::Key(k) => k,
                 Address::Coords(c) => omap[c],
@@ -426,33 +415,6 @@ impl Tile {
     }
 
     fn __ne__(&self, other: &Bound<PyAny>, py: Python<'_>) -> bool {
-        let map = &self.dmm.cast_bound::<Dmm>(py).unwrap().borrow().map;
-        let key = match self.addr {
-            Address::Key(k) => k,
-            Address::Coords(c) => map[c],
-        };
-        let prefabs = &map.dictionary[&key];
-
-        if let Ok(other) = other.extract::<Py<Self>>() {
-            let otile = &other.bind(py).borrow();
-            let obound = self.dmm.cast_bound::<Dmm>(py).unwrap();
-            let omap = &obound.borrow().map;
-
-            let okey = match otile.addr {
-                Address::Key(k) => k,
-                Address::Coords(c) => omap[c],
-            };
-            let oprefabs = &omap.dictionary[&okey];
-
-            for (f, s) in prefabs.iter().zip(oprefabs.iter()) {
-                if !f.eq(s) {
-                    return true;
-                }
-            }
-
-            false
-        } else {
-            false
-        }
+        !self.__eq__(other, py)
     }
 }
