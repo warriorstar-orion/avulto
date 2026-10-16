@@ -1,7 +1,6 @@
 use dreammaker::constants::{Constant, Pop};
 use pyo3::{
-    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyResult, Python,
-    pyclass, pymethods,
+    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyBool, PyDict, PyFloat, PyInt, PyList, PyString},
 };
 
