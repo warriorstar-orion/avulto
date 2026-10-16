@@ -3,18 +3,16 @@ use std::io::{self, BufReader};
 use std::path::{Path, PathBuf};
 use std::vec;
 
-use dmi::dirs::Dirs;
 use dmi::icon::{DmiVersion, Icon};
 use oxipng::{InFile, OutFile};
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyRuntimeError};
-use pyo3::types::{PyAnyMethods, PyInt, PyListMethods, PyString, PyTuple};
-use pyo3::{Bound, IntoPyObjectExt, PyErr};
+use pyo3::types::{PyAnyMethods, PyListMethods, PyString, PyTuple};
+use pyo3::{Bound, IntoPyObjectExt};
 use pyo3::{Py, PyAny, PyRef, PyRefMut, PyResult, Python, pyclass, pymethods, types::PyList};
 use pyo3_stub_gen::create_exception;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::dmi::iconstate::IconState;
-use crate::helpers::Dir;
 
 pub mod iconstate;
 

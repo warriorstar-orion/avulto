@@ -1,12 +1,10 @@
 use dreammaker::constants::{Constant, Pop};
 use pyo3::{
     Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyResult, Python,
-    exceptions::PyRuntimeError,
-    pyclass, pyfunction, pymethods,
+    pyclass, pymethods,
     types::{PyAnyMethods, PyBool, PyDict, PyFloat, PyInt, PyList, PyString},
 };
 
-use dmm_tools::dmi::Dir as SDir;
 use pyo3_stub_gen::derive::gen_stub_pyclass_enum;
 
 use crate::{
