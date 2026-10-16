@@ -1,12 +1,9 @@
 use dreammaker::constants::{Constant, Pop};
 use pyo3::{
-    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyResult, Python,
-    exceptions::PyRuntimeError,
-    pyclass, pyfunction, pymethods,
+    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyBool, PyDict, PyFloat, PyInt, PyList, PyString},
 };
 
-use dmm_tools::dmi::Dir as SDir;
 use pyo3_stub_gen::derive::gen_stub_pyclass_enum;
 
 use crate::{
@@ -61,34 +58,6 @@ impl From<i32> for Dir {
             10 => Dir::Southwest,
             _ => panic!("bad dir {}", i),
         }
-    }
-}
-
-pub fn to_dmm_dir(d: Dir) -> SDir {
-    match d {
-        Dir::North => SDir::North,
-        Dir::South => SDir::South,
-        Dir::East => SDir::East,
-        Dir::West => SDir::West,
-        Dir::Northeast => SDir::Northeast,
-        Dir::Northwest => SDir::Northwest,
-        Dir::Southeast => SDir::Southeast,
-        Dir::Southwest => SDir::Southwest,
-    }
-}
-
-#[pyfunction]
-pub fn as_dir(c: i32) -> PyResult<Dir> {
-    match c {
-        1 => Ok(Dir::North),
-        2 => Ok(Dir::South),
-        4 => Ok(Dir::East),
-        8 => Ok(Dir::West),
-        5 => Ok(Dir::Northeast),
-        9 => Ok(Dir::Northwest),
-        6 => Ok(Dir::Southeast),
-        10 => Ok(Dir::Southwest),
-        _ => Err(PyRuntimeError::new_err(format!("no dir {}", c))),
     }
 }
 

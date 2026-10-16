@@ -3,18 +3,16 @@ use std::io::{self, BufReader};
 use std::path::{Path, PathBuf};
 use std::vec;
 
-use dmi::dirs::Dirs;
 use dmi::icon::{DmiVersion, Icon};
 use oxipng::{InFile, OutFile};
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyRuntimeError};
-use pyo3::types::{PyAnyMethods, PyInt, PyListMethods, PyString, PyTuple};
-use pyo3::{Bound, IntoPyObjectExt, PyErr};
+use pyo3::types::{PyAnyMethods, PyListMethods, PyString, PyTuple};
+use pyo3::{Bound, IntoPyObjectExt};
 use pyo3::{Py, PyAny, PyRef, PyRefMut, PyResult, Python, pyclass, pymethods, types::PyList};
 use pyo3_stub_gen::create_exception;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::dmi::iconstate::IconState;
-use crate::helpers::Dir;
 
 pub mod iconstate;
 
@@ -37,35 +35,6 @@ pub struct Dmi {
     /// The height of icons in the DMI.
     #[pyo3(get)]
     icon_height: u32,
-}
-
-fn _get_dir_from(arg: &Bound<PyAny>) -> Result<Dirs, PyErr> {
-    if let Ok(diridx) = arg.extract::<Dir>() {
-        Ok(match diridx {
-            Dir::North => dmi::dirs::Dirs::NORTH,
-            Dir::South => dmi::dirs::Dirs::SOUTH,
-            Dir::East => dmi::dirs::Dirs::EAST,
-            Dir::West => dmi::dirs::Dirs::WEST,
-            Dir::Northeast => dmi::dirs::Dirs::NORTHEAST,
-            Dir::Northwest => dmi::dirs::Dirs::NORTHWEST,
-            Dir::Southeast => dmi::dirs::Dirs::SOUTHEAST,
-            Dir::Southwest => dmi::dirs::Dirs::SOUTHWEST,
-        })
-    } else if let Ok(dirint) = arg.cast::<PyInt>() {
-        match dirint.extract::<u8>().unwrap() {
-            1 => Ok(dmi::dirs::Dirs::NORTH),
-            2 => Ok(dmi::dirs::Dirs::SOUTH),
-            4 => Ok(dmi::dirs::Dirs::EAST),
-            8 => Ok(dmi::dirs::Dirs::WEST),
-            5 => Ok(dmi::dirs::Dirs::NORTHEAST),
-            9 => Ok(dmi::dirs::Dirs::NORTHWEST),
-            6 => Ok(dmi::dirs::Dirs::SOUTHEAST),
-            10 => Ok(dmi::dirs::Dirs::SOUTHWEST),
-            _ => Err(PyRuntimeError::new_err("invalid direction")),
-        }
-    } else {
-        Err(PyRuntimeError::new_err("invalid direction"))
-    }
 }
 
 #[gen_stub_pymethods]

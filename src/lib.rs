@@ -57,7 +57,6 @@ fn avulto(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<SourceLoc>()?;
 
     m.add_class::<helpers::Dir>()?;
-    m.add_function(wrap_pyfunction!(helpers::as_dir, m)?)?;
 
     m.add_wrapped(wrap_pymodule!(dme::nodes::ast))?;
     let sys = PyModule::import(_py, "sys")?;
