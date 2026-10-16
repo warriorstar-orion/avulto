@@ -39,35 +39,6 @@ pub struct Dmi {
     icon_height: u32,
 }
 
-fn _get_dir_from(arg: &Bound<PyAny>) -> Result<Dirs, PyErr> {
-    if let Ok(diridx) = arg.extract::<Dir>() {
-        Ok(match diridx {
-            Dir::North => dmi::dirs::Dirs::NORTH,
-            Dir::South => dmi::dirs::Dirs::SOUTH,
-            Dir::East => dmi::dirs::Dirs::EAST,
-            Dir::West => dmi::dirs::Dirs::WEST,
-            Dir::Northeast => dmi::dirs::Dirs::NORTHEAST,
-            Dir::Northwest => dmi::dirs::Dirs::NORTHWEST,
-            Dir::Southeast => dmi::dirs::Dirs::SOUTHEAST,
-            Dir::Southwest => dmi::dirs::Dirs::SOUTHWEST,
-        })
-    } else if let Ok(dirint) = arg.cast::<PyInt>() {
-        match dirint.extract::<u8>().unwrap() {
-            1 => Ok(dmi::dirs::Dirs::NORTH),
-            2 => Ok(dmi::dirs::Dirs::SOUTH),
-            4 => Ok(dmi::dirs::Dirs::EAST),
-            8 => Ok(dmi::dirs::Dirs::WEST),
-            5 => Ok(dmi::dirs::Dirs::NORTHEAST),
-            9 => Ok(dmi::dirs::Dirs::NORTHWEST),
-            6 => Ok(dmi::dirs::Dirs::SOUTHEAST),
-            10 => Ok(dmi::dirs::Dirs::SOUTHWEST),
-            _ => Err(PyRuntimeError::new_err("invalid direction")),
-        }
-    } else {
-        Err(PyRuntimeError::new_err("invalid direction"))
-    }
-}
-
 #[gen_stub_pymethods]
 #[pymethods]
 impl Dmi {
