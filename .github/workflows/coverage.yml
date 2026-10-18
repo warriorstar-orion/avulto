@@ -1,0 +1,30 @@
+name: Coverage
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Build and test with coverage
+        run: |
+          source <(cargo llvm-cov show-env --export-prefix)
+          cargo llvm-cov clean --workspace
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install maturin pytest Pillow
+          maturin develop
+          pytest
+          cargo llvm-cov report --summary-only --ignore-filename-regex 'src/bin/'
