@@ -1,5 +1,5 @@
-use dreammaker::ast::Statement;
-use pyo3::{IntoPyObject, Py, Python, types::PyList};
+use dreammaker::ast::{self, Spanned, Statement};
+use pyo3::{IntoPyObject, Py, PyResult, Python, types::PyList};
 
 use crate::{
     dme::{FileData, SourceLoc},
@@ -12,233 +12,115 @@ use super::{
     operators::SettingMode,
 };
 
+fn parse_expr(py: Python<'_>, expr: &ast::Expression, fd: &FileData) -> PyResult<PyExpr> {
+    Ok(Expression::parse(py, expr, fd).into_pyobject(py)?.unbind())
+}
+
+fn parse_block(
+    py: Python<'_>,
+    stmts: &[Spanned<Statement>],
+    fd: &FileData,
+) -> PyResult<PyCodeBlock> {
+    stmts
+        .iter()
+        .map(|s| Node::from_statement(py, &s.elem, fd.fill_source_loc(&s.location), fd))
+        .collect()
+}
+
 impl Node {
     pub fn from_statement(
         py: Python<'_>,
         root: &Statement,
         source_loc: SourceLoc,
         file_data: &FileData,
-    ) -> Py<Self> {
-        match &root {
+    ) -> PyResult<Py<Node>> {
+        let node = match &root {
             Statement::Var(v) => Self::Var {
                 name: Expression::ident(v.name.to_string(), SourceLoc::builtin(), py),
-                value: v.value.as_ref().map(|expr| {
-                    Expression::parse(py, expr, file_data)
-                        .into_pyobject(py)
-                        .expect("parsing var value")
-                        .into()
-                }),
+                value: v
+                    .value
+                    .as_ref()
+                    .map(|expr| parse_expr(py, expr, file_data))
+                    .transpose()?,
                 declared_type: if v.var_type.type_path.is_empty() {
                     None
                 } else {
                     Some(TypePath::from_tree_path(&v.var_type.type_path))
                 },
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing var")
-            .into(),
+            },
             Statement::Expr(expression) => Self::Expression {
-                expr: Expression::parse(py, expression, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing statement inner expr")
-                    .into(),
+                expr: parse_expr(py, expression, file_data)?,
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing statement expr")
-            .into(),
+            },
             Statement::Return(expression) => Self::Return {
-                retval: expression.as_ref().map(|expr| {
-                    Expression::parse(py, expr, file_data)
-                        .into_pyobject(py)
-                        .expect("parsing return expr")
-                        .into()
-                }),
+                retval: expression
+                    .as_ref()
+                    .map(|expr| parse_expr(py, expr, file_data))
+                    .transpose()?,
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing return")
-            .into(),
+            },
             Statement::Throw(expression) => Self::Throw {
-                expr: Expression::parse(py, expression, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing throw expr")
-                    .into(),
+                expr: parse_expr(py, expression, file_data)?,
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing throw")
-            .into(),
+            },
             Statement::While { condition, block } => Self::While {
-                condition: Expression::parse(py, condition, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing while condition")
-                    .into(),
-                block: block
-                    .iter()
-                    .map(|stmt| {
-                        Node::from_statement(
-                            py,
-                            &stmt.elem,
-                            file_data.fill_source_loc(&stmt.location),
-                            file_data,
-                        )
-                        .into_pyobject(py)
-                        .expect("parsing while block")
-                        .into()
-                    })
-                    .collect(),
+                condition: parse_expr(py, condition, file_data)?,
+                block: parse_block(py, block, file_data)?,
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing while")
-            .into(),
+            },
             Statement::DoWhile { block, condition } => Self::DoWhile {
-                condition: Expression::parse(py, &condition.elem, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing do-while condition")
-                    .into(),
-                block: block
-                    .iter()
-                    .map(|stmt| {
-                        Node::from_statement(
-                            py,
-                            &stmt.elem,
-                            file_data.fill_source_loc(&stmt.location),
-                            file_data,
-                        )
-                        .into_pyobject(py)
-                        .expect("parsing do-while block")
-                        .into()
-                    })
-                    .collect(),
+                condition: parse_expr(py, &condition.elem, file_data)?,
+                block: parse_block(py, block, file_data)?,
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing do-while")
-            .into(),
+            },
             Statement::If { arms, else_arm } => {
-                let if_arms: Vec<(PyExpr, PyCodeBlock)> = arms
+                let if_arms = arms
                     .iter()
                     .map(|(cond, stmts)| {
-                        let mut stmt_nodes: PyCodeBlock = vec![];
-                        for stmt in stmts.iter() {
-                            stmt_nodes.push(
-                                Node::from_statement(
-                                    py,
-                                    &stmt.elem,
-                                    file_data.fill_source_loc(&stmt.location),
-                                    file_data,
-                                )
-                                .into_pyobject(py)
-                                .expect("parsing if arm block")
-                                .into(),
-                            );
-                        }
-
-                        (
-                            Expression::parse(py, &cond.elem, file_data)
-                                .into_pyobject(py)
-                                .expect("parsing if condition")
-                                .into(),
-                            stmt_nodes,
-                        )
+                        Ok((
+                            parse_expr(py, &cond.elem, file_data)?,
+                            parse_block(py, stmts, file_data)?,
+                        ))
                     })
-                    .collect();
-                let mut else_arm_nodes: PyCodeBlock = vec![];
-                if let Some(else_arm_block) = else_arm {
-                    for stmt in else_arm_block.iter() {
-                        else_arm_nodes.push(
-                            Node::from_statement(
-                                py,
-                                &stmt.elem,
-                                file_data.fill_source_loc(&stmt.location),
-                                file_data,
-                            )
-                            .into_pyobject(py)
-                            .expect("parsing if else block")
-                            .into(),
-                        );
-                    }
-                }
+                    .collect::<PyResult<Vec<(PyExpr, PyCodeBlock)>>>()?;
+
+                let else_arm = match else_arm {
+                    Some(block) => Some(parse_block(py, block, file_data)?),
+                    None => None,
+                };
 
                 Self::If {
                     if_arms,
-                    else_arm: if else_arm_nodes.is_empty() {
-                        None
-                    } else {
-                        Some(else_arm_nodes)
-                    },
+                    else_arm,
                     source_loc,
                 }
-                .into_pyobject(py)
-                .expect("parsing if")
-                .into()
             }
             Statement::ForInfinite { block } => Self::ForInfinite {
-                block: block
-                    .iter()
-                    .map(|stmt| {
-                        Node::from_statement(
-                            py,
-                            &stmt.elem,
-                            file_data.fill_source_loc(&stmt.location),
-                            file_data,
-                        )
-                        .into_pyobject(py)
-                        .expect("parsing for infinite block")
-                        .into()
-                    })
-                    .collect(),
+                block: parse_block(py, block, file_data)?,
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing for infinite")
-            .into(),
+            },
             Statement::ForLoop {
                 init,
                 test,
                 inc,
                 block,
             } => Self::ForLoop {
-                init: init.as_ref().map(|stmt| {
-                    Node::from_statement(py, stmt, SourceLoc::builtin(), file_data)
-                        .into_pyobject(py)
-                        .expect("parsing for loop init")
-                        .into()
-                }),
-                test: test.as_ref().map(|expr| {
-                    Expression::parse(py, expr, file_data)
-                        .into_pyobject(py)
-                        .expect("parsing for loop test")
-                        .into()
-                }),
-                inc: inc.as_ref().map(|stmt| {
-                    Node::from_statement(py, stmt, SourceLoc::builtin(), file_data)
-                        .into_pyobject(py)
-                        .expect("parsing for loop inc")
-                        .into()
-                }),
-                block: block
-                    .iter()
-                    .map(|stmt| {
-                        Node::from_statement(
-                            py,
-                            &stmt.elem,
-                            file_data.fill_source_loc(&stmt.location),
-                            file_data,
-                        )
-                        .into_pyobject(py)
-                        .expect("parsing for loop block")
-                        .into()
-                    })
-                    .collect(),
+                init: init
+                    .as_ref()
+                    .map(|stmt| Node::from_statement(py, stmt, SourceLoc::builtin(), file_data))
+                    .transpose()?,
+                test: test
+                    .as_ref()
+                    .map(|expr| parse_expr(py, expr, file_data))
+                    .transpose()?,
+                inc: inc
+                    .as_ref()
+                    .map(|stmt| Node::from_statement(py, stmt, SourceLoc::builtin(), file_data))
+                    .transpose()?,
+                block: parse_block(py, block, file_data)?,
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing for loop")
-            .into(),
+            },
             Statement::ForList(for_list_statement) => {
                 let mut var_type_path: Option<TypePath> = None;
                 if let Some(var_type) = &for_list_statement.var_type {
@@ -252,33 +134,15 @@ impl Node {
                         SourceLoc::builtin(),
                         py,
                     ),
-                    in_list: for_list_statement.in_list.as_ref().map(|expr| {
-                        Expression::parse(py, expr, file_data)
-                            .into_pyobject(py)
-                            .expect("parsing for list in-list")
-                            .into()
-                    }),
-                    block: for_list_statement
-                        .block
-                        .iter()
-                        .map(|stmt| {
-                            Node::from_statement(
-                                py,
-                                &stmt.elem,
-                                file_data.fill_source_loc(&stmt.location),
-                                file_data,
-                            )
-                            .into_pyobject(py)
-                            .expect("parsing for list block")
-                            .into()
-                        })
-                        .collect(),
+                    in_list: for_list_statement
+                        .in_list
+                        .as_ref()
+                        .map(|expr| parse_expr(py, expr, file_data))
+                        .transpose()?,
+                    block: parse_block(py, &for_list_statement.block, file_data)?,
                     source_loc,
                     var_type: var_type_path,
                 }
-                .into_pyobject(py)
-                .expect("parsing for list")
-                .into()
             }
             Statement::ForRange(for_range_statement) => Self::ForRange {
                 name: Expression::ident(
@@ -286,52 +150,27 @@ impl Node {
                     SourceLoc::builtin(),
                     py,
                 ),
-                start: Expression::parse(py, &for_range_statement.start, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing for range start")
-                    .into(),
-                end: Expression::parse(py, &for_range_statement.end, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing for range end")
-                    .into(),
-                block: for_range_statement
-                    .block
-                    .iter()
-                    .map(|stmt| {
-                        Node::from_statement(
-                            py,
-                            &stmt.elem,
-                            file_data.fill_source_loc(&stmt.location),
-                            file_data,
-                        )
-                        .into_pyobject(py)
-                        .expect("parsing for range block")
-                        .into()
-                    })
-                    .collect(),
-                step: for_range_statement.step.as_ref().map(|expr| {
-                    Expression::parse(py, expr, file_data)
-                        .into_pyobject(py)
-                        .expect("parsing for range step")
-                        .into()
-                }),
+                start: parse_expr(py, &for_range_statement.start, file_data)?,
+                end: parse_expr(py, &for_range_statement.end, file_data)?,
+                block: parse_block(py, &for_range_statement.block, file_data)?,
+                step: for_range_statement
+                    .step
+                    .as_ref()
+                    .map(|expr| parse_expr(py, expr, file_data))
+                    .transpose()?,
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing for range")
-            .into(),
+            },
             Statement::Vars(vec) => Self::Vars {
                 vars: vec
                     .iter()
                     .map(|vs| {
-                        Self::Var {
+                        Ok(Self::Var {
                             name: Expression::ident(vs.name.to_string(), SourceLoc::builtin(), py),
-                            value: vs.value.as_ref().map(|expr| {
-                                Expression::parse(py, expr, file_data)
-                                    .into_pyobject(py)
-                                    .expect("parsing vars stmt value")
-                                    .into()
-                            }),
+                            value: vs
+                                .value
+                                .as_ref()
+                                .map(|expr| parse_expr(py, expr, file_data))
+                                .transpose()?,
                             declared_type: if vs.var_type.type_path.is_empty() {
                                 None
                             } else {
@@ -339,66 +178,34 @@ impl Node {
                             },
                             source_loc: source_loc.clone(),
                         }
-                        .into_pyobject(py)
-                        .expect("parsing vars var statement")
-                        .into()
+                        .into_pyobject(py)?
+                        .unbind())
                     })
-                    .collect(),
+                    .collect::<PyResult<_>>()?,
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing vars")
-            .into(),
+            },
             Statement::Setting { name, mode, value } => Self::Setting {
                 name: Expression::ident(name.to_string(), SourceLoc::builtin(), py),
                 mode: match mode {
                     dreammaker::ast::SettingMode::Assign => SettingMode::Assign,
                     dreammaker::ast::SettingMode::In => SettingMode::In,
                 },
-                value: Expression::parse(py, value, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing setting value")
-                    .into(),
+                value: parse_expr(py, value, file_data)?,
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing setting")
-            .into(),
+            },
             Statement::Spawn { delay, block } => Self::Spawn {
-                delay: delay.as_ref().map(|expr| {
-                    Expression::parse(py, expr, file_data)
-                        .into_pyobject(py)
-                        .expect("parsing spawn delay")
-                        .into()
-                }),
-                block: block
-                    .iter()
-                    .map(|stmt| {
-                        Node::from_statement(
-                            py,
-                            &stmt.elem,
-                            file_data.fill_source_loc(&stmt.location),
-                            file_data,
-                        )
-                        .into_pyobject(py)
-                        .expect("parsing spawn block")
-                        .into()
-                    })
-                    .collect::<PyCodeBlock>(),
+                delay: delay
+                    .as_ref()
+                    .map(|expr| parse_expr(py, expr, file_data))
+                    .transpose()?,
+                block: parse_block(py, block, file_data)?,
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing spawn")
-            .into(),
+            },
             Statement::Switch {
                 input,
                 cases,
                 default,
             } => {
-                let input_expr = Expression::parse(py, input, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing switch input")
-                    .into();
                 let mut case_nodes: Vec<Py<SwitchCase>> = vec![];
                 for (case, block) in cases.iter() {
                     let mut exact_nodes: Vec<PyExpr> = vec![];
@@ -407,117 +214,44 @@ impl Node {
                     for case_type in &case.elem {
                         match case_type {
                             dreammaker::ast::Case::Exact(e) => {
-                                exact_nodes.push(
-                                    Expression::parse(py, e, file_data)
-                                        .into_pyobject(py)
-                                        .expect("parsing switch exact case")
-                                        .into(),
-                                );
+                                exact_nodes.push(parse_expr(py, e, file_data)?);
                             }
                             dreammaker::ast::Case::Range(s, e) => {
                                 let range_list = PyList::new(
                                     py,
-                                    [
-                                        Expression::parse(py, s, file_data)
-                                            .into_pyobject(py)
-                                            .expect("parsing switch range case"),
-                                        Expression::parse(py, e, file_data)
-                                            .into_pyobject(py)
-                                            .expect("parsing switch range case"),
-                                    ],
-                                )
-                                .expect("parsing switch range case");
+                                    [parse_expr(py, s, file_data)?, parse_expr(py, e, file_data)?],
+                                )?;
                                 range_nodes.push(range_list.into());
                             }
                         }
                     }
-                    case_nodes.push(
+                    case_nodes.push(Py::new(
+                        py,
                         SwitchCase {
-                            exact: PyList::new(py, exact_nodes)
-                                .expect("parsing switch-case exact")
-                                .into(),
-                            range: PyList::new(py, range_nodes)
-                                .expect("parsing switch-case range")
-                                .into(),
-                            block: block
-                                .iter()
-                                .map(|stmt| {
-                                    Node::from_statement(
-                                        py,
-                                        &stmt.elem,
-                                        file_data.fill_source_loc(&stmt.location),
-                                        file_data,
-                                    )
-                                    .into_pyobject(py)
-                                    .expect("parsing switch-case block")
-                                    .into()
-                                })
-                                .collect(),
-                        }
-                        .into_pyobject(py)
-                        .expect("parsing switch-case node")
-                        .into(),
-                    );
+                            exact: PyList::new(py, exact_nodes)?.unbind(),
+                            range: PyList::new(py, range_nodes)?.unbind(),
+                            block: parse_block(py, block, file_data)?,
+                        },
+                    )?);
                 }
 
                 Self::Switch {
-                    input: input_expr,
+                    input: parse_expr(py, input, file_data)?,
                     cases: case_nodes,
-                    default: default.as_ref().map(|stmts| {
-                        stmts
-                            .iter()
-                            .map(|stmt| {
-                                Node::from_statement(
-                                    py,
-                                    &stmt.elem,
-                                    file_data.fill_source_loc(&stmt.location),
-                                    file_data,
-                                )
-                                .into_pyobject(py)
-                                .expect("parsing switch default")
-                                .into()
-                            })
-                            .collect()
-                    }),
+                    default: default
+                        .as_ref()
+                        .map(|block| parse_block(py, block, file_data))
+                        .transpose()?,
                     source_loc,
                 }
-                .into_pyobject(py)
-                .expect("parsing switch")
-                .into()
             }
             Statement::TryCatch {
                 try_block,
                 catch_params,
                 catch_block,
             } => Self::TryCatch {
-                try_block: try_block
-                    .iter()
-                    .map(|stmt| {
-                        Node::from_statement(
-                            py,
-                            &stmt.elem,
-                            file_data.fill_source_loc(&stmt.location),
-                            file_data,
-                        )
-                        .into_pyobject(py)
-                        .expect("parsing trycatch try block")
-                        .into()
-                    })
-                    .collect(),
-                catch_block: catch_block
-                    .iter()
-                    .map(|stmt| {
-                        Node::from_statement(
-                            py,
-                            &stmt.elem,
-                            file_data.fill_source_loc(&stmt.location),
-                            file_data,
-                        )
-                        .into_pyobject(py)
-                        .expect("parsing trycatch catch block")
-                        .into()
-                    })
-                    .collect(),
+                try_block: parse_block(py, try_block, file_data)?,
+                catch_block: parse_block(py, catch_block, file_data)?,
                 catch_params: catch_params
                     .iter()
                     .map(|tc| {
@@ -527,78 +261,39 @@ impl Node {
                     })
                     .collect(),
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing trycatch")
-            .into(),
+            },
             Statement::Continue(name) => Self::Continue {
                 name: name
                     .as_ref()
                     .map(|s| Expression::ident(s.clone(), SourceLoc::builtin(), py)),
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing continue")
-            .into(),
+            },
             Statement::Break(label) => Self::Break {
                 label: label
                     .as_ref()
                     .map(|l| Expression::ident(l.clone(), SourceLoc::builtin(), py)),
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing break")
-            .into(),
+            },
             Statement::Goto(label) => Self::Goto {
                 label: Expression::ident(label.to_string(), SourceLoc::builtin(), py),
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing goto")
-            .into(),
+            },
             Statement::Label { name, block } => Self::Label {
                 name: Expression::ident(name.to_string(), SourceLoc::builtin(), py),
-                block: block
-                    .iter()
-                    .map(|stmt| {
-                        Node::from_statement(
-                            py,
-                            &stmt.elem,
-                            file_data.fill_source_loc(&stmt.location),
-                            file_data,
-                        )
-                        .into_pyobject(py)
-                        .expect("parsing label block")
-                        .into()
-                    })
-                    .collect(),
+                block: parse_block(py, block, file_data)?,
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing label")
-            .into(),
+            },
             Statement::Del(expression) => Self::Del {
-                expr: Expression::parse(py, expression, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing del expr")
-                    .into(),
+                expr: parse_expr(py, expression, file_data)?,
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing del")
-            .into(),
+            },
             Statement::Crash(expression) => Self::Crash {
-                expr: expression.as_ref().map(|expr| {
-                    Expression::parse(py, expr, file_data)
-                        .into_pyobject(py)
-                        .expect("parsing crash expr")
-                        .into()
-                }),
+                expr: expression
+                    .as_ref()
+                    .map(|expr| parse_expr(py, expr, file_data))
+                    .transpose()?,
                 source_loc,
-            }
-            .into_pyobject(py)
-            .expect("parsing crash")
-            .into(),
+            },
             Statement::ForKeyValue(stmt) => {
                 let mut var_type_path: Option<TypePath> = None;
                 if let Some(var_type) = &stmt.var_type {
@@ -609,34 +304,18 @@ impl Node {
                 Self::ForKeyValue {
                     key: Expression::ident(stmt.key.to_string(), SourceLoc::builtin(), py),
                     value: Expression::ident(stmt.value.to_string(), SourceLoc::builtin(), py),
-                    in_list: stmt.in_list.as_ref().map(|expr| {
-                        Expression::parse(py, expr, file_data)
-                            .into_pyobject(py)
-                            .expect("parsing for list in-list")
-                            .into()
-                    }),
-                    block: stmt
-                        .block
-                        .iter()
-                        .map(|stmt| {
-                            Node::from_statement(
-                                py,
-                                &stmt.elem,
-                                file_data.fill_source_loc(&stmt.location),
-                                file_data,
-                            )
-                            .into_pyobject(py)
-                            .expect("parsing label block")
-                            .into()
-                        })
-                        .collect(),
+                    in_list: stmt
+                        .in_list
+                        .as_ref()
+                        .map(|expr| parse_expr(py, expr, file_data))
+                        .transpose()?,
+                    block: parse_block(py, &stmt.block, file_data)?,
                     var_type: var_type_path,
                     source_loc,
                 }
-                .into_pyobject(py)
-                .expect("parsing forkeyvalue")
-                .into()
             }
-        }
+        };
+
+        Ok(node.into_pyobject(py)?.unbind())
     }
 }
