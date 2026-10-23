@@ -1,18 +1,9 @@
 import os
 
 import pytest
-
-from avulto import DMI, IconState, Dir
 from PIL import Image
 
-
-def get_fixture_path(name: str) -> str:
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", name)
-
-
-@pytest.fixture
-def dmi() -> DMI:
-    return DMI.from_file(get_fixture_path("icon1.dmi"))
+from avulto import DMI, Dir, IconState
 
 
 def test_dmi_info(dmi: DMI):

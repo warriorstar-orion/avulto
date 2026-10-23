@@ -1,18 +1,10 @@
-import os
+
 from pathlib import Path
 
-import pytest
+from avulto import DMM
+from avulto import TypePath as p
 
-from avulto import DMM, TypePath as p
-
-
-def get_fixture_path(name: str) -> str:
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", name)
-
-
-@pytest.fixture
-def dmm() -> DMM:
-    return DMM.from_file(get_fixture_path("map1.dmm"))
+from .conftest import get_fixture_path
 
 
 def test_dmm_pathlib():
