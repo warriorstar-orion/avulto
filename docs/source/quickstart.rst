@@ -128,8 +128,8 @@ list. We can get this list like so:
 
 	for pth in dme.typesof('/datum/uplink_item'):
 		typedecl = dme.types[pth]
-		name = typedecl.var_decl('name').const_val
-		cost = typedecl.var_decl('cost').const_val
+		name = typedecl.vars['name'].const_val
+		cost = typedecl.vars['cost'].const_val
 		print(f"Name: {name} Cost: {cost}")
 
 And the result will end up looking something like this:
@@ -182,8 +182,8 @@ Since Avulto has access to all this information, we can do this in one script:
     def get_iconstate_dirs(turf_path):
         if turf_path not in known_dirs:
             typedecl = dme.types[turf]
-            icon = typedecl.var_decl('icon').const_val
-            icon_state = typedecl.var_decl('icon_state').const_val
+            icon = typedecl.vars['icon'].const_val
+            icon_state = typedecl.vars['icon_state'].const_val
             if icon not in dmi_files:
                 dmi_files[icon] = DMI.from_file(icon)
             dmi = dmi_files[icon]
