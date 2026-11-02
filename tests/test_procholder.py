@@ -1,17 +1,8 @@
-import os
 
 import pytest
 
 from avulto import DME, ProcDef, VarDef
 
-
-def get_fixture_path(name: str) -> str:
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", name)
-
-
-@pytest.fixture
-def dme() -> DME:
-    return DME.from_file(get_fixture_path("testenv.dme"))
 
 def def_to_names(defs: list[ProcDef]|list[VarDef]) -> set[str]:
     return {element.name for element in defs}

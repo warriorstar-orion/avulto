@@ -2,16 +2,8 @@ import os
 
 import pytest
 
-from avulto import DME, TypePath as p
-
-
-def get_fixture_path(name: str) -> str:
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", name)
-
-
-@pytest.fixture
-def dme() -> DME:
-    return DME.from_file(get_fixture_path("testenv.dme"))
+from avulto import DME
+from avulto import TypePath as p
 
 
 def test_dme_typesof(dme: DME):
