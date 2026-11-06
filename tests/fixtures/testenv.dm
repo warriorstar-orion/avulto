@@ -71,3 +71,79 @@
 		new /datum/foo/bar(3, 4),
 		new /datum/foo/baz(10, 12),
 	)
+
+/obj/node_parse
+
+/obj/node_parse/proc/if_else_if_else(x)
+	if(x == 1)
+		return 1
+	else if(x == 2)
+		return 2
+	else
+		return 3
+
+/obj/node_parse/proc/if_no_else(x)
+	if(x)
+		return 1
+
+/obj/node_parse/proc/while_loop(x)
+	while(x)
+		x--
+		x--
+
+/obj/node_parse/proc/do_while_loop(x)
+	do
+		x--
+	while(x)
+
+/obj/node_parse/proc/for_loop()
+	for(var/i = 0, i < 3, i++)
+		return i
+
+/obj/node_parse/proc/for_infinite()
+	for()
+		return
+
+/obj/node_parse/proc/for_list(list/L)
+	for(var/obj/O in L)
+		return O
+
+/obj/node_parse/proc/for_range()
+	for(var/i in 1 to 10 step 2)
+		return i
+
+/obj/node_parse/proc/for_key_value(list/L)
+	for(var/k, v in L)
+		return v
+
+/obj/node_parse/proc/switch_stmt(x)
+	switch(x)
+		if(1)
+			return 1
+		if(2 to 5)
+			return 2
+		else
+			return 3
+
+/obj/node_parse/proc/switch_no_default(x)
+	switch(x)
+		if(1, 2)
+			return 1
+
+/obj/node_parse/proc/try_catch()
+	try
+		throw EXCEPTION("oops")
+	catch(var/exception/e)
+		return e
+
+/obj/node_parse/proc/vars_stmt()
+	var/a = 1, b
+
+/obj/node_parse/proc/setting()
+	set name = "Setting"
+
+/obj/node_parse/proc/del_stmt(x)
+	del(x)
+
+/obj/node_parse/proc/crash_stmt()
+	CRASH("oops")
