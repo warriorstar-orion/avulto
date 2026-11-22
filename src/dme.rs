@@ -230,7 +230,7 @@ impl Dme {
         py: Python<'_>,
     ) -> PyResult<()> {
         let source_loc = self_.file_data.fill_source_loc(&stmt.location);
-        let node = Node::from_statement(py, &stmt.elem, source_loc, &self_.file_data);
+        let node = Node::from_statement(py, &stmt.elem, source_loc, &self_.file_data)?;
         Node::walk(node.bind(py), &self_.into_pyobject(py).unwrap(), walker, py)?;
         Ok(())
     }
