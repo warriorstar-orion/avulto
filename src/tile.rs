@@ -184,7 +184,12 @@ impl Tile {
     /// with the given prefix. If exact is True, then the prefab path must match
     /// exactly.
     #[pyo3(signature = (prefix, exact=false))]
-    pub fn only(&self, prefix: &Bound<PyAny>, exact: bool, py: Python<'_>) -> PyResult<Option<i32>> {
+    pub fn only(
+        &self,
+        prefix: &Bound<PyAny>,
+        exact: bool,
+        py: Python<'_>,
+    ) -> PyResult<Option<i32>> {
         let result = self.find(prefix, exact, py)?;
         match result.len().cmp(&1) {
             std::cmp::Ordering::Less => Ok(None),
