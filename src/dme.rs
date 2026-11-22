@@ -470,13 +470,11 @@ impl Dme {
     }
 
     /// Returns a list of type paths with the given *prefix*, including itself.
-    #[gen_stub(override_return_type(type_repr="builtins.list[TypePath]", imports=("builtins")))]
     fn typesof(
         &self,
         #[gen_stub(override_type(type_repr = "TypePath | builtins.str", imports=("builtins")))]
         prefix: &Bound<PyAny>,
-        py: Python<'_>,
-    ) -> PyResult<Py<PyList>> {
+    ) -> PyResult<Vec<TypePath>> {
         let mut out: Vec<TypePath> = Vec::new();
 
         let prefix_path = if let Ok(path) = prefix.extract::<path::TypePath>() {
@@ -493,17 +491,15 @@ impl Dme {
         };
         self.collect_child_paths(&prefix_path, false, &mut out);
 
-        Ok(PyList::new(py, out)?.unbind().clone_ref(py))
+        Ok(out)
     }
 
     /// Returns a list of type paths with the given *prefix*, excluding *prefix* itself.
-    #[gen_stub(override_return_type(type_repr="builtins.list[TypePath]", imports=("builtins")))]
     fn subtypesof(
         &self,
         #[gen_stub(override_type(type_repr = "TypePath | builtins.str", imports=("builtins")))]
         prefix: &Bound<PyAny>,
-        py: Python<'_>,
-    ) -> PyResult<Py<PyList>> {
+    ) -> PyResult<Vec<TypePath>> {
         let mut out: Vec<TypePath> = Vec::new();
 
         let prefix_path = if let Ok(path) = prefix.extract::<path::TypePath>() {
@@ -520,7 +516,7 @@ impl Dme {
         };
         self.collect_child_paths(&prefix_path, true, &mut out);
 
-        Ok(PyList::new(py, out)?.unbind().clone_ref(py))
+        Ok(out)
     }
 
     fn __repr__(&self) -> PyResult<String> {

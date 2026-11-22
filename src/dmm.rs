@@ -117,8 +117,8 @@ impl CoordIterator {
     fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
         slf
     }
-    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> Option<Py<PyAny>> {
-        slf.iter.next().map(|c| c.into_py_any(py).unwrap())
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<(i32, i32, i32)> {
+        slf.iter.next()
     }
 }
 
