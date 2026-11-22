@@ -5,9 +5,9 @@ use std::vec;
 
 use dmi::icon::{DmiVersion, Icon};
 use oxipng::{InFile, OutFile};
+use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyRuntimeError};
-use pyo3::types::{PyAnyMethods, PyListMethods, PyString, PyTuple};
-use pyo3::{Bound, IntoPyObjectExt};
+use pyo3::types::{PyListMethods, PyTuple};
 use pyo3::{Py, PyAny, PyRef, PyRefMut, PyResult, Python, pyclass, pymethods, types::PyList};
 use pyo3_stub_gen::create_exception;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -53,30 +53,15 @@ impl Dmi {
 
     /// Creates a DMI from the given *filename*.
     #[staticmethod]
-    pub fn from_file(
-        #[gen_stub(override_type(type_repr = "os.PathLike[builtins.str] | builtins.str", imports=("builtins", "os")))]
-        filename: &Bound<PyAny>,
-        py: Python<'_>,
-    ) -> PyResult<Dmi> {
-        let path = if let Ok(pathbuf) = filename.extract::<std::path::PathBuf>() {
-            pathbuf
-        } else if let Ok(pystr) = filename.cast::<PyString>() {
-            PathBuf::from(&pystr.to_string())
-        } else {
-            return Err(PyRuntimeError::new_err(format!(
-                "invalid filename {}",
-                filename
-            )));
-        };
-
+    pub fn from_file(filename: PathBuf, py: Python<'_>) -> PyResult<Dmi> {
         // TODO: Why am I doing this like this instead of just checking for path.exists?
-        let file = match File::open(&path) {
+        let file = match File::open(&filename) {
             Ok(f) => f,
             Err(err) => {
                 if err.kind() == io::ErrorKind::NotFound {
                     return Err(PyFileNotFoundError::new_err(format!(
                         "Not found: {}",
-                        path.to_str().unwrap()
+                        filename.to_str().unwrap()
                     )));
                 }
                 return Err(PyRuntimeError::new_err(format!("Unknown error: {}", err)));
@@ -95,7 +80,7 @@ impl Dmi {
                 let states = PyList::new(py, list).unwrap().as_unbound().clone_ref(py);
                 Ok(Dmi {
                     states,
-                    filepath: Some(path),
+                    filepath: Some(filename),
                     icon_width: icon.width,
                     icon_height: icon.height,
                 })
@@ -165,18 +150,8 @@ impl Dmi {
 
     /// Saves the DMI to the given *filename*.
     #[pyo3(signature = (filename, compress=0))]
-    fn save_to(&self, filename: &Bound<PyAny>, compress: u8, py: Python<'_>) -> PyResult<()> {
-        let path = if let Ok(path) = filename.extract::<std::path::PathBuf>() {
-            path
-        } else if let Ok(pystr) = filename.cast::<PyString>() {
-            Path::new(&pystr.to_string()).to_path_buf()
-        } else {
-            return Err(PyRuntimeError::new_err(format!(
-                "invalid filename {}",
-                filename
-            )));
-        };
-        self.write_to_file(path.as_path(), compress, py)
+    fn save_to(&self, filename: PathBuf, compress: u8, py: Python<'_>) -> PyResult<()> {
+        self.write_to_file(filename.as_path(), compress, py)
     }
 }
 
