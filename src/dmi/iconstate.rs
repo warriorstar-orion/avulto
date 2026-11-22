@@ -202,30 +202,23 @@ impl IconState {
     }
 
     /// The directions available in the icon state.
-    #[gen_stub(override_return_type(type_repr="builtins.list[Dir]", imports=("builtins")))]
     #[getter]
-    pub fn dirs(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
-        Ok(PyList::new(
-            py,
-            match self.dir_count {
-                1 => vec![Dir::South],
-                4 => vec![Dir::South, Dir::North, Dir::East, Dir::West],
-                8 => vec![
-                    Dir::South,
-                    Dir::North,
-                    Dir::East,
-                    Dir::West,
-                    Dir::Southeast,
-                    Dir::Southwest,
-                    Dir::Northeast,
-                    Dir::Northwest,
-                ],
-                _ => panic!("invalid number of dirs {}", self.dir_count),
-            }
-            .iter()
-            .map(|f| Py::new(py, *f).unwrap()),
-        )?
-        .into())
+    pub fn dirs(&self) -> PyResult<Vec<Dir>> {
+        Ok(match self.dir_count {
+            1 => vec![Dir::South],
+            4 => vec![Dir::South, Dir::North, Dir::East, Dir::West],
+            8 => vec![
+                Dir::South,
+                Dir::North,
+                Dir::East,
+                Dir::West,
+                Dir::Southeast,
+                Dir::Southwest,
+                Dir::Northeast,
+                Dir::Northwest,
+            ],
+            _ => panic!("invalid number of dirs {}", self.dir_count),
+        })
     }
 
     /// Return the byte data of the spritesheet in 8-bit RGBA.

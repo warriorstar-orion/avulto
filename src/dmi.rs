@@ -111,8 +111,7 @@ impl Dmi {
     }
 
     /// Return a list of strings containing all state names in the file.
-    #[gen_stub(override_return_type(type_repr="builtins.list[builtins.str]", imports=("builtins")))]
-    pub fn state_names(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+    pub fn state_names(&self, py: Python<'_>) -> PyResult<Vec<String>> {
         let mut out = vec![];
         for boundstate in self.states.bind(py).iter() {
             out.push(
@@ -124,7 +123,7 @@ impl Dmi {
                     .clone(),
             );
         }
-        PyList::new(py, out).unwrap().into_py_any(py)
+        Ok(out)
     }
 
     /// Return the icon state with the given *name*. If there are duplicates,
@@ -144,12 +143,9 @@ impl Dmi {
     }
 
     /// The width and height of icons in the DMI.
-    #[gen_stub(override_return_type(type_repr="tuple[builtins.int, builtins.int]", imports=("builtins")))]
     #[getter]
-    pub fn icon_dims(&self, py: Python<'_>) -> Py<PyTuple> {
-        PyTuple::new(py, [self.icon_width, self.icon_height])
-            .expect("icon dims")
-            .unbind()
+    pub fn icon_dims(&self) -> (u32, u32) {
+        (self.icon_width, self.icon_height)
     }
 
     fn __str__(&self) -> PyResult<String> {

@@ -428,7 +428,7 @@ class Tile:
         Return the indexes of the prefabs prefixed with the given path *prefix*.
         If exact is True, then the prefab path must match exactly.
         """
-    def only(self, prefix: typing.Any, exact: builtins.bool = False) -> typing.Any:
+    def only(self, prefix: typing.Any, exact: builtins.bool = False) -> typing.Optional[builtins.int]:
         r"""
         Returns the index of the only prefab with the given *prefix*, or None if
         no such prefab exists. Raises an error if there is more than one prefab

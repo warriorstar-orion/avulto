@@ -184,11 +184,11 @@ impl Tile {
     /// with the given prefix. If exact is True, then the prefab path must match
     /// exactly.
     #[pyo3(signature = (prefix, exact=false))]
-    pub fn only(&self, prefix: &Bound<PyAny>, exact: bool, py: Python<'_>) -> PyResult<Py<PyAny>> {
+    pub fn only(&self, prefix: &Bound<PyAny>, exact: bool, py: Python<'_>) -> PyResult<Option<i32>> {
         let result = self.find(prefix, exact, py)?;
         match result.len().cmp(&1) {
-            std::cmp::Ordering::Less => Ok(py.None()),
-            std::cmp::Ordering::Equal => Ok(result[0].into_py_any(py).unwrap()),
+            std::cmp::Ordering::Less => Ok(None),
+            std::cmp::Ordering::Equal => Ok(Some(result[0])),
             std::cmp::Ordering::Greater => Err(PyRuntimeError::new_err(format!(
                 "found {} matches on tile, not 0 or 1",
                 result.len()
