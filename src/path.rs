@@ -9,7 +9,6 @@ use pyo3_stub_gen::{
     derive::{gen_stub_pyclass, gen_stub_pymethods},
     impl_stub_type,
 };
-use regex::Regex;
 
 create_exception!(avulto.exceptions, PathError, PyException);
 
@@ -62,6 +61,12 @@ impl From<TypePath> for String {
     }
 }
 
+fn is_valid_path_part(part: &str) -> bool {
+    let mut bytes = part.bytes();
+    matches!(bytes.next(), Some(b'A'..=b'Z' | b'a'..=b'z' | b'_'))
+        && bytes.all(|b| b.is_ascii_alphanumeric() || b == b'_')
+}
+
 #[derive(FromPyObject)]
 pub enum PathArg {
     Path(TypePath),
@@ -69,14 +74,6 @@ pub enum PathArg {
 }
 
 impl_stub_type!(PathArg = TypePath | String);
-
-lazy_static! {
-    static ref VALID_PATH_PART_RE: Regex = Regex::new(r"^[A-Za-z_][A-Za-z0-9_]*$").unwrap();
-}
-
-fn invalid_path_part(part: &&str) -> bool {
-    VALID_PATH_PART_RE.captures(part).is_none()
-}
 
 impl TypePath {
     pub fn root() -> TypePath {
@@ -120,7 +117,7 @@ impl TypePath {
         if parts.iter().filter(|&x| x.is_empty()).count() > 1 {
             return Err(String::from("path contains empty parts"));
         }
-        if parts.iter().filter(|&x| invalid_path_part(x)).count() > 1 {
+        if parts.iter().filter(|&x| !is_valid_path_part(x)).count() > 1 {
             return Err(String::from("path contains invalid parts"));
         }
         let rel = to_relative_path(trimmed);

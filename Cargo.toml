@@ -13,12 +13,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 pyo3 = "0.29.3"
 itertools = "0.14.0"
-lodepng = "3.7.0"
-ndarray = "0.15.6"
 dmi = "0.3.4"
 image = "0.25.2"
-regex = "1.10.3"
-lazy_static = "1.4"
 oxipng = "9.1.5"
 pyo3-stub-gen = "0.23.1"
 
