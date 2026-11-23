@@ -179,25 +179,3 @@ impl Dmi {
         }
     }
 }
-
-#[pyclass(module = "avulto")]
-pub struct StateIter {
-    inner: std::vec::IntoIter<Py<PyAny>>,
-}
-
-#[pymethods]
-impl StateIter {
-    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
-        slf
-    }
-
-    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<Py<PyAny>> {
-        if let Some(n) = slf.inner.next() {
-            let cell = n.cast_bound::<IconState>(slf.py()).unwrap();
-            let state = cell.borrow_mut();
-            return Some(state.into_py_any(slf.py()).unwrap());
-        }
-
-        None
-    }
-}
