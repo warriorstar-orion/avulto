@@ -12,7 +12,7 @@ use pyo3::{
     Bound, Py, PyAny, PyErr, PyResult, Python,
     exceptions::PyRuntimeError,
     pyclass, pymethods,
-    types::{PyAnyMethods, PyBytes, PyBytesMethods, PyInt, PyList},
+    types::{PyAnyMethods, PyBytes, PyBytesMethods, PyInt},
 };
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 

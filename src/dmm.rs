@@ -9,10 +9,7 @@ use dmm_tools::dmm::{Key, Prefab};
 use itertools::iproduct;
 use pyo3::exceptions::{PyOSError, PyRuntimeError};
 use pyo3::types::{PyAnyMethods, PyList, PyTuple};
-use pyo3::{
-    Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyRef, PyRefMut, PyResult, Python, pyclass,
-    pymethods,
-};
+use pyo3::{Bound, IntoPyObject, Py, PyAny, PyRef, PyRefMut, PyResult, Python, pyclass, pymethods};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::tile::Tile;

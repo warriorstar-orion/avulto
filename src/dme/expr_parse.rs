@@ -1,5 +1,5 @@
 use dreammaker::ast::AssignOp;
-use pyo3::{IntoPyObject, Py, Python};
+use pyo3::{Py, PyResult, Python, exceptions::PyValueError};
 
 use crate::{
     dme::{FileData, SourceLoc},
@@ -14,8 +14,30 @@ use super::{
 };
 
 impl Expression {
-    pub fn parse(py: Python<'_>, expr: &dreammaker::ast::Expression, file_data: &FileData) -> Self {
-        match expr {
+    pub fn parse_exprs(
+        py: Python<'_>,
+        arr: &[dreammaker::ast::Expression],
+        file_data: &FileData,
+    ) -> PyResult<Vec<PyExpr>> {
+        arr.iter()
+            .map(|expr| Self::parse_py(py, expr, file_data))
+            .collect()
+    }
+
+    pub fn parse_py(
+        py: Python<'_>,
+        expr: &dreammaker::ast::Expression,
+        file_data: &FileData,
+    ) -> PyResult<PyExpr> {
+        Py::new(py, Self::parse(py, expr, file_data)?)
+    }
+
+    pub fn parse(
+        py: Python<'_>,
+        expr: &dreammaker::ast::Expression,
+        file_data: &FileData,
+    ) -> PyResult<Self> {
+        Ok(match expr {
             dreammaker::ast::Expression::Base { term, follow } => {
                 let mut core = match &term.elem {
                     dreammaker::ast::Term::Ident(i) => Self::Identifier {
@@ -50,28 +72,21 @@ impl Expression {
                     dreammaker::ast::Term::__TYPE__ => todo!(),
                     dreammaker::ast::Term::__IMPLIED_TYPE__ => todo!(),
                     dreammaker::ast::Term::Expr(expression) => {
-                        Expression::parse(py, expression, file_data)
+                        Self::parse(py, expression, file_data)?
                     }
                     dreammaker::ast::Term::Prefab(prefab) => Self::Prefab {
-                        prefab: Prefab::make(py, prefab, file_data)
-                            .into_pyobject(py)
-                            .expect("parsing prefab")
-                            .into(),
+                        prefab: Py::new(py, Prefab::make(py, prefab, file_data)?)?,
                         source_loc: file_data.fill_source_loc(&term.location),
                     },
                     dreammaker::ast::Term::InterpString(ident2, tokens) => {
                         let mut token_vec: Vec<(Option<PyExpr>, Py<Constant>)> = vec![];
                         for (maybe_token_expr, token_str) in tokens.iter() {
-                            let token_expr_node = maybe_token_expr.as_ref().map(|token_expr| {
-                                Expression::parse(py, token_expr, file_data)
-                                    .into_pyobject(py)
-                                    .expect("parsing interpstring token expr")
-                                    .into()
-                            });
-                            let token_expr_str = Constant::String(token_str.to_string())
-                                .into_pyobject(py)
-                                .expect("parsing interpstring token str")
-                                .into();
+                            let token_expr_node = maybe_token_expr
+                                .as_ref()
+                                .map(|token_expr| Self::parse_py(py, token_expr, file_data))
+                                .transpose()?;
+                            let token_expr_str =
+                                Py::new(py, Constant::String(token_str.to_string()))?;
                             token_vec.push((token_expr_node, token_expr_str));
                         }
                         Self::InterpString {
@@ -82,97 +97,58 @@ impl Expression {
                     }
                     dreammaker::ast::Term::Call(ident2, args) => Self::Call {
                         // TODO: Not sure these should be marked as builtins
-                        expr: Expression::null(file_data.fill_source_loc(&term.location), py),
-                        name: Expression::ident(
+                        expr: Self::null(file_data.fill_source_loc(&term.location), py)?,
+                        name: Self::ident(
                             ident2.to_string(),
                             file_data.fill_source_loc(&term.location),
                             py,
-                        ),
-                        args: args
-                            .iter()
-                            .map(|e| {
-                                Expression::parse(py, e, file_data)
-                                    .into_pyobject(py)
-                                    .expect("parsing call args")
-                                    .into()
-                            })
-                            .collect(),
+                        )?,
+                        args: Self::parse_exprs(py, args, file_data)?,
                         source_loc: file_data.fill_source_loc(&term.location),
                     },
                     dreammaker::ast::Term::SelfCall(args) => Self::SelfCall {
-                        args: args
-                            .iter()
-                            .map(|e| {
-                                Expression::parse(py, e, file_data)
-                                    .into_pyobject(py)
-                                    .expect("parsing selfcall args")
-                                    .into()
-                            })
-                            .collect(),
+                        args: Self::parse_exprs(py, args, file_data)?,
                         source_loc: file_data.fill_source_loc(&term.location),
                     },
                     dreammaker::ast::Term::ParentCall(args) => Self::ParentCall {
-                        args: args
-                            .iter()
-                            .map(|e| {
-                                Expression::parse(py, e, file_data)
-                                    .into_pyobject(py)
-                                    .expect("parsing parentcall args")
-                                    .into()
-                            })
-                            .collect(),
+                        args: Self::parse_exprs(py, args, file_data)?,
                         source_loc: file_data.fill_source_loc(&term.location),
                     },
                     dreammaker::ast::Term::NewImplicit { args } => Self::NewImplicit {
-                        args: args.as_ref().map(|args| {
-                            args.iter()
-                                .map(|arg| {
-                                    Expression::parse(py, arg, file_data)
-                                        .into_pyobject(py)
-                                        .expect("parsing new implicit arg")
-                                        .into()
-                                })
-                                .collect()
-                        }),
+                        args: args
+                            .as_deref()
+                            .map(|a| Self::parse_exprs(py, a, file_data))
+                            .transpose()?,
                         source_loc: file_data.fill_source_loc(&term.location),
                     },
                     dreammaker::ast::Term::NewPrefab { prefab, args } => Self::NewPrefab {
-                        prefab: Prefab::make(py, prefab, file_data)
-                            .into_pyobject(py)
-                            .expect("parsing new prefab")
-                            .into(),
-                        args: args.as_ref().map(|args| {
-                            args.iter()
-                                .map(|expr| {
-                                    Expression::parse(py, expr, file_data)
-                                        .into_pyobject(py)
-                                        .expect("parsing new prefab arg")
-                                        .into()
-                                })
-                                .collect()
-                        }),
+                        prefab: Py::new(py, Prefab::make(py, prefab, file_data)?)?,
+                        args: args
+                            .as_deref()
+                            .map(|a| Self::parse_exprs(py, a, file_data))
+                            .transpose()?,
                         source_loc: file_data.fill_source_loc(&term.location),
                     },
                     dreammaker::ast::Term::NewMiniExpr { expr, args: _ } => Self::NewMiniExpr {
-                        name: Expression::ident(expr.ident.to_string(), SourceLoc::builtin(), py),
+                        name: Self::ident(expr.ident.to_string(), SourceLoc::builtin(), py)?,
                         fields: expr
                             .fields
                             .iter()
                             .map(|f| {
-                                Expression::Field {
-                                    expr: None,
-                                    field: Expression::ident(
-                                        f.ident.to_string(),
-                                        SourceLoc::builtin(),
-                                        py,
-                                    ),
-                                    source_loc: SourceLoc::builtin(),
-                                }
-                                .into_pyobject(py)
-                                .expect("parsing newminiexpr fields")
-                                .into()
+                                Py::new(
+                                    py,
+                                    Self::Field {
+                                        expr: None,
+                                        field: Self::ident(
+                                            f.ident.to_string(),
+                                            SourceLoc::builtin(),
+                                            py,
+                                        )?,
+                                        source_loc: SourceLoc::builtin(),
+                                    },
+                                )
                             })
-                            .collect(),
+                            .collect::<PyResult<Vec<_>>>()?,
                         source_loc: file_data.fill_source_loc(&term.location),
                     },
                     dreammaker::ast::Term::List(l) => {
@@ -182,70 +158,39 @@ impl Expression {
                         for args in l.iter() {
                             match args {
                                 dreammaker::ast::Expression::Base { .. } => {
-                                    keys.push(
-                                        Expression::parse(py, args, file_data)
-                                            .into_pyobject(py)
-                                            .expect("parsing base expr")
-                                            .into(),
-                                    );
-                                    vals.push(Expression::null(SourceLoc::builtin(), py));
+                                    keys.push(Self::parse_py(py, args, file_data)?);
+                                    vals.push(Self::null(SourceLoc::builtin(), py)?);
                                 }
                                 dreammaker::ast::Expression::AssignOp { op: _, lhs, rhs } => {
-                                    keys.push(
-                                        Expression::parse(py, lhs, file_data)
-                                            .into_pyobject(py)
-                                            .expect("parsing assign op lhs")
-                                            .into(),
-                                    );
-                                    vals.push(
-                                        Expression::parse(py, rhs, file_data)
-                                            .into_pyobject(py)
-                                            .expect("parsing assign op rhs")
-                                            .into(),
-                                    );
+                                    keys.push(Self::parse_py(py, lhs, file_data)?);
+                                    vals.push(Self::parse_py(py, rhs, file_data)?);
                                 }
                                 dreammaker::ast::Expression::BinaryOp { .. } => {
-                                    keys.push(
-                                        Expression::parse(py, args, file_data)
-                                            .into_pyobject(py)
-                                            .expect("parsing list binary op key")
-                                            .into(),
-                                    );
-                                    vals.push(Expression::null(SourceLoc::builtin(), py));
+                                    keys.push(Self::parse_py(py, args, file_data)?);
+                                    vals.push(Self::null(SourceLoc::builtin(), py)?);
                                 }
                                 dreammaker::ast::Expression::TernaryOp { cond, if_, else_ } => {
-                                    keys.push(
+                                    keys.push(Py::new(
+                                        py,
                                         Self::TernaryOp {
-                                            cond: Expression::parse(py, cond, file_data)
-                                                .into_pyobject(py)
-                                                .expect("bad ternary op cond")
-                                                .into(),
-                                            if_expr: Expression::parse(py, if_, file_data)
-                                                .into_pyobject(py)
-                                                .expect("bad ternary op if_expr")
-                                                .into(),
-                                            else_expr: Expression::parse(py, else_, file_data)
-                                                .into_pyobject(py)
-                                                .expect("bad ternary op else_expr")
-                                                .into(),
+                                            cond: Self::parse_py(py, cond, file_data)?,
+                                            if_expr: Self::parse_py(py, if_, file_data)?,
+                                            else_expr: Self::parse_py(py, else_, file_data)?,
                                             source_loc: SourceLoc::builtin(),
-                                        }
-                                        .into_pyobject(py)
-                                        .expect("bad ternary op")
-                                        .into(),
-                                    );
-                                    vals.push(Expression::null(SourceLoc::builtin(), py));
+                                        },
+                                    )?);
+                                    vals.push(Self::null(SourceLoc::builtin(), py)?);
                                 }
                             }
                         }
                         Self::List {
-                            list: DmList {
-                                keys: keys.iter().map(|k| k.clone_ref(py).into_any()).collect(),
-                                vals: vals.iter().map(|k| k.clone_ref(py).into_any()).collect(),
-                            }
-                            .into_pyobject(py)
-                            .expect("bad list")
-                            .into(),
+                            list: Py::new(
+                                py,
+                                DmList {
+                                    keys: keys.iter().map(|k| k.clone_ref(py).into_any()).collect(),
+                                    vals: vals.iter().map(|k| k.clone_ref(py).into_any()).collect(),
+                                },
+                            )?,
                             source_loc: file_data.fill_source_loc(&term.location),
                         }
                     }
@@ -254,81 +199,39 @@ impl Expression {
                         input_type,
                         in_list,
                     } => Self::Input {
-                        args: args
-                            .iter()
-                            .map(|expr| {
-                                Expression::parse(py, expr, file_data)
-                                    .into_pyobject(py)
-                                    .expect("parsing input args")
-                                    .into()
-                            })
-                            .collect(),
+                        args: Self::parse_exprs(py, args, file_data)?,
                         input_type: input_type.as_ref().map(|it| it.bits()),
-                        in_list: in_list.as_ref().map(|in_list| {
-                            Expression::parse(py, in_list, file_data)
-                                .into_pyobject(py)
-                                .expect("parsing input in-list")
-                                .into()
-                        }),
+                        in_list: in_list
+                            .as_ref()
+                            .map(|in_list| Self::parse_py(py, in_list, file_data))
+                            .transpose()?,
                         source_loc: file_data.fill_source_loc(&term.location),
                     },
                     dreammaker::ast::Term::Locate { args, in_list } => Self::Locate {
-                        args: args
-                            .iter()
-                            .map(|expr| {
-                                Expression::parse(py, expr, file_data)
-                                    .into_pyobject(py)
-                                    .expect("parsing locate args")
-                                    .into()
-                            })
-                            .collect(),
-                        in_list: in_list.as_ref().map(|expr| {
-                            Expression::parse(py, expr, file_data)
-                                .into_pyobject(py)
-                                .expect("parsing locate in-list")
-                                .into()
-                        }),
+                        args: Self::parse_exprs(py, args, file_data)?,
+                        in_list: in_list
+                            .as_ref()
+                            .map(|expr| Self::parse_py(py, expr, file_data))
+                            .transpose()?,
                         source_loc: file_data.fill_source_loc(&term.location),
                     },
                     dreammaker::ast::Term::Pick(p) => Self::Pick {
                         args: p
                             .iter()
                             .map(|(a, b)| {
-                                (
-                                    a.as_ref().map(|expr| {
-                                        Expression::parse(py, expr, file_data)
-                                            .into_pyobject(py)
-                                            .expect("parsing pick arg key")
-                                            .into()
-                                    }),
-                                    Expression::parse(py, b, file_data)
-                                        .into_pyobject(py)
-                                        .expect("parsing pick arg val")
-                                        .into(),
-                                )
+                                Ok((
+                                    a.as_ref()
+                                        .map(|expr| Self::parse_py(py, expr, file_data))
+                                        .transpose()?,
+                                    Self::parse_py(py, b, file_data)?,
+                                ))
                             })
-                            .collect(),
+                            .collect::<PyResult<Vec<_>>>()?,
                         source_loc: file_data.fill_source_loc(&term.location),
                     },
                     dreammaker::ast::Term::DynamicCall(lib_name, proc_name) => Self::DynamicCall {
-                        lib_name: lib_name
-                            .iter()
-                            .map(|expr| {
-                                Expression::parse(py, expr, file_data)
-                                    .into_pyobject(py)
-                                    .expect("parsing dynamic call lib name")
-                                    .into()
-                            })
-                            .collect(),
-                        proc_name: proc_name
-                            .iter()
-                            .map(|expr| {
-                                Expression::parse(py, expr, file_data)
-                                    .into_pyobject(py)
-                                    .expect("parsing dynamic call proc name")
-                                    .into()
-                            })
-                            .collect(),
+                        lib_name: Self::parse_exprs(py, lib_name, file_data)?,
+                        proc_name: Self::parse_exprs(py, proc_name, file_data)?,
                         source_loc: file_data.fill_source_loc(&term.location),
                     },
                     dreammaker::ast::Term::ExternalCall {
@@ -336,27 +239,15 @@ impl Expression {
                         function,
                         args,
                     } => Self::ExternalCall {
-                        library_name: Expression::parse(
+                        library_name: Self::parse_py(
                             py,
-                            library.as_ref().unwrap().as_ref(),
+                            library.as_deref().ok_or_else(|| {
+                                PyValueError::new_err("missing external call library")
+                            })?,
                             file_data,
-                        )
-                        .into_pyobject(py)
-                        .expect("parsing external call lib name")
-                        .into(),
-                        function_name: Expression::parse(py, function, file_data)
-                            .into_pyobject(py)
-                            .expect("parsing external call func name")
-                            .into(),
-                        args: args
-                            .iter()
-                            .map(|a| {
-                                Expression::parse(py, a, file_data)
-                                    .into_pyobject(py)
-                                    .expect("parsing external call arg")
-                                    .into()
-                            })
-                            .collect(),
+                        )?,
+                        function_name: Self::parse_py(py, function, file_data)?,
+                        args: Self::parse_exprs(py, args, file_data)?,
                         source_loc: file_data.fill_source_loc(&term.location),
                     },
                     dreammaker::ast::Term::GlobalIdent(_) => todo!(),
@@ -367,61 +258,37 @@ impl Expression {
                     match &f.elem {
                         dreammaker::ast::Follow::Index(_, expression) => {
                             core = Self::Index {
-                                expr: core
-                                    .into_pyobject(py)
-                                    .expect("parsing term follow index expr")
-                                    .into(),
-                                index: Expression::parse(py, expression, file_data)
-                                    .into_pyobject(py)
-                                    .expect("parsing term follow index")
-                                    .into(),
+                                expr: Py::new(py, core)?,
+                                index: Self::parse_py(py, expression, file_data)?,
                                 source_loc: file_data.fill_source_loc(&f.location),
                             };
                         }
                         dreammaker::ast::Follow::Field(_, ident2) => {
                             core = Self::Field {
-                                expr: Some(
-                                    core.into_pyobject(py)
-                                        .expect("parsing term follow field expr")
-                                        .into(),
-                                ),
-                                field: Expression::ident(
+                                expr: Some(Py::new(py, core)?),
+                                field: Self::ident(
                                     ident2.to_string(),
                                     file_data.fill_source_loc(&f.location),
                                     py,
-                                ),
+                                )?,
                                 source_loc: file_data.fill_source_loc(&f.location),
                             };
                         }
                         dreammaker::ast::Follow::Call(_, ident2, args) => {
                             core = Self::Call {
-                                expr: core
-                                    .into_pyobject(py)
-                                    .expect("parsing term follow call")
-                                    .into(),
-                                name: Expression::ident(
+                                expr: Py::new(py, core)?,
+                                name: Self::ident(
                                     ident2.to_string(),
                                     file_data.fill_source_loc(&f.location),
                                     py,
-                                ),
-                                args: args
-                                    .iter()
-                                    .map(|e| {
-                                        Expression::parse(py, e, file_data)
-                                            .into_pyobject(py)
-                                            .expect("parsing term follow arg")
-                                            .into()
-                                    })
-                                    .collect(),
+                                )?,
+                                args: Self::parse_exprs(py, args, file_data)?,
                                 source_loc: file_data.fill_source_loc(&f.location),
                             }
                         }
                         dreammaker::ast::Follow::Unary(unary_op) => {
                             core = Self::UnaryOp {
-                                expr: core
-                                    .into_pyobject(py)
-                                    .expect("parsing term follow unary op")
-                                    .into(),
+                                expr: Py::new(py, core)?,
                                 unary_op: match unary_op {
                                     dreammaker::ast::UnaryOp::Neg => UnaryOperator::Neg,
                                     dreammaker::ast::UnaryOp::Not => UnaryOperator::Not,
@@ -438,32 +305,15 @@ impl Expression {
                         }
                         dreammaker::ast::Follow::StaticField(ident2) => {
                             core = Self::StaticField {
-                                expr: core
-                                    .into_pyobject(py)
-                                    .expect("parsing term follow static field")
-                                    .into(),
-                                field: Expression::ident(
-                                    ident2.to_string(),
-                                    SourceLoc::builtin(),
-                                    py,
-                                ),
+                                expr: Py::new(py, core)?,
+                                field: Self::ident(ident2.to_string(), SourceLoc::builtin(), py)?,
                                 source_loc: file_data.fill_source_loc(&f.location),
                             };
                         }
                         dreammaker::ast::Follow::ProcReference(ident2) => {
                             core = Self::ProcReference {
-                                expr: core
-                                    .into_pyobject(py)
-                                    .expect("parsing term follow proc ref expr")
-                                    .into(),
-                                name: Expression::ident(
-                                    ident2.to_string(),
-                                    SourceLoc::builtin(),
-                                    py,
-                                )
-                                .into_pyobject(py)
-                                .expect("parsing term follow proc ref name")
-                                .into(),
+                                expr: Py::new(py, core)?,
+                                name: Self::ident(ident2.to_string(), SourceLoc::builtin(), py)?,
                                 source_loc: file_data.fill_source_loc(&f.location),
                             };
                         }
@@ -500,14 +350,8 @@ impl Expression {
                     dreammaker::ast::BinaryOp::To => BinaryOperator::To,
                     dreammaker::ast::BinaryOp::LessOrGreater => BinaryOperator::LessOrGreater,
                 },
-                lhs: Self::parse(py, lhs, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing binary op lhs")
-                    .into(),
-                rhs: Self::parse(py, rhs, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing binary op rhs")
-                    .into(),
+                lhs: Self::parse_py(py, lhs, file_data)?,
+                rhs: Self::parse_py(py, rhs, file_data)?,
                 source_loc: SourceLoc::builtin(),
             },
             dreammaker::ast::Expression::AssignOp { op, lhs, rhs } => Self::AssignOp {
@@ -528,31 +372,16 @@ impl Expression {
                     AssignOp::LShiftAssign => AssignOperator::AssignLShift,
                     AssignOp::RShiftAssign => AssignOperator::AssignRShift,
                 },
-                lhs: Self::parse(py, lhs, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing assign op lhs")
-                    .into(),
-                rhs: Self::parse(py, rhs, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing assign op rhs")
-                    .into(),
+                lhs: Self::parse_py(py, lhs, file_data)?,
+                rhs: Self::parse_py(py, rhs, file_data)?,
                 source_loc: SourceLoc::builtin(),
             },
             dreammaker::ast::Expression::TernaryOp { cond, if_, else_ } => Self::TernaryOp {
-                cond: Self::parse(py, cond, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing ternary op condition")
-                    .into(),
-                if_expr: Self::parse(py, if_, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing ternary op if")
-                    .into(),
-                else_expr: Self::parse(py, else_, file_data)
-                    .into_pyobject(py)
-                    .expect("parsing ternary op else")
-                    .into(),
+                cond: Self::parse_py(py, cond, file_data)?,
+                if_expr: Self::parse_py(py, if_, file_data)?,
+                else_expr: Self::parse_py(py, else_, file_data)?,
                 source_loc: SourceLoc::builtin(),
             },
-        }
+        })
     }
 }

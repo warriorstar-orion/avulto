@@ -1,7 +1,7 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 use pyo3::{
-    Bound, IntoPyObject, Py, PyAny, PyResult, Python, pyclass, pymethods,
+    Bound, Py, PyAny, PyResult, Python, pyclass, pymethods,
     types::{PyAnyMethods, PyDict, PyDictMethods, PyList},
 };
 use pyo3_stub_gen::derive::gen_stub_pyclass;
@@ -20,7 +20,11 @@ pub struct Prefab {
 }
 
 impl Prefab {
-    pub fn make(py: Python<'_>, prefab: &dreammaker::ast::Prefab, file_data: &FileData) -> Self {
+    pub fn make(
+        py: Python<'_>,
+        prefab: &dreammaker::ast::Prefab,
+        file_data: &FileData,
+    ) -> PyResult<Self> {
         let mut path: String = "".to_owned();
         for (op, val) in prefab.path.iter() {
             path.push_str(format!("{}{}", op, val).as_str());
@@ -30,23 +34,13 @@ impl Prefab {
 
         for (k, v) in prefab.vars.iter() {
             let var = PyDict::new(py);
-            var.set_item(
-                k.as_str(),
-                Expression::parse(py, v, file_data)
-                    .into_pyobject(py)
-                    .expect("setting prefab vars")
-                    .into_any(),
-            )
-            .expect("setting prefab var item");
+            var.set_item(k.as_str(), Expression::parse_py(py, v, file_data)?)?;
             out.push(var);
         }
-        Prefab {
+        Ok(Prefab {
             path: pypath,
-            vars: PyList::new(py, out)
-                .expect("building prefab vars list")
-                .into_any()
-                .unbind(),
-        }
+            vars: PyList::new(py, out)?.into_any().unbind(),
+        })
     }
     pub fn vars_to_string(&self, py: Python<'_>) -> String {
         if let Ok(vardict) = self.vars.cast_bound::<PyDict>(py) {

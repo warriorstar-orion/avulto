@@ -98,8 +98,7 @@ impl TypePath {
     }
 
     pub fn to_tree_path(&self) -> TreePath {
-        let parts = self.rel.split('/').map(String::from).collect();
-        parts
+        self.rel.split('/').map(String::from).collect()
     }
 
     pub fn make_untrusted(value: &str) -> Result<TypePath, String> {
@@ -207,19 +206,19 @@ fn to_absolute_path(value: &str) -> String {
     if parts.is_empty() {
         "/".to_string()
     } else if parts[0].eq("area") {
-        return "/datum/atom/".to_string() + &parts.join("/");
+        "/datum/atom/".to_string() + &parts.join("/")
     } else if parts[0].eq("atom") {
-        return "/datum/".to_string() + &parts.join("/");
+        "/datum/".to_string() + &parts.join("/")
     } else if parts[0].eq("mob") {
-        return "/datum/atom/movable/".to_string() + &parts.join("/");
+        "/datum/atom/movable/".to_string() + &parts.join("/")
     } else if parts[0].eq("turf") {
-        return "/datum/atom/".to_string() + &parts.join("/");
+        "/datum/atom/".to_string() + &parts.join("/")
     } else if parts[0].eq("obj") {
-        return "/datum/atom/movable/".to_string() + &parts.join("/");
+        "/datum/atom/movable/".to_string() + &parts.join("/")
     } else if CORE_TYPES.contains(&parts[0]) {
-        return "/".to_string() + &parts.join("/");
+        "/".to_string() + &parts.join("/")
     } else {
-        return "/datum/".to_string() + &parts.join("/");
+        "/datum/".to_string() + &parts.join("/")
     }
 }
 
