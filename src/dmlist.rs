@@ -62,22 +62,6 @@ impl NewCall {
 }
 
 #[pyclass]
-struct DmListIter {
-    inner: std::iter::Zip<std::vec::IntoIter<PyExpr>, std::vec::IntoIter<PyExpr>>,
-}
-
-#[pymethods]
-impl DmListIter {
-    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
-        slf
-    }
-
-    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<(PyExpr, PyExpr)> {
-        slf.inner.next()
-    }
-}
-
-#[pyclass]
 struct DmListKeyIter {
     list: Vec<Py<PyAny>>,
     index: usize,
