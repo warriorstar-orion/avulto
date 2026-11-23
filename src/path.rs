@@ -2,18 +2,12 @@ use std::fmt;
 
 use dreammaker::ast::TreePath;
 use itertools::Itertools;
-use pyo3::{
-    Bound, PyAny, PyResult, pymethods,
-    types::{PyAnyMethods, PyString, PyStringMethods},
-};
-use pyo3::{
-    IntoPyObject, Python,
-    exceptions::{PyException, PyTypeError},
-    pyclass,
-};
+use pyo3::{FromPyObject, PyResult, pymethods, types::PyAnyMethods};
+use pyo3::{IntoPyObject, Python, exceptions::PyException, pyclass};
 use pyo3_stub_gen::{
     create_exception,
     derive::{gen_stub_pyclass, gen_stub_pymethods},
+    impl_stub_type,
 };
 
 create_exception!(avulto.exceptions, PathError, PyException);
@@ -72,6 +66,14 @@ fn is_valid_path_part(part: &str) -> bool {
     matches!(bytes.next(), Some(b'A'..=b'Z' | b'a'..=b'z' | b'_'))
         && bytes.all(|b| b.is_ascii_alphanumeric() || b == b'_')
 }
+
+#[derive(FromPyObject)]
+pub enum PathArg {
+    Path(TypePath),
+    Str(String),
+}
+
+impl_stub_type!(PathArg = TypePath | String);
 
 impl TypePath {
     pub fn root() -> TypePath {
@@ -168,13 +170,10 @@ impl TypePath {
     }
 
     /// Performs a comparison for either another path or a string.
-    fn cmp_other(&self, other: &Bound<PyAny>, op: impl Fn(&str, &str) -> bool) -> bool {
-        if let Ok(rhs) = other.extract::<Self>() {
-            op(&self.abs, &rhs.abs)
-        } else if let Ok(rhs) = other.cast::<PyString>() {
-            op(&self.abs, &to_absolute_path(rhs.to_str().unwrap()))
-        } else {
-            false
+    fn cmp_other(&self, other: PathArg, op: impl Fn(&str, &str) -> bool) -> bool {
+        match other {
+            PathArg::Path(type_path) => op(&self.abs, &type_path.abs),
+            PathArg::Str(rhs) => op(&self.abs, &to_absolute_path(&rhs)),
         }
     }
 }
@@ -241,14 +240,12 @@ impl TypePath {
     /// If `strict` is true, the current path will not be considered a child of
     /// itself.
     #[pyo3(signature = (other, strict=false))]
-    fn child_of(&self, other: &Bound<PyAny>, strict: bool) -> PyResult<bool> {
-        if let Ok(rhs) = other.extract::<Self>() {
-            return Ok(self.internal_child_of_string(&rhs.abs, strict));
-        } else if let Ok(rhs) = other.cast::<PyString>() {
-            return Ok(self.internal_child_of_string(&rhs.to_cow().unwrap().to_string(), strict));
-        }
-
-        Err(PyTypeError::new_err("invalid argument type"))
+    fn child_of(&self, other: PathArg, strict: bool) -> PyResult<bool> {
+        let rhs = match other {
+            PathArg::Path(type_path) => type_path.abs,
+            PathArg::Str(s) => s,
+        };
+        Ok(self.internal_child_of_string(&rhs, strict))
     }
 
     /// Returns whether the path is a parent of `other`.
@@ -256,14 +253,13 @@ impl TypePath {
     /// If `strict` is true, the current path will not be considered a parent of
     /// itself.
     #[pyo3(signature = (other, strict=false))]
-    fn parent_of(&self, other: &Bound<PyAny>, strict: bool) -> PyResult<bool> {
-        if let Ok(rhs) = other.extract::<Self>() {
-            return Ok(self.internal_parent_of_string(&rhs.abs, strict));
-        } else if let Ok(rhs) = other.cast::<PyString>() {
-            return Ok(self.internal_parent_of_string(&rhs.to_cow().unwrap().to_string(), strict));
-        }
+    fn parent_of(&self, other: PathArg, strict: bool) -> PyResult<bool> {
+        let rhs = match other {
+            PathArg::Path(type_path) => type_path.abs,
+            PathArg::Str(s) => s,
+        };
 
-        Err(PyTypeError::new_err("invalid argument type"))
+        Ok(self.internal_parent_of_string(&rhs, strict))
     }
 
     /// The parent path.
@@ -325,48 +321,49 @@ impl TypePath {
         Ok(self.rel.clone())
     }
 
-    fn __eq__(&self, other: &Bound<PyAny>) -> bool {
+    fn __eq__(&self, other: PathArg) -> bool {
         self.cmp_other(other, |lhs, rhs| lhs == rhs)
     }
 
-    fn __ne__(&self, other: &Bound<PyAny>) -> bool {
+    fn __ne__(&self, other: PathArg) -> bool {
         self.cmp_other(other, |lhs, rhs| lhs != rhs)
     }
 
-    fn __lt__(&self, other: &Bound<PyAny>) -> bool {
+    fn __lt__(&self, other: PathArg) -> bool {
         self.cmp_other(other, |lhs, rhs| lhs < rhs)
     }
 
-    fn __le__(&self, other: &Bound<PyAny>) -> bool {
+    fn __le__(&self, other: PathArg) -> bool {
         self.cmp_other(other, |lhs, rhs| lhs <= rhs)
     }
 
-    fn __gt__(&self, other: &Bound<PyAny>) -> bool {
+    fn __gt__(&self, other: PathArg) -> bool {
         self.cmp_other(other, |lhs, rhs| lhs > rhs)
     }
 
-    fn __ge__(&self, other: &Bound<PyAny>) -> bool {
+    fn __ge__(&self, other: PathArg) -> bool {
         self.cmp_other(other, |lhs, rhs| lhs >= rhs)
     }
 
     /// Return the path with the specified suffix.
-    fn __truediv__(&self, other: &Bound<PyAny>) -> PyResult<Self> {
-        if let Ok(rhs) = other.extract::<Self>() {
-            let new_path = self.abs.clone() + &rhs.rel;
-            return TypePath::new(new_path.as_str());
-        } else if let Ok(rhs) = other.cast::<PyString>() {
-            let new_path = if self.get_is_root() {
-                String::from("")
-            } else {
-                self.abs.clone()
-            } + "/"
-                + rhs
-                    .to_string()
-                    .strip_prefix('/')
-                    .unwrap_or(rhs.to_string().as_str());
-            return TypePath::new(new_path.as_str());
+    fn __truediv__(&self, other: PathArg) -> PyResult<Self> {
+        match other {
+            PathArg::Path(type_path) => {
+                let new_path = self.abs.clone() + &type_path.rel;
+                TypePath::new(new_path.as_str())
+            }
+            PathArg::Str(rhs) => {
+                let new_path = if self.get_is_root() {
+                    String::from("")
+                } else {
+                    self.abs.clone()
+                } + "/"
+                    + rhs
+                        .to_string()
+                        .strip_prefix('/')
+                        .unwrap_or(rhs.to_string().as_str());
+                TypePath::new(new_path.as_str())
+            }
         }
-
-        Err(PathError::new_err("cannot append"))
     }
 }

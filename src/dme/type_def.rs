@@ -137,10 +137,9 @@ impl VarHolder {
 #[pymethods]
 impl VarHolder {
     /// Return the names of all variables visible from this type path.
-    #[gen_stub(override_return_type(type_repr="builtins.list[builtins.str]", imports=("builtins")))]
-    pub fn names(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
+    pub fn names(&self, py: Python<'_>) -> PyResult<Vec<String>> {
         let names = self.collect_names(py, true, true, true)?;
-        Ok(PyList::new(py, names)?.into_pyobject(py)?.unbind())
+        Ok(names)
     }
 
     /// Return all variable declarations visible from this type path.
@@ -300,10 +299,9 @@ impl ProcHolder {
 #[pymethods]
 impl ProcHolder {
     /// Return the names of all procs visible from this type path.
-    #[gen_stub(override_return_type(type_repr="builtins.list[builtins.str]", imports=("builtins")))]
-    pub fn names(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
+    pub fn names(&self, py: Python<'_>) -> PyResult<Vec<String>> {
         let names = self.collect_names(py, true, true, true)?;
-        Ok(PyList::new(py, names)?.into_pyobject(py)?.unbind())
+        Ok(names)
     }
 
     /// Return all proc declarations visible from this type path.

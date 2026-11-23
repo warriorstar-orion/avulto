@@ -63,7 +63,7 @@ class DME:
         A mapping of paths in the DME to their type definitions.
         """
     @staticmethod
-    def from_file(filename: os.PathLike[builtins.str] | builtins.str, parse_procs: builtins.bool = False) -> DME:
+    def from_file(filename: builtins.str | os.PathLike | pathlib.Path, parse_procs: builtins.bool = False) -> DME:
         r"""
         Read the BYOND environment from the *filename* referring to a ".dme" file.
         
@@ -125,7 +125,7 @@ class DMI:
         Creates an empty DMI file with the given icon width-height tuple *dims*.
         """
     @staticmethod
-    def from_file(filename: os.PathLike[builtins.str] | builtins.str) -> DMI:
+    def from_file(filename: builtins.str | os.PathLike | pathlib.Path) -> DMI:
         r"""
         Creates a DMI from the given *filename*.
         """
@@ -140,7 +140,7 @@ class DMI:
         """
     def __str__(self) -> builtins.str: ...
     def __repr__(self) -> builtins.str: ...
-    def save_to(self, filename: typing.Any, compress: builtins.int = 0) -> None:
+    def save_to(self, filename: builtins.str | os.PathLike | pathlib.Path, compress: builtins.int = 0) -> None:
         r"""
         Saves the DMI to the given *filename*.
         """
@@ -161,11 +161,11 @@ class DMM:
         The original filename of the DMM.
         """
     @staticmethod
-    def from_file(filename: os.PathLike[builtins.str] | builtins.str) -> DMM:
+    def from_file(filename: builtins.str | os.PathLike | pathlib.Path) -> DMM:
         r"""
         Creates a DMM from the given `filename`.
         """
-    def save_to(self, filename: typing.Any) -> None:
+    def save_to(self, filename: builtins.str | os.PathLike | pathlib.Path) -> None:
         r"""
         Saves the DMM to the given `filename`.
         """
@@ -428,7 +428,7 @@ class Tile:
         Return the indexes of the prefabs prefixed with the given path *prefix*.
         If exact is True, then the prefab path must match exactly.
         """
-    def only(self, prefix: typing.Any, exact: builtins.bool = False) -> typing.Any:
+    def only(self, prefix: typing.Any, exact: builtins.bool = False) -> typing.Optional[builtins.int]:
         r"""
         Returns the index of the only prefab with the given *prefix*, or None if
         no such prefab exists. Raises an error if there is more than one prefab
@@ -551,14 +551,14 @@ class TypePath:
         r"""
         Returns a new path.
         """
-    def child_of(self, other: typing.Any, strict: builtins.bool = False) -> builtins.bool:
+    def child_of(self, other: TypePath  |  builtins.str, strict: builtins.bool = False) -> builtins.bool:
         r"""
         Returns whether the path is a child of `other`.
         
         If `strict` is true, the current path will not be considered a child of
         itself.
         """
-    def parent_of(self, other: typing.Any, strict: builtins.bool = False) -> builtins.bool:
+    def parent_of(self, other: TypePath  |  builtins.str, strict: builtins.bool = False) -> builtins.bool:
         r"""
         Returns whether the path is a parent of `other`.
         
@@ -568,13 +568,13 @@ class TypePath:
     def __hash__(self) -> builtins.int: ...
     def __str__(self) -> builtins.str: ...
     def __repr__(self) -> builtins.str: ...
-    def __eq__(self, other: typing.Any) -> builtins.bool: ...
-    def __ne__(self, other: typing.Any) -> builtins.bool: ...
-    def __lt__(self, other: typing.Any) -> builtins.bool: ...
-    def __le__(self, other: typing.Any) -> builtins.bool: ...
-    def __gt__(self, other: typing.Any) -> builtins.bool: ...
-    def __ge__(self, other: typing.Any) -> builtins.bool: ...
-    def __truediv__(self, other: typing.Any) -> TypePath:
+    def __eq__(self, other: TypePath  |  builtins.str) -> builtins.bool: ...
+    def __ne__(self, other: TypePath  |  builtins.str) -> builtins.bool: ...
+    def __lt__(self, other: TypePath  |  builtins.str) -> builtins.bool: ...
+    def __le__(self, other: TypePath  |  builtins.str) -> builtins.bool: ...
+    def __gt__(self, other: TypePath  |  builtins.str) -> builtins.bool: ...
+    def __ge__(self, other: TypePath  |  builtins.str) -> builtins.bool: ...
+    def __truediv__(self, other: TypePath  |  builtins.str) -> TypePath:
         r"""
         Return the path with the specified suffix.
         """

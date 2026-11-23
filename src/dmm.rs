@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 
 use dmm_tools::dmm::{Key, Prefab};
 use itertools::iproduct;
-use pyo3::exceptions::{PyOSError, PyRuntimeError, PyValueError};
-use pyo3::types::{PyAnyMethods, PyList, PyString, PyTuple};
+use pyo3::exceptions::{PyOSError, PyRuntimeError};
+use pyo3::types::{PyAnyMethods, PyList, PyTuple};
 use pyo3::{
     Bound, IntoPyObject, IntoPyObjectExt, Py, PyAny, PyRef, PyRefMut, PyResult, Python, pyclass,
     pymethods,
@@ -117,8 +117,8 @@ impl CoordIterator {
     fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
         slf
     }
-    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> Option<Py<PyAny>> {
-        slf.iter.next().map(|c| c.into_py_any(py).unwrap())
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<(i32, i32, i32)> {
+        slf.iter.next()
     }
 }
 
@@ -186,26 +186,15 @@ impl Dmm {
 impl Dmm {
     /// Creates a DMM from the given `filename`.
     #[staticmethod]
-    fn from_file(
-        #[gen_stub(override_type(type_repr = "os.PathLike[builtins.str] | builtins.str", imports=("builtins", "os")))]
-        filename: &Bound<PyAny>,
-    ) -> PyResult<Dmm> {
-        let path = if let Ok(pathbuf) = filename.extract::<std::path::PathBuf>() {
-            pathbuf
-        } else if let Ok(pystr) = filename.cast::<PyString>() {
-            PathBuf::from(&pystr.to_string())
-        } else {
-            return Err(PyRuntimeError::new_err(format!(
-                "invalid filename {}",
+    fn from_file(filename: PathBuf) -> PyResult<Dmm> {
+        if !filename.is_file() {
+            return Err(PyOSError::new_err(format!(
+                "file not found: {:?}",
                 filename
             )));
-        };
-
-        if !path.is_file() {
-            return Err(PyOSError::new_err(format!("file not found: {:?}", path)));
         }
 
-        let map = dmm_tools::dmm::Map::from_file(&path).unwrap();
+        let map = dmm_tools::dmm::Map::from_file(&filename).unwrap();
         let dim = map.dim_xyz();
         Ok(Dmm {
             map,
@@ -214,26 +203,20 @@ impl Dmm {
                 y: dim.1 as i32,
                 z: dim.2 as i32,
             },
-            filepath: path,
+            filepath: filename,
         })
     }
 
     /// Saves the DMM to the given `filename`.
-    fn save_to(&mut self, filename: &Bound<PyAny>) -> PyResult<()> {
-        if let Ok(path) = filename.extract::<std::path::PathBuf>() {
-            if let Ok(()) = self.write_to_file(&path) {
-                return Ok(());
-            }
-        } else if let Ok(pystr) = filename.cast::<PyString>() {
-            if let Ok(()) = self.write_to_file(Path::new(&pystr.to_string())) {
-                return Ok(());
-            }
+    fn save_to(&mut self, filename: PathBuf) -> PyResult<()> {
+        if let Ok(()) = self.write_to_file(&filename) {
+            Ok(())
+        } else {
+            Err(PyRuntimeError::new_err(format!(
+                "failed to write {:?}",
+                filename
+            )))
         }
-
-        Err(PyValueError::new_err(format!(
-            "invalid filename {}",
-            filename
-        )))
     }
 
     /// Return the tile definition at coords (`x`, `y`, `z`).
