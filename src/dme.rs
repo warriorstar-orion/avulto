@@ -405,32 +405,20 @@ impl Dme {
     ///    RuntimeError: If there was an error parsing the DME environment.
     #[staticmethod]
     #[pyo3(signature = (filename, parse_procs=false))]
-    fn from_file(
-        #[gen_stub(override_type(type_repr = "os.PathLike[builtins.str] | builtins.str", imports=("builtins", "os")))]
-        filename: &Bound<PyAny>,
-        parse_procs: bool,
-    ) -> PyResult<Dme> {
-        let path = if let Ok(path) = filename.extract::<std::path::PathBuf>() {
-            path
-        } else if let Ok(pystr) = filename.cast::<PyString>() {
-            std::path::Path::new(&pystr.to_string()).to_path_buf()
-        } else {
-            return Err(PyValueError::new_err(format!(
-                "invalid filename {}",
+    fn from_file(filename: PathBuf, parse_procs: bool) -> PyResult<Dme> {
+        if !filename.is_file() {
+            return Err(PyOSError::new_err(format!(
+                "file not found: {:?}",
                 filename
             )));
-        };
-
-        if !path.is_file() {
-            return Err(PyOSError::new_err(format!("file not found: {:?}", path)));
         }
         let ctx = dreammaker::Context::default();
-        let pp = match dreammaker::preprocessor::Preprocessor::new(&ctx, path.clone()) {
+        let pp = match dreammaker::preprocessor::Preprocessor::new(&ctx, filename.clone()) {
             Ok(pp) => pp,
             Err(e) => {
                 return Err(PyOSError::new_err(format!(
                     "error opening {:?}: {}",
-                    path, e
+                    filename, e
                 )));
             }
         };
@@ -443,14 +431,14 @@ impl Dme {
         let (fatal_errored, tree) = parser.parse_object_tree_2();
         if fatal_errored {
             return Err(PyRuntimeError::new_err(format!(
-                "failed to parse DME environment {}",
+                "failed to parse DME environment {:?}",
                 filename
             )));
         }
 
         let dme = Dme {
             objtree: tree,
-            filepath: path,
+            filepath: filename,
             procs_parsed: parse_procs,
             file_data: FileData::from_file_list(ctx.file_list()),
         };
