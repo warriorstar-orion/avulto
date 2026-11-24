@@ -1,5 +1,5 @@
 use dreammaker::ast::AssignOp;
-use pyo3::{Py, PyResult, Python, exceptions::PyValueError};
+use pyo3::{IntoPyObject, Py, PyResult, Python, exceptions::PyValueError};
 
 use crate::{
     dme::{FileData, SourceLoc},
@@ -29,7 +29,7 @@ impl Expression {
         expr: &dreammaker::ast::Expression,
         file_data: &FileData,
     ) -> PyResult<PyExpr> {
-        Py::new(py, Self::parse(py, expr, file_data)?)
+        Ok(Self::parse(py, expr, file_data)?.into_pyobject(py)?.unbind())
     }
 
     pub fn parse(
@@ -85,8 +85,9 @@ impl Expression {
                                 .as_ref()
                                 .map(|token_expr| Self::parse_py(py, token_expr, file_data))
                                 .transpose()?;
-                            let token_expr_str =
-                                Py::new(py, Constant::String(token_str.to_string()))?;
+                            let token_expr_str = Constant::String(token_str.to_string())
+                                .into_pyobject(py)?
+                                .unbind();
                             token_vec.push((token_expr_node, token_expr_str));
                         }
                         Self::InterpString {
@@ -135,18 +136,17 @@ impl Expression {
                             .fields
                             .iter()
                             .map(|f| {
-                                Py::new(
-                                    py,
-                                    Self::Field {
-                                        expr: None,
-                                        field: Self::ident(
-                                            f.ident.to_string(),
-                                            SourceLoc::builtin(),
-                                            py,
-                                        )?,
-                                        source_loc: SourceLoc::builtin(),
-                                    },
-                                )
+                                Ok(Self::Field {
+                                    expr: None,
+                                    field: Self::ident(
+                                        f.ident.to_string(),
+                                        SourceLoc::builtin(),
+                                        py,
+                                    )?,
+                                    source_loc: SourceLoc::builtin(),
+                                }
+                                .into_pyobject(py)?
+                                .unbind())
                             })
                             .collect::<PyResult<Vec<_>>>()?,
                         source_loc: file_data.fill_source_loc(&term.location),
@@ -170,15 +170,16 @@ impl Expression {
                                     vals.push(Self::null(SourceLoc::builtin(), py)?);
                                 }
                                 dreammaker::ast::Expression::TernaryOp { cond, if_, else_ } => {
-                                    keys.push(Py::new(
-                                        py,
+                                    keys.push(
                                         Self::TernaryOp {
                                             cond: Self::parse_py(py, cond, file_data)?,
                                             if_expr: Self::parse_py(py, if_, file_data)?,
                                             else_expr: Self::parse_py(py, else_, file_data)?,
                                             source_loc: SourceLoc::builtin(),
-                                        },
-                                    )?);
+                                        }
+                                        .into_pyobject(py)?
+                                        .unbind(),
+                                    );
                                     vals.push(Self::null(SourceLoc::builtin(), py)?);
                                 }
                             }
@@ -258,14 +259,14 @@ impl Expression {
                     match &f.elem {
                         dreammaker::ast::Follow::Index(_, expression) => {
                             core = Self::Index {
-                                expr: Py::new(py, core)?,
+                                expr: core.into_pyobject(py)?.unbind(),
                                 index: Self::parse_py(py, expression, file_data)?,
                                 source_loc: file_data.fill_source_loc(&f.location),
                             };
                         }
                         dreammaker::ast::Follow::Field(_, ident2) => {
                             core = Self::Field {
-                                expr: Some(Py::new(py, core)?),
+                                expr: Some(core.into_pyobject(py)?.unbind()),
                                 field: Self::ident(
                                     ident2.to_string(),
                                     file_data.fill_source_loc(&f.location),
@@ -276,7 +277,7 @@ impl Expression {
                         }
                         dreammaker::ast::Follow::Call(_, ident2, args) => {
                             core = Self::Call {
-                                expr: Py::new(py, core)?,
+                                expr: core.into_pyobject(py)?.unbind(),
                                 name: Self::ident(
                                     ident2.to_string(),
                                     file_data.fill_source_loc(&f.location),
@@ -288,7 +289,7 @@ impl Expression {
                         }
                         dreammaker::ast::Follow::Unary(unary_op) => {
                             core = Self::UnaryOp {
-                                expr: Py::new(py, core)?,
+                                expr: core.into_pyobject(py)?.unbind(),
                                 unary_op: match unary_op {
                                     dreammaker::ast::UnaryOp::Neg => UnaryOperator::Neg,
                                     dreammaker::ast::UnaryOp::Not => UnaryOperator::Not,
@@ -305,14 +306,14 @@ impl Expression {
                         }
                         dreammaker::ast::Follow::StaticField(ident2) => {
                             core = Self::StaticField {
-                                expr: Py::new(py, core)?,
+                                expr: core.into_pyobject(py)?.unbind(),
                                 field: Self::ident(ident2.to_string(), SourceLoc::builtin(), py)?,
                                 source_loc: file_data.fill_source_loc(&f.location),
                             };
                         }
                         dreammaker::ast::Follow::ProcReference(ident2) => {
                             core = Self::ProcReference {
-                                expr: Py::new(py, core)?,
+                                expr: core.into_pyobject(py)?.unbind(),
                                 name: Self::ident(ident2.to_string(), SourceLoc::builtin(), py)?,
                                 source_loc: file_data.fill_source_loc(&f.location),
                             };

@@ -164,33 +164,30 @@ pub enum Expression {
 
 impl Expression {
     pub fn null(source_loc: SourceLoc, py: Python<'_>) -> PyResult<Py<Self>> {
-        Py::new(
-            py,
-            Self::Constant {
-                constant: Constant::Null(),
-                source_loc,
-            },
-        )
+        Ok(Self::Constant {
+            constant: Constant::Null(),
+            source_loc,
+        }
+        .into_pyobject(py)?
+        .unbind())
     }
 
     pub fn ident(ident: String, source_loc: SourceLoc, py: Python<'_>) -> PyResult<Py<Self>> {
-        Py::new(
-            py,
-            Self::Identifier {
-                name: ident,
-                source_loc,
-            },
-        )
+        Ok(Self::Identifier {
+            name: ident,
+            source_loc,
+        }
+        .into_pyobject(py)?
+        .unbind())
     }
 
     pub fn string(string: String, source_loc: SourceLoc, py: Python<'_>) -> PyResult<Py<Self>> {
-        Py::new(
-            py,
-            Self::Constant {
-                constant: Constant::String(string),
-                source_loc,
-            },
-        )
+        Ok(Self::Constant {
+            constant: Constant::String(string),
+            source_loc,
+        }
+        .into_pyobject(py)?
+        .unbind())
     }
 }
 
