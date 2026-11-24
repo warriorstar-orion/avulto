@@ -12,6 +12,7 @@ use pyo3_stub_gen::derive::{
 use crate::{
     dme::{
         SourceLoc,
+        node_walk::try_visit,
         operators::{AssignOperator, BinaryOperator, UnaryOperator},
         prefab::Prefab,
     },
@@ -242,10 +243,11 @@ pub enum Node {
 }
 
 pub fn visit_constant(constant: &Constant, walker: &Bound<PyAny>) -> PyResult<()> {
-    if walker.hasattr("visit_Constant").unwrap() {
-        walker.call_method1("visit_Constant", (constant.clone(),))?;
-    }
-
+    try_visit(
+        walker,
+        pyo3::intern!(walker.py(), "visit_Constant"),
+        (constant.clone(),),
+    )?;
     Ok(())
 }
 

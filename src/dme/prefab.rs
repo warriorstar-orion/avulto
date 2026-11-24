@@ -6,7 +6,10 @@ use pyo3::{
 };
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 
-use crate::{dme::FileData, path::TypePath};
+use crate::{
+    dme::{FileData, node_walk::try_visit},
+    path::TypePath,
+};
 
 use super::expression::Expression;
 
@@ -65,10 +68,11 @@ impl Prefab {
     }
 
     pub fn walk(self_: &Bound<Self>, walker: &Bound<PyAny>, py: Python<'_>) -> PyResult<()> {
-        if walker.hasattr("visit_Prefab").unwrap() {
-            walker.call_method1("visit_Prefab", (self_, py.None()))?;
-        }
-
+        try_visit(
+            walker,
+            pyo3::intern!(walker.py(), "visit_Prefab"),
+            (self_, py.None()),
+        )?;
         Ok(())
     }
 }
