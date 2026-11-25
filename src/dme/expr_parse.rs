@@ -29,7 +29,9 @@ impl Expression {
         expr: &dreammaker::ast::Expression,
         file_data: &FileData,
     ) -> PyResult<PyExpr> {
-        Ok(Self::parse(py, expr, file_data)?.into_pyobject(py)?.unbind())
+        Ok(Self::parse(py, expr, file_data)?
+            .into_pyobject(py)?
+            .unbind())
     }
 
     pub fn parse(
