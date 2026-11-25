@@ -7,8 +7,8 @@ use dmi::icon::{DmiVersion, Icon};
 use oxipng::{InFile, OutFile};
 use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::{PyException, PyFileNotFoundError, PyRuntimeError};
-use pyo3::types::{PyListMethods, PyTuple};
-use pyo3::{Py, PyAny, PyRef, PyRefMut, PyResult, Python, pyclass, pymethods, types::PyList};
+use pyo3::types::PyListMethods;
+use pyo3::{Py, PyAny, PyResult, Python, pyclass, pymethods, types::PyList};
 use pyo3_stub_gen::create_exception;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
