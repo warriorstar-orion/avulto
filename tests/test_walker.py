@@ -1,3 +1,5 @@
+import pytest
+
 from avulto import DME, SourceLoc
 from avulto.ast import Expression, Node
 
@@ -33,3 +35,12 @@ def test_visit_call(parsed_dme: DME):
     parsed_dme.types["/obj/test_object"].procs["test_visit_call"][0].walk(walker)
     assert len(walker.calls) == 2
     assert all([isinstance(call, Expression.Call) for call in walker.calls])
+
+def test_bad_walker(parsed_dme: DME):
+    class BadWalker:
+        def __getattr__(self, name):
+            raise RuntimeError("ouch")
+
+    walker = BadWalker()
+    with pytest.raises(RuntimeError) as ex:
+        parsed_dme.types["/obj/test_object"].procs["test_visit_call"][0].walk(walker)
