@@ -33,7 +33,7 @@ def test_missing_type(dme: DME):
 
 def test_dme_vars(dme: DME):
     foo = dme.types["/obj/foo"]
-    var_names = [var.name for var in foo.vars.declared() + foo.vars.unmodified()]
+    var_names = [var.name for var in foo.vars.declared() + foo.vars.modified()]
     assert all([x in var_names for x in ["a", "icon", "icon_state"]])
     assert foo.vars["a"].const_val == 3
 

@@ -107,6 +107,7 @@ impl VarHolder {
             out.extend(
                 parent_names
                     .difference(&leaf_declared_names)
+                    .filter(|name| !leaf_undeclared_names.contains(*name))
                     .cloned()
                     .collect::<Vec<_>>(),
             );

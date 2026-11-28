@@ -67,7 +67,9 @@ def test_varholder_unmodified(dme: DME):
     unmodified = bar.vars.unmodified()
 
     # Analyze
-    assert {"icon", "icon_state"}.issubset(def_to_names(unmodified))
+    names = def_to_names(unmodified)
+    assert {"icon", "icon_state"}.issubset(names)
+    assert "a" not in names
 
 
 def test_varholder_iter(dme: DME):
